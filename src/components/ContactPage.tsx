@@ -132,7 +132,7 @@ export default function ContactPage({ data }: ContactPageProps) {
           </h1>
           <div className="w-20 h-1 bg-gradient-to-r from-slate-400 to-slate-600 rounded-full mx-auto mb-6"></div>
           <p className="text-lg opacity-80 max-w-2xl mx-auto" style={{ color: 'var(--foreground)' }}>
-            Get in touch with us. We'd love to hear from you and answer any questions you may have.
+            Get in touch with us. We&apos;d love to hear from you and answer any questions you may have.
           </p>
         </div>
 
@@ -148,7 +148,7 @@ export default function ContactPage({ data }: ContactPageProps) {
               </svg>
               <div>
                 <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>Message Sent!</h3>
-                <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Thank you for your message. We'll get back to you as soon as possible.</p>
+                <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Thank you for your message. We&apos;ll get back to you as soon as possible.</p>
               </div>
             </div>
           </div>
@@ -384,7 +384,7 @@ export default function ContactPage({ data }: ContactPageProps) {
                   required
                   className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors"
                   style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                  placeholder="What's this about?"
+                  placeholder="What&apos;s this about?"
                 />
               </div>
 

@@ -3,16 +3,17 @@
 import { useState, useEffect } from 'react';
 import EventsPage from "@/components/EventsPage";
 import api from "@/services/apiClient";
+import { Event } from '@/types/event';
 
 export default function Events() {
-  const [data, setData] = useState({ photo: [], notification: [], event: [], setting: [] });
+  const [data, setData] = useState<{ photo: unknown[]; notification: unknown[]; event: Event[]; setting: unknown[] }>({ photo: [], notification: [], event: [], setting: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         const response = await api.get('/events');
-        setData(response);
+        setData(response as { photo: unknown[]; notification: unknown[]; event: Event[]; setting: unknown[] });
       } catch (error) {
         console.error('Error fetching events data:', error);
       } finally {

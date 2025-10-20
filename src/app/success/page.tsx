@@ -1,22 +1,18 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   FaCheckCircle, 
   FaTicketAlt, 
-  FaCalendarAlt, 
-  FaMapMarkerAlt, 
   FaDownload,
-  FaShare,
   FaQrcode,
   FaEnvelope,
   FaHome,
   FaArrowLeft
 } from 'react-icons/fa';
-import { getCurrencySymbol } from '@/utils/currency';
 
 interface TicketData {
   _id: string;
@@ -54,15 +50,32 @@ interface TicketData {
   __v: number;
 }
 
+interface SimpleTicketData {
+  ticketId: string;
+  eventId: string;
+  quantity: number;
+  total: number;
+  email: string;
+}
+
 interface SuccessPageProps {
-  ticketData?: any;
+  ticketData?: TicketData | SimpleTicketData;
   ticketId?: string;
+}
+
+// Type guard to check if ticketData is a full TicketData object
+function isFullTicketData(ticketData: TicketData | SimpleTicketData | null): ticketData is TicketData {
+  return ticketData !== null && 'ticketInfo' in ticketData;
+}
+
+// Helper function to safely get ticketInfo
+function getTicketInfo(ticketData: TicketData | SimpleTicketData | null) {
+  return isFullTicketData(ticketData) ? ticketData.ticketInfo : null;
 }
 
 export default function SuccessPage({ ticketData: propTicketData}: SuccessPageProps = {}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [ticketData, setTicketData] = useState<TicketData | null>(null);
+  const [ticketData, setTicketData] = useState<TicketData | SimpleTicketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,7 +101,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Ticket - ${ticketData?.ticketInfo?.eventName ?? 'Event'}</title>
+          <title>Ticket - ${isFullTicketData(ticketData) ? ticketData.ticketInfo?.eventName : 'Event'}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             .ticket { border: 2px solid #000; padding: 20px; max-width: 400px; margin: 0 auto; }
@@ -103,15 +116,15 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
         <body>
           <div class="ticket">
             <div class="header">
-              <h1>${ticketData?.ticketInfo?.eventName}</h1>
-              <h2>${ticketData?.ticketInfo?.ticketName}</h2>
+              <h1>${isFullTicketData(ticketData) ? ticketData.ticketInfo?.eventName : 'Event'}</h1>
+              <h2>${isFullTicketData(ticketData) ? ticketData.ticketInfo?.ticketName : 'Ticket'}</h2>
             </div>
             
             <div class="qr-code">
-              ${ticketData?.qrCode && ticketData?.qrCode.data && ticketData?.qrCode.data.length > 0 ? 
+              ${isFullTicketData(ticketData) && ticketData?.qrCode && ticketData?.qrCode.data && ticketData?.qrCode.data.length > 0 ? 
                 (() => {
                   try {
-                    const dataString = String.fromCharCode(...ticketData.qrCode.data);
+                    const dataString = String.fromCharCode(...(ticketData as TicketData).qrCode.data);
                     let dataUrl = '';
                     
                     if (dataString.startsWith('data:image/')) {
@@ -129,20 +142,20 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                     }
                     
                     return `<img src="${dataUrl}" width="200" height="200" style="border: 2px solid #ccc; border-radius: 8px; padding: 10px; background: white;" />`;
-                  } catch (error) {
+                  } catch {
                     return `<div style="font-size: 32px; color: #4f46e5; font-family: monospace; font-weight: bold; padding: 20px; border: 2px solid #4f46e5; border-radius: 8px; display: inline-block;">${ticketData?.otp}</div>`;
                   }
                 })() :
-                `<div style="font-size: 32px; color: #4f46e5; font-family: monospace; font-weight: bold; padding: 20px; border: 2px solid #4f46e5; border-radius: 8px; display: inline-block;">${ticketData?.otp}</div>`
+                `<div style="font-size: 32px; color: #4f46e5; font-family: monospace; font-weight: bold; padding: 20px; border: 2px solid #4f46e5; border-radius: 8px; display: inline-block;">${isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</div>`
               }
             </div>
             
             <div class="details">
-              <div><span class="label">Ticket Code:</span><span class="value ticket-code">${ticketData?.otp}</span></div>
-              <div><span class="label">Quantity:</span><span class="value">${ticketData?.ticketInfo?.quantity}</span></div>
-              <div><span class="label">Price:</span><span class="value">${ticketData?.ticketInfo?.price} ${ticketData?.ticketInfo?.currency?.toUpperCase()}</span></div>
-              <div><span class="label">Email:</span><span class="value">${ticketData?.ticketInfo?.email}</span></div>
-              <div><span class="label">Purchase Date:</span><span class="value">${new Date(ticketData?.ticketInfo?.purchaseDate || ticketData?.createdAt || '').toLocaleDateString('en-US', {
+              <div><span class="label">Ticket Code:</span><span class="value ticket-code">${isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</span></div>
+              <div><span class="label">Quantity:</span><span class="value">${getTicketInfo(ticketData)?.quantity || 'N/A'}</span></div>
+              <div><span class="label">Price:</span><span class="value">${getTicketInfo(ticketData)?.price || 'N/A'} ${getTicketInfo(ticketData)?.currency?.toUpperCase() || ''}</span></div>
+              <div><span class="label">Email:</span><span class="value">${getTicketInfo(ticketData)?.email || 'N/A'}</span></div>
+              <div><span class="label">Purchase Date:</span><span class="value">${new Date(getTicketInfo(ticketData)?.purchaseDate || (ticketData as TicketData)?.createdAt || '').toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -164,7 +177,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ticket-${ticketData?.ticketInfo?.eventName?.replace(/\s+/g, '-')}-${ticketData?.otp}.html`;
+      a.download = `ticket-${getTicketInfo(ticketData)?.eventName?.replace(/\s+/g, '-') || 'event'}-${isFullTicketData(ticketData) ? ticketData.otp : 'ticket'}.html`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -229,12 +242,12 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold">{ticketData.ticketInfo?.eventName}</h2>
-                  <p className="opacity-90">{ticketData.ticketInfo?.ticketName}</p>
+                  <h2 className="text-2xl font-bold">{getTicketInfo(ticketData)?.eventName || 'Event'}</h2>
+                  <p className="opacity-90">{getTicketInfo(ticketData)?.ticketName || 'Ticket'}</p>
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold">
-                    {ticketData.ticketInfo?.price} {ticketData.ticketInfo?.currency?.toUpperCase()}
+                    {getTicketInfo(ticketData)?.price || 'N/A'} {getTicketInfo(ticketData)?.currency?.toUpperCase() || ''}
                   </div>
                   <div className="text-sm opacity-90">Total Paid</div>
                 </div>
@@ -245,7 +258,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
             <div className="relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
               <div className="text-center text-white">
                 <FaTicketAlt className="text-6xl mx-auto mb-4 opacity-80" />
-                <h3 className="text-xl font-bold">{ticketData.ticketInfo?.eventName}</h3>
+                <h3 className="text-xl font-bold">{getTicketInfo(ticketData)?.eventName || 'Event'}</h3>
                 <p className="opacity-90">Your ticket is confirmed</p>
               </div>
             </div>
@@ -261,11 +274,11 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="opacity-70">Ticket Name:</span>
-                      <span className="font-medium">{ticketData.ticketInfo?.ticketName}</span>
+                      <span className="font-medium">{getTicketInfo(ticketData)?.ticketName || 'Ticket'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="opacity-70">Quantity:</span>
-                      <span>{ticketData.ticketInfo?.quantity}</span>
+                      <span>{getTicketInfo(ticketData)?.quantity || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="opacity-70">Status:</span>
@@ -273,7 +286,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                     </div>
                     <div className="flex justify-between">
                       <span className="opacity-70">Purchase Date:</span>
-                      <span>{new Date(ticketData.ticketInfo?.purchaseDate || ticketData.createdAt).toLocaleDateString('en-US', {
+                      <span>{new Date(getTicketInfo(ticketData)?.purchaseDate || (ticketData as TicketData)?.createdAt || '').toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
@@ -283,7 +296,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                     </div>
                     <div className="flex justify-between">
                       <span className="opacity-70">Ticket Code:</span>
-                      <span className="font-mono font-bold text-indigo-600 text-lg">{ticketData.otp}</span>
+                      <span className="font-mono font-bold text-indigo-600 text-lg">{isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -296,7 +309,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="opacity-70">Email:</span>
-                      <span>{ticketData.ticketInfo?.email}</span>
+                      <span>{getTicketInfo(ticketData)?.email || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -304,14 +317,14 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
 
               {/* QR Code Section */}
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center mb-6">
-                {ticketData.qrCode && ticketData.qrCode.data && ticketData.qrCode.data.length > 0 ? (
+                {isFullTicketData(ticketData) && ticketData.qrCode && ticketData.qrCode.data && ticketData.qrCode.data.length > 0 ? (
                   <div>
                     {(() => {
                       // Convert Buffer data to data URL
                       let dataUrl = '';
                       try {
                         // Convert the array of bytes to a string
-                        const dataString = String.fromCharCode(...ticketData.qrCode.data);
+                        const dataString = String.fromCharCode(...(ticketData as TicketData).qrCode.data);
                         
                         if (dataString.startsWith('data:image/')) {
                           // It's already a complete data URL
@@ -334,10 +347,12 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                       }
                       
                       return dataUrl ? (
-                        <img 
+                        <Image 
                           src={dataUrl}
                           alt="QR Code"
-                          className="mx-auto mb-4 w-64 h-64 border-2 border-gray-300 rounded-lg bg-white p-4"
+                          width={256}
+                          height={256}
+                          className="mx-auto mb-4 border-2 border-gray-300 rounded-lg bg-white p-4"
                           onError={(e) => {
                             console.error('QR Code image failed to load:', e);
                             console.error('Data URL preview:', dataUrl.substring(0, 100));
@@ -359,7 +374,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                 ) : (
                   <div>
                     <FaQrcode className="text-6xl text-indigo-600 mx-auto mb-4" />
-                    <p className="text-lg font-bold text-indigo-600 font-mono">{ticketData.otp}</p>
+                    <p className="text-lg font-bold text-indigo-600 font-mono">{isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</p>
                     <p className="text-sm opacity-70 mt-2">Use this ticket code for entry</p>
                   </div>
                 )}

@@ -83,7 +83,7 @@ export default function Header() {
       className={`fixed w-full z-50 transition-all duration-300 overflow-x-hidden ${
         isScrolled ? 'backdrop-blur-md shadow-lg' : ''
       }`}
-      style={{ background: isScrolled ? 'color-mix(in srgb, var(--background) 90%, transparent)' as any : 'var(--background)', color: 'var(--foreground)' }}
+      style={{ background: isScrolled ? 'color-mix(in srgb, var(--background) 90%, transparent)' : 'var(--background)', color: 'var(--foreground)' }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4 md:py-6">

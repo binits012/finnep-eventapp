@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -43,7 +43,15 @@ const getThemeColors = () => {
   };
 };
 
-function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData; onSuccess: (ticketData: any) => void }) {
+interface TicketData {
+  ticketId: string;
+  eventId: string;
+  quantity: number;
+  total: number;
+  email: string;
+}
+
+function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData; onSuccess: (ticketData: TicketData) => void }) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -182,7 +190,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
   };
 
   // Add card change handler
-  const handleCardChange = (event: any) => {
+  const handleCardChange = (event: { complete: boolean; error?: { message: string } }) => {
     setCardComplete(event.complete);
     if (event.error) {
       setError(event.error.message);
@@ -310,11 +318,11 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
   );
 }
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const search = useSearchParams();
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [successTicketData, setSuccessTicketData] = useState<any | null>(null);
+  const [successTicketData, setSuccessTicketData] = useState<TicketData | null>(null);
 
   useEffect(() => {
     try {
@@ -325,7 +333,7 @@ export default function CheckoutPage() {
       } else {
         setError('Invalid checkout data');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to decode checkout data');
     }
   }, [search]);
@@ -434,4 +442,12 @@ export default function CheckoutPage() {
       </div>
     </Elements>
   );
-} 
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CheckoutContent />
+    </Suspense>
+  );
+}

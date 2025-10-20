@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { formatEventDate } from '@/utils/common';
 import {
     FaCalendarAlt, FaMapMarkerAlt, FaTicketAlt, FaInfoCircle, FaGlobe,
-    FaFacebookF, FaTwitter, FaInstagram, FaTiktok, FaYoutube, FaExternalLinkAlt
+    FaFacebookF, FaTwitter, FaInstagram, FaTiktok, FaExternalLinkAlt
 } from 'react-icons/fa';
 import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet';
@@ -33,7 +33,7 @@ const Popup = dynamic(
     { ssr: false }
 );
 
-import { Event, Settings, TicketInfo } from '@/types/event';
+import { Event, TicketInfo } from '@/types/event';
 
 // Debounce hook to stabilize rapidly changing values
 function useDebouncedValue<T>(value: T, delay = 250): T {
@@ -49,7 +49,7 @@ function useDebouncedValue<T>(value: T, delay = 250): T {
 
 export default function EventDetail({ event }: { event: Event }) {
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
-    const [isLeafletReady, setIsLeafletReady] = useState(false);
+    const [, setIsLeafletReady] = useState(false);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [showAllImages, setShowAllImages] = useState(false);
     const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
@@ -93,7 +93,7 @@ export default function EventDetail({ event }: { event: Event }) {
         Promise.all([
             import('leaflet')
         ]).then(([L]) => {
-            delete (L.Icon.Default.prototype as any)._getIconUrl;
+            delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
             L.Icon.Default.mergeOptions({
                 iconRetinaUrl: '/marker-icon-2x.png',
                 iconUrl: '/marker-icon.png',
@@ -115,24 +115,22 @@ export default function EventDetail({ event }: { event: Event }) {
         return (match && match[2].length === 11) ? match[2] : null;
     };
 
-    if (!event) {
-        return <div className="container mx-auto px-4 py-20 text-center">Loading event...</div>;
-    }
-
     const [lat, lng] = event?.eventLocationGeoCode
         ? event.eventLocationGeoCode.split(',').map(coord => parseFloat(coord.trim()))
         : [0, 0];
 
     // Normalize then debounce, then memoize for stable references in render
-    const normalizedPhotos = useMemo(() => (Array.isArray(event.eventPhoto) ? event.eventPhoto : []), [event.eventPhoto]);
+    const normalizedPhotos = useMemo(() => (Array.isArray(event?.eventPhoto) ? event.eventPhoto : []), [event?.eventPhoto]);
     const debouncedPhotos = useDebouncedValue(normalizedPhotos, 250);
     const eventPhotos = useMemo(() => debouncedPhotos, [debouncedPhotos]);
 
-
     useEffect(() => {
         setYoutubeVideoId(getYoutubeVideoId(event?.videoUrl));
+    }, [event?.videoUrl]);
+
+    if (!event) {
+        return <div className="container mx-auto px-4 py-20 text-center">Loading event...</div>;
     }
-        , [event?.videoUrl]);
 
     
     return (
@@ -718,16 +716,16 @@ export default function EventDetail({ event }: { event: Event }) {
                     setIsPurchaseOpen(false);
                     setSelectedTicket(null);
                 }}
-                ticket={selectedTicketObj as any}
-                eventId={event._id as any}
-                merchantId={(event as any)?.merchant?._id}
+                ticket={selectedTicketObj!}
+                eventId={event._id}
+                merchantId={event?.merchant?._id}
                 externalMerchantId={(() => {
                     console.log('Event merchant data:', {
-                        merchant: (event as any)?.merchant,
-                        merchantId: (event as any)?.merchant?.merchantId,
-                        externalMerchantId: (event as any)?.externalMerchantId
+                        merchant: event?.merchant,
+                        merchantId: event?.merchant?.merchantId,
+                        externalMerchantId: event?.externalMerchantId
                     });
-                    return (event as any)?.merchant?.merchantId ?? (event as any)?.externalMerchantId;
+                    return event?.merchant?.merchantId ?? event?.externalMerchantId;
                 })()}
             />
         </>

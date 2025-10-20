@@ -613,13 +613,13 @@ export default function MerchantRegistrationPage() {
     };
 
     checkOAuthStatus();
-  }, []);
+  }, [formData]);
 
-  const mandatoryFields = [
+  const mandatoryFields = useMemo(() => [
     'orgName', 'companyEmail', 'companyPhoneNumber', 
     'companyAddress', 'country', 'userName', 'password', 
     'verifyPassword', 'companyDescription'
-  ];
+  ], []);
 
   // Check if form is valid for submit button
   const isFormValid = useMemo(() => {
@@ -656,7 +656,7 @@ export default function MerchantRegistrationPage() {
            stripeValid && 
            websiteValid && 
            logoValid;
-  }, [formData]);
+  }, [formData, mandatoryFields]);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -782,7 +782,7 @@ export default function MerchantRegistrationPage() {
 
       // Remove undefined values
       const cleanPayload = Object.fromEntries(
-        Object.entries(payload).filter(([_, value]) => value !== undefined)
+        Object.entries(payload).filter(([, value]) => value !== undefined)
       );
 
       // Generate encrypted timestamp for security
@@ -815,7 +815,7 @@ export default function MerchantRegistrationPage() {
         throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      await response.json();
       
       setSubmitMessage({
         type: 'success',
@@ -845,12 +845,12 @@ export default function MerchantRegistrationPage() {
       // Keep submit button disabled after success
       setIsSubmitting(true);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       
       setSubmitMessage({
         type: 'error',
-        message: error.message || 'Failed to submit registration. Please try again or contact support.'
+        message: (error instanceof Error ? error.message : 'Failed to submit registration. Please try again or contact support.')
       });
     } finally {
       setIsSubmitting(false);
@@ -1393,7 +1393,7 @@ export default function MerchantRegistrationPage() {
                                   <FaExternalLinkAlt className="ml-2 text-sm" />
                                 </button>
                                 <p className="text-xs text-gray-500">
-                                  You'll be redirected to Stripe to authorize the connection
+                                  You&apos;ll be redirected to Stripe to authorize the connection
                                 </p>
                               </div>
                             )}

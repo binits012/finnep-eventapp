@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,39 +8,35 @@ import { useSearchParams } from 'next/navigation';
 import { formatEventDate } from '@/utils/common';
 import { FaCalendarAlt, FaMapMarkerAlt, FaSearch, FaFilter } from 'react-icons/fa'; 
 import { getCurrencySymbol } from '@/utils/currency';
+import { Event } from '@/types/event';
 
-// locale helper
-function getLocaleForCountry(country?: string): string {
-  if (typeof navigator !== 'undefined' && navigator.language) return navigator.language;
-  return 'en-US';
-}
+// locale helper - removed unused function
 
-export default function EventsPage({ data }: { data: { items?: any[]; event?: any[]; page?: number; limit?: number; total?: number; totalPages?: number } }) {
-  const allEvents = (data.items ?? data.event) ?? [];
+export default function EventsPage({ data }: { data: { items?: Event[]; event?: Event[]; page?: number; limit?: number; total?: number; totalPages?: number } }) {
+  const allEvents = useMemo(() => (data.items ?? data.event) ?? [], [data.items, data.event]);
   const serverPage = data.page ?? 1;
   const serverLimit = (data.limit ?? allEvents.length) || 12;
-  const total = data.total ?? allEvents.length;
   const totalPages = data.totalPages ?? 1;
   
   const searchParams = useSearchParams();
   const venueFromUrl = searchParams.get('venue');
   
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedVenue, setSelectedVenue] = useState(venueFromUrl || "");
   const [showFilters, setShowFilters] = useState(false);
   
   // Get unique countries and venues for filter
-  const countries = [...new Set(allEvents.map((event: any) => event.country).filter(Boolean))];
-  const venues = [...new Set(allEvents.map((event: any) => event.venueInfo?.name || event.venue?.name).filter(Boolean))];
+  const countries = [...new Set(allEvents.map((event: Event) => event.country).filter(Boolean))];
+  const venues = [...new Set(allEvents.map((event: Event) => event.venueInfo?.name).filter(Boolean))];
   
   // Filter events based on search and filters (client-side refinement on server slice)
   useEffect(() => {
     let filtered = [...allEvents];
     
     if (searchTerm) {
-      filtered = filtered.filter((event: any) => 
+      filtered = filtered.filter((event: Event) => 
         (event.eventTitle || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (event.eventDescription || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (event.city || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -48,12 +44,12 @@ export default function EventsPage({ data }: { data: { items?: any[]; event?: an
     }
     
     if (selectedCountry) {
-      filtered = filtered.filter((event: any) => event.country === selectedCountry);
+      filtered = filtered.filter((event: Event) => event.country === selectedCountry);
     }
     
     if (selectedVenue) {
-      filtered = filtered.filter((event: any) => 
-        (event.venueInfo?.name || event.venue?.name || '').toLowerCase().includes(selectedVenue.toLowerCase())
+      filtered = filtered.filter((event: Event) => 
+        (event.venueInfo?.name || '').toLowerCase().includes(selectedVenue.toLowerCase())
       );
     }
     
@@ -197,7 +193,7 @@ export default function EventsPage({ data }: { data: { items?: any[]; event?: an
           {/* Events Grid */}
           {events.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {events.map((event: any) => (
+              {events.map((event: Event) => (
                 <EventCard key={event._id} event={event} />
               ))}
             </div>
@@ -235,10 +231,9 @@ export default function EventsPage({ data }: { data: { items?: any[]; event?: an
   );
 }
 
-function EventCard({ event }: { event: any }) {
-  const locale = getLocaleForCountry(event.country);
+function EventCard({ event }: { event: Event }) {
   const minPrice = Array.isArray(event.ticketInfo) && event.ticketInfo.length
-    ? Math.min(...event.ticketInfo.map((t: any) => Number(t.price) || 0))
+    ? Math.min(...event.ticketInfo.map((t) => Number(t.price) || 0))
     : 0;
 
   return (

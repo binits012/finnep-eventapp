@@ -96,10 +96,12 @@ export const getCurrencyInfo = (countryName: string) => {
   return currencies && currencies.length > 0 ? currencies[0] : null;
 };
 
-export default {
+const currencyUtils = {
   getCountryCode,
   getCurrencySymbol,
   getCurrencyCode,
   formatPrice,
   getCurrencyInfo,
 };
+
+export default currencyUtils;

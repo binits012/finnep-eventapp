@@ -1,11 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FaMapMarkerAlt, FaSearch, FaFilter, FaCalendarAlt, FaUsers, FaStar, FaGlobe, FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaSearch, FaFilter, FaCalendarAlt, FaStar, FaGlobe, FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
 import { useData } from '@/contexts/DataContext';
+import { Event } from '@/types/event';
+
+interface VenueData {
+  id: string;
+  name: string;
+  location: string;
+  capacity: number;
+  website?: string;
+  socialMedia?: Record<string, string>;
+  photos?: string[];
+  events?: Array<{
+    id: string;
+    name: string;
+    date: string;
+  }>;
+}
 
 // Add custom CSS for animations
 const customStyles = `
@@ -55,7 +71,7 @@ interface Venue {
   venueImage?: string;
   capacity?: number;
   eventsCount?: number;
-  upcomingEvents?: any[];
+  upcomingEvents?: Event[];
   website?: string;
   socialMedia?: {
     facebook?: string;
@@ -83,15 +99,14 @@ export default function VenuesPage() {
   
   // Memoize venues processing to prevent infinite re-renders
   const venues = useMemo(() => {
-    if (!venuesData?.items) return [];
+    if (!venuesData || !Array.isArray(venuesData)) return [];
     
     const venueMap = new Map<string, Venue>();
     
-    venuesData.items.forEach((event: any) => {
-      // Use venueInfo or venue object for venue data
-      const venueInfo = event.venueInfo || event.venue;
-      const venueName = venueInfo?.name;
-      const venueAddress = event.venue?.address || event.eventLocationAddress;
+    venuesData.forEach((venueData: VenueData) => {
+      // Use venue data directly
+      const venueName = venueData.name;
+      const venueAddress = venueData.location;
       
       if (venueName && venueAddress) {
         const venueKey = `${venueName}-${venueAddress}`;
@@ -100,55 +115,55 @@ export default function VenuesPage() {
           const existingVenue = venueMap.get(venueKey)!;
           existingVenue.eventsCount = (existingVenue.eventsCount || 0) + 1;
           
-          // Add upcoming events (next 3 months)
-          const eventDate = new Date(event.eventDate);
-          const now = new Date();
-          const threeMonthsFromNow = new Date(now.getTime() + (90 * 24 * 60 * 60 * 1000));
-          
-          if (eventDate >= now && eventDate <= threeMonthsFromNow) {
+          // Add upcoming events from venue data
+          if (venueData.events && venueData.events.length > 0) {
             existingVenue.upcomingEvents = existingVenue.upcomingEvents || [];
-            if (existingVenue.upcomingEvents.length < 3) {
-              existingVenue.upcomingEvents.push({
-                _id: event._id,
-                eventTitle: event.eventTitle,
-                eventDate: event.eventDate,
-                eventImage: event.eventPromotionPhoto
-              });
-            }
+            venueData.events.forEach(event => {
+              if (existingVenue.upcomingEvents!.length < 3) {
+                existingVenue.upcomingEvents!.push({
+                  _id: event.id,
+                  eventTitle: event.name,
+                  eventDate: event.date,
+                  eventPromotionPhoto: '',
+                  ticketInfo: []
+                });
+              }
+            });
           }
         } else {
           const newVenue: Venue = {
-            _id: event._id, // Use event ID as venue ID for now
+            _id: venueData.id,
             venueName: venueName,
             venueAddress: venueAddress,
-            city: event.city || '',
-            country: event.country || '',
-            venueDescription: venueInfo?.description || '',
-            venueImage: venueInfo?.media?.photo?.[0] || event.eventPromotionPhoto,
-            capacity: event.occupancy || 0,
+            city: '',
+            country: '',
+            venueDescription: '',
+            venueImage: venueData.photos && venueData.photos.length > 0 ? venueData.photos[0] : '',
+            capacity: venueData.capacity || 0,
             eventsCount: 1,
             upcomingEvents: [],
-            website: venueInfo?.media?.website || '',
+            website: venueData.website || '',
             socialMedia: {
-              facebook: venueInfo?.media?.social?.facebook || '',
-              twitter: venueInfo?.media?.social?.twitter || '',
-              instagram: venueInfo?.media?.social?.instagram || '',
-              linkedin: venueInfo?.media?.social?.linkedin || ''
+              facebook: venueData.socialMedia?.facebook || '',
+              twitter: venueData.socialMedia?.twitter || '',
+              instagram: venueData.socialMedia?.instagram || '',
+              linkedin: venueData.socialMedia?.linkedin || ''
             }
           };
           
-          // Add upcoming events
-          const eventDate = new Date(event.eventDate);
-          const now = new Date();
-          const threeMonthsFromNow = new Date(now.getTime() + (90 * 24 * 60 * 60 * 1000));
-          
-          if (eventDate >= now && eventDate <= threeMonthsFromNow) {
-            newVenue.upcomingEvents = [{
-              _id: event._id,
-              eventTitle: event.eventTitle,
-              eventDate: event.eventDate,
-              eventImage: event.eventPromotionPhoto
-            }];
+          // Add upcoming events from venue data
+          if (venueData.events && venueData.events.length > 0) {
+            venueData.events.forEach(event => {
+              if (newVenue.upcomingEvents!.length < 3) {
+                newVenue.upcomingEvents!.push({
+                  _id: event.id,
+                  eventTitle: event.name,
+                  eventDate: event.date,
+                  eventPromotionPhoto: '',
+                  ticketInfo: []
+                });
+              }
+            });
           }
           
           venueMap.set(venueKey, newVenue);
@@ -157,7 +172,7 @@ export default function VenuesPage() {
     });
     
     return Array.from(venueMap.values());
-  }, [venuesData?.items]);
+  }, [venuesData]);
   
   // Get unique countries for filter
   const countries = useMemo(() => 
@@ -359,7 +374,7 @@ export default function VenuesPage() {
               </div>
               <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">No Venues Found</h3>
               <p className="text-gray-600 dark:text-gray-400 text-lg max-w-md mx-auto">
-                We couldn't find any venues matching your criteria. Try adjusting your search or filters.
+                We couldn&apos;t find any venues matching your criteria. Try adjusting your search or filters.
               </p>
             </motion.div>
           ) : (
@@ -442,7 +457,7 @@ export default function VenuesPage() {
                             Upcoming Events
                           </h4>
                           <div className="space-y-2">
-                            {venue.upcomingEvents.slice(0, 2).map((event: any) => (
+                            {venue.upcomingEvents.slice(0, 2).map((event: Event) => (
                               <div key={event._id} className="flex items-center text-xs text-gray-700 dark:text-gray-300">
                                 <div className="w-2 h-2 bg-slate-500 rounded-full mr-3"></div>
                                 <span className="font-medium">{new Date(event.eventDate).toLocaleDateString()}</span>

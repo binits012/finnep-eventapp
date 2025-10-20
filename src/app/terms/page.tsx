@@ -2,6 +2,18 @@
 
 import { useData } from '@/contexts/DataContext';
 
+interface TermsSection {
+  title: string;
+  text: string;
+  bullet_points?: string[];
+  note?: string;
+  prohibitions?: string[];
+}
+
+interface TermsData {
+  [key: string]: TermsSection;
+}
+
 export default function TermsPage() {
   const { data, loading, error } = useData();
   
@@ -26,10 +38,10 @@ export default function TermsPage() {
     );
   }
 
-  const settings = data?.setting?.[0] || {};
-  const termsData = settings?.otherInfo?.terms_and_conditions;
+  const settings = data?.settings || {};
+  const termsData = (settings as { otherInfo?: { terms_and_conditions?: TermsData } })?.otherInfo?.terms_and_conditions;
 
-  const renderTermsSection = (section: any) => {
+  const renderTermsSection = (section: TermsSection) => {
     return (
       <div key={section.title} className="mb-8">
         <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--foreground)' }}>
@@ -61,7 +73,7 @@ export default function TermsPage() {
         
         <div className="space-y-6">
           {termsData ? (
-            Object.values(termsData).map((section: any) => renderTermsSection(section))
+            Object.values(termsData as TermsData).map((section: TermsSection) => renderTermsSection(section))
           ) : (
             <div className="text-center py-12">
               <p className="text-lg opacity-70">Terms and conditions content is not available at the moment.</p>

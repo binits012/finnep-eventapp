@@ -2,6 +2,17 @@
 
 import { useData } from '@/contexts/DataContext';
 
+interface PrivacySection {
+  title: string;
+  text: string;
+  bullet_points?: string[];
+  note?: string;
+}
+
+interface PrivacyData {
+  [key: string]: PrivacySection;
+}
+
 export default function PrivacyPage() {
   const { data, loading, error } = useData();
   
@@ -26,10 +37,10 @@ export default function PrivacyPage() {
     );
   }
 
-  const settings = data?.setting?.[0] || {};
-  const privacyData = settings?.otherInfo?.privacy_policy;
+  const settings = data?.settings || {};
+  const privacyData = (settings as { otherInfo?: { privacy_policy?: PrivacyData } })?.otherInfo?.privacy_policy;
 
-  const renderPrivacySection = (section: any) => {
+  const renderPrivacySection = (section: PrivacySection) => {
     return (
       <div key={section.title} className="mb-8">
         <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--foreground)' }}>
@@ -71,7 +82,7 @@ export default function PrivacyPage() {
         
         <div className="space-y-6">
           {privacyData ? (
-            Object.values(privacyData).map((section: any) => renderPrivacySection(section))
+            Object.values(privacyData as PrivacyData).map((section: PrivacySection) => renderPrivacySection(section))
           ) : (
             <div className="text-center py-12">
               <p className="text-lg opacity-70">Privacy policy content is not available at the moment.</p>

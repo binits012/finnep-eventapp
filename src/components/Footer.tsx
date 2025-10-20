@@ -7,7 +7,8 @@ import { useData } from '@/contexts/DataContext';
 
 export default function Footer() {
   const { data } = useData();
-  const settings = data?.setting?.[0] || {};
+  const settings = data?.settings || {};
+  const socialMedia = (settings as { socialMedia?: { facebook?: string; twitter?: string; instagram?: string; linkedin?: string; fb?: string; x?: string; in?: string; ln?: string; } }).socialMedia;
   
   return (
     <footer className="w-full border-t overflow-x-hidden" style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}>
@@ -33,32 +34,32 @@ export default function Footer() {
                 Discover exciting events happening around you. Connect with people who share your interests.
               </p>
               <div className="mt-4 flex justify-center sm:justify-start space-x-6">
-                {settings.socialMedia?.facebook && (
-                  <a href={settings.socialMedia.facebook} target="_blank" rel="noreferrer" 
+                {socialMedia?.facebook && (
+                  <a href={socialMedia.facebook} target="_blank" rel="noreferrer" 
                      className="transition p-2 opacity-70 hover:opacity-100"
                      style={{ color: 'var(--foreground)' }}>
                     <FaFacebook size={20} />
                     <span className="sr-only">Facebook</span>
                   </a>
                 )}
-                {settings.socialMedia?.twitter && (
-                  <a href={settings.socialMedia.twitter} target="_blank" rel="noreferrer" 
+                {socialMedia?.twitter && (
+                  <a href={socialMedia.twitter} target="_blank" rel="noreferrer" 
                      className="transition p-2 opacity-70 hover:opacity-100"
                      style={{ color: 'var(--foreground)' }}>
                     <FaTwitter size={20} />
                     <span className="sr-only">Twitter</span>
                   </a>
                 )}
-                {settings.socialMedia?.instagram && (
-                  <a href={settings.socialMedia.instagram} target="_blank" rel="noreferrer" 
+                {socialMedia?.instagram && (
+                  <a href={socialMedia.instagram} target="_blank" rel="noreferrer" 
                      className="transition p-2 opacity-70 hover:opacity-100"
                      style={{ color: 'var(--foreground)' }}>
                     <FaInstagram size={20} />
                     <span className="sr-only">Instagram</span>
                   </a>
                 )}
-                {settings.socialMedia?.linkedin && (
-                  <a href={settings.socialMedia.linkedin} target="_blank" rel="noreferrer" 
+                {socialMedia?.linkedin && (
+                  <a href={socialMedia.linkedin} target="_blank" rel="noreferrer" 
                      className="transition p-2 opacity-70 hover:opacity-100"
                      style={{ color: 'var(--foreground)' }}>
                     <FaLinkedin size={20} />
@@ -166,26 +167,26 @@ export default function Footer() {
               Discover exciting events happening around you. Connect with people who share your interests.
             </p>
             <div className="mt-6 flex space-x-4">
-              {settings.socialMedia?.fb && (
-                <a href={settings.socialMedia.fb} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
+              {socialMedia?.fb && (
+                <a href={socialMedia.fb} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
                   <FaFacebook size={20} />
                   <span className="sr-only">Facebook</span>
                 </a>
               )}
-              {settings.socialMedia?.x && (
-                <a href={settings.socialMedia.x} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
+              {socialMedia?.x && (
+                <a href={socialMedia.x} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
                   <FaTwitter size={20} />
                   <span className="sr-only">Twitter</span>
                 </a>
               )}
-              {settings.socialMedia?.in && (
-                <a href={settings.socialMedia.in} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
+              {socialMedia?.in && (
+                <a href={socialMedia.in} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
                   <FaInstagram size={20} />
                   <span className="sr-only">Instagram</span>
                 </a>
               )}
-              {settings.socialMedia?.ln && (
-                <a href={settings.socialMedia.ln} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
+              {socialMedia?.ln && (
+                <a href={socialMedia.ln} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
                   <FaLinkedin size={20} />
                   <span className="sr-only">LinkedIn</span>
                 </a>

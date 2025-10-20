@@ -28,5 +28,5 @@ export default function ContactRoute() {
     );
   }
 
-  return <ContactPage data={data} />;
+  return <ContactPage data={data as { setting?: Array<{ contactInfo?: { email?: string; phone?: string; address?: string; }; socialMedia?: { fb?: string; x?: string; in?: string; ln?: string; tk?: string; }; }> } | undefined} />;
 }

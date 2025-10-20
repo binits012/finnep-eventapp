@@ -4,17 +4,37 @@ import Link from 'next/link';
 import { FaFacebookF, FaTwitter, FaInstagram, FaEnvelope, FaPhone } from 'react-icons/fa';
 import type { Settings } from '@/types/event';
 
+interface ContactInfo {
+  email?: string;
+  phone?: string;
+}
+
+interface SocialMedia {
+  facebook?: string;
+  twitter?: string;
+  instagram?: string;
+  linkedin?: string;
+}
+
+interface ExtendedSettings extends Settings {
+  contactInfo?: ContactInfo;
+  socialMedia?: SocialMedia;
+  aboutSection?: string;
+  partners?: string[];
+  createdAt?: string;
+}
+
 interface AboutPageProps {
   data: {
-    setting?: Settings[];
+    setting?: ExtendedSettings[];
   };
 }
 
 export default function AboutPage({ data }: AboutPageProps) {
-  const settings = data?.setting?.[0] || {} as Settings;
-  const contactEmail = (settings as any)?.contactInfo?.email as string | undefined;
-  const contactPhone = (settings as any)?.contactInfo?.phone as string | undefined;
-  const socials = (settings as any)?.socialMedia || {} as Record<string, string>;
+  const settings = data?.setting?.[0] || {} as ExtendedSettings;
+  const contactEmail = settings?.contactInfo?.email;
+  const contactPhone = settings?.contactInfo?.phone;
+  const socials = settings?.socialMedia || {};
   
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
@@ -33,7 +53,7 @@ export default function AboutPage({ data }: AboutPageProps) {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1, borderRadius: 12 }}>
             <div className="prose dark:prose-invert mx-auto p-4 sm:p-6">
-              <div dangerouslySetInnerHTML={{ __html: (settings as any)?.aboutSection || '' }} />
+              <div dangerouslySetInnerHTML={{ __html: settings?.aboutSection || '' }} />
             </div>
           </div>
         </div>
@@ -58,7 +78,7 @@ export default function AboutPage({ data }: AboutPageProps) {
       </section>
       
       {/* Timeline Section */}
-      {(settings as any)?.createdAt && (
+      {settings?.createdAt && (
         <section className="py-8 sm:py-12">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto">
@@ -66,11 +86,11 @@ export default function AboutPage({ data }: AboutPageProps) {
               <ol className="relative border-s" style={{ borderColor: 'var(--border)' }}>
                 <li className="mb-8 ms-4">
                   <div className="absolute w-3 h-3 bg-indigo-600 rounded-full mt-1.5 -start-1.5"></div>
-                  <time className="mb-1 text-sm opacity-70" style={{ color: 'var(--foreground)' }}>{new Date((settings as any).createdAt).toLocaleDateString()}</time>
+                  <time className="mb-1 text-sm opacity-70" style={{ color: 'var(--foreground)' }}>{new Date(settings.createdAt).toLocaleDateString()}</time>
                   <h3 className="text-base font-medium">Founded</h3>
                   <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Yellow Bridge begins its journey to connect communities with memorable events.</p>
                 </li>
-                {(settings as any)?.aboutSection && (
+                {settings?.aboutSection && (
                   <li className="mb-8 ms-4">
                     <div className="absolute w-3 h-3 bg-indigo-600 rounded-full mt-1.5 -start-1.5"></div>
                     <h3 className="text-base font-medium">Our Story</h3>
@@ -91,13 +111,13 @@ export default function AboutPage({ data }: AboutPageProps) {
       )}
 
       {/* Logo Wall (optional) */}
-      {Array.isArray((settings as any)?.partners) && (settings as any)?.partners.length > 0 && (
+      {Array.isArray(settings?.partners) && settings?.partners.length > 0 && (
         <section className="py-8 sm:py-12">
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
               <h2 className="text-xl font-semibold mb-6 text-center">Partners & Sponsors</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 items-center">
-                {((settings as any).partners as string[]).map((logoUrl: string, idx: number) => (
+                {(settings.partners as string[]).map((logoUrl: string, idx: number) => (
                   <div key={idx} className="h-12 sm:h-14 relative opacity-80 hover:opacity-100 transition" style={{ filter: 'grayscale(100%)' }}>
                     <Image src={logoUrl} alt={`Partner ${idx + 1}`} fill className="object-contain" />
                   </div>
@@ -170,8 +190,8 @@ export default function AboutPage({ data }: AboutPageProps) {
                         <FaFacebookF />
                       </Link>
                     )}
-                    {(socials.twitter || (socials as any).x) && (
-                      <Link href={socials.twitter || (socials as any).x} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-10 w-10 rounded-full transition" style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}>
+                    {(socials.twitter || (socials as SocialMedia & { x?: string }).x) && (
+                      <Link href={socials.twitter || (socials as SocialMedia & { x?: string }).x || '#'} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-10 w-10 rounded-full transition" style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}>
                         <FaTwitter />
                       </Link>
                     )}

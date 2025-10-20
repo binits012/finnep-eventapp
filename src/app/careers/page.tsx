@@ -152,8 +152,8 @@ export default function CareersPage() {
           </h1>
           <div className="w-20 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full mx-auto mb-6"></div>
           <p className="text-lg opacity-80 max-w-2xl mx-auto" style={{ color: 'var(--foreground)' }}>
-            We're always looking for talented individuals to join our growing team. 
-            Submit your application and let's build something amazing together.
+            We&apos;re always looking for talented individuals to join our growing team. 
+            Submit your application and let&apos;s build something amazing together.
           </p>
         </div>
 
@@ -169,7 +169,7 @@ export default function CareersPage() {
               </svg>
               <div>
                 <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>Application Submitted!</h3>
-                <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Thank you for your interest. We'll review your application and get back to you soon.</p>
+                <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Thank you for your interest. We&apos;ll review your application and get back to you soon.</p>
               </div>
             </div>
           </div>
@@ -348,7 +348,7 @@ export default function CareersPage() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors resize-none"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)' }}
-                placeholder="Tell us why you're interested in this position and what makes you a great fit..."
+                placeholder="Tell us why you&apos;re interested in this position and what makes you a great fit..."
               />
             </div>
           </div>
@@ -495,7 +495,7 @@ export default function CareersPage() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors resize-none"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)' }}
-                placeholder="Any additional information you'd like to share..."
+                placeholder="Any additional information you&apos;d like to share..."
               />
             </div>
           </div>

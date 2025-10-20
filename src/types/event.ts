@@ -19,6 +19,10 @@ export interface Event {
         website?: string;
       };
     };
+    venue?: {
+      name?: string;
+      address?: string;
+    };
     city?: string;
     country?: string;
     eventLocationAddress?: string;
@@ -34,10 +38,14 @@ export interface Event {
     active?: boolean;
     occupancy?: number;
     merchant?: {
+      _id?: string;
       name?: string;
       logo?: string;
       website?: string;
+      merchantId?: string;
     };
+    merchantId?: string;
+    externalMerchantId?: string;
     ticketsSold?: number;
     eventTimezone?: string; 
     videoUrl?: string;  
@@ -79,8 +87,8 @@ export interface Event {
   }
   
   export interface ApiResponse {
-    photo: any[];
-    notification: any[];
+    photo: unknown[];
+    notification: unknown[];
     event: Event[];
     setting: Settings[];
   }

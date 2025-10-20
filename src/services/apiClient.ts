@@ -8,7 +8,7 @@ const API_TIMEOUT = 30000; // 30 seconds
 interface ApiErrorResponse {
   message: string;
   code?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 // Create a configured axios instance
@@ -56,14 +56,12 @@ apiClient.interceptors.response.use(
       }
     }
     
-    // Create a more user-friendly error message
-    const errorMessage = response?.data?.message || 'Something went wrong';   
     return Promise.reject(error);
   }
 );
 
 // Generic API request function with types
-export async function apiRequest<T = any, D = any>(
+export async function apiRequest<T = unknown, D = unknown>(
   config: AxiosRequestConfig<D>
 ): Promise<T> {
   try {
@@ -82,9 +80,9 @@ export const api = {
    * @param params - URL parameters
    * @param config - Additional Axios config
    */
-  get: async <T = any>(
+  get: async <T = unknown>(
     url: string, 
-    params?: Record<string, any>, 
+    params?: Record<string, unknown>, 
     config?: AxiosRequestConfig
   ): Promise<T> => {
     return apiRequest<T>({ method: 'GET', url, params, ...config });
@@ -96,7 +94,7 @@ export const api = {
    * @param data - The request payload
    * @param config - Additional Axios config
    */
-  post: async <T = any, D = any>(
+  post: async <T = unknown, D = unknown>(
     url: string, 
     data?: D, 
     config?: AxiosRequestConfig
@@ -110,7 +108,7 @@ export const api = {
    * @param data - The request payload
    * @param config - Additional Axios config
    */
-  put: async <T = any, D = any>(
+  put: async <T = unknown, D = unknown>(
     url: string, 
     data?: D, 
     config?: AxiosRequestConfig
@@ -124,7 +122,7 @@ export const api = {
    * @param data - The request payload
    * @param config - Additional Axios config
    */
-  patch: async <T = any, D = any>(
+  patch: async <T = unknown, D = unknown>(
     url: string, 
     data?: D, 
     config?: AxiosRequestConfig
@@ -137,7 +135,7 @@ export const api = {
    * @param url - The API endpoint
    * @param config - Additional Axios config
    */
-  delete: async <T = any>(
+  delete: async <T = unknown>(
     url: string, 
     config?: AxiosRequestConfig
   ): Promise<T> => {

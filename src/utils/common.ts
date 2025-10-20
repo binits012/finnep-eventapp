@@ -13,7 +13,7 @@ export function formatEventDate(dateISO: string, timeZone?: string): string {
         // Use dayjs for timezone-aware formatting
         const localDateTime = dayjs(dateISO).tz(timeZone);
         return localDateTime.format('MMM D, YYYY HH:mm');
-    } catch (e) {
+    } catch {
         return dateISO;
     }
 }

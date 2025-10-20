@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import EventDetail from '@/components/EventDetail';
 import api from '@/services/apiClient';
+import { Event } from '@/types/event';
 
 export default function EventPage() {
-  const [event, setEvent] = useState(null);
+  const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const params = useParams();
@@ -20,8 +22,8 @@ export default function EventPage() {
         setLoading(true);
         const response = await api.get(`/event/${eventId}`);
         
-        if (response && response.event) {
-          setEvent(response.event);
+        if (response && (response as { event?: Event }).event) {
+          setEvent((response as { event: Event }).event);
         } else {
           setError('Event not found');
         }
@@ -53,12 +55,12 @@ export default function EventPage() {
         <div className="text-center p-8 max-w-md">
           <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
-          <a 
+          <Link 
             href="/events"
             className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition duration-300"
           >
             Back to Events
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -70,14 +72,14 @@ export default function EventPage() {
         <div className="text-center p-8 max-w-md">
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">Event Not Found</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            The event you're looking for doesn't exist or has been removed.
+            The event you&apos;re looking for doesn&apos;t exist or has been removed.
           </p>
-          <a 
+          <Link 
             href="/events"
             className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition duration-300"
           >
             Browse All Events
-          </a>
+          </Link>
         </div>
       </div>
     );

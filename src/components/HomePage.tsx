@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import dayjs from 'dayjs';
@@ -16,29 +16,26 @@ import { FaCalendarAlt, FaMapMarkerAlt, FaTicketAlt, FaArrowRight } from 'react-
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { FaExternalLinkAlt, FaPlay } from 'react-icons/fa';
 
-import { Event, Settings } from '@/types/event';
+import { Event } from '@/types/event';
 import { getCurrencySymbol } from '@/utils/currency';
 import { formatEventDate } from '@/utils/common';
 import countries from 'i18n-iso-countries';
 import enCountries from 'i18n-iso-countries/langs/en.json';
 import { useData } from '@/contexts/DataContext';
 
-// ensure country dataset is registered
-if (!countries.getNames('en')) {
-  countries.registerLocale(enCountries as any);
+interface Slide {
+  id: string;
+  image: string;
+  videoUrl: string;
+  title: string;
 }
 
-// Locale helpers
-function getLocaleForCountry(country?: string): string {
-  try {
-    const alpha2 = country ? countries.getAlpha2Code(country, 'en') : undefined;
-    if (alpha2) {
-      return `en-${alpha2.toUpperCase()}`;
-    }
-  } catch {}
-  if (typeof navigator !== 'undefined' && navigator.language) return navigator.language;
-  return 'en-US';
+// ensure country dataset is registered
+if (!countries.getNames('en')) {
+  countries.registerLocale(enCountries as unknown as { locale: string; countries: Record<string, string> });
 }
+
+// Locale helpers - removed unused function
 
 
 function isEventInFuture(eventDate: string): boolean {
@@ -49,8 +46,7 @@ export default function HomePage() {
   const { data, loading, error } = useData();
   
   // Hero carousel state - moved here to ensure hooks are called in same order
-  const events = data?.event || [];
-  const settings = data?.setting?.[0] || {};
+  const events = (data?.event || []) as Event[];
   
   // Filter and sort featured events based on new featured structure
   const featuredEvents = events
@@ -129,7 +125,7 @@ export default function HomePage() {
       >
         <div className="absolute inset-0 z-0">
           {slides.length > 0 ? (
-            slides.map((slide: any, idx: number) => {
+            slides.map((slide: Slide, idx: number) => {
               const isActive = idx === currentSlide;
               const yt = getYoutubeId(slide.videoUrl);
               return (
@@ -170,7 +166,7 @@ export default function HomePage() {
         {slides.length > 1 && (
           <div className="absolute inset-x-0 bottom-6 z-10 flex flex-col items-center gap-3">
             <div className="flex items-center gap-2">
-              {slides.map((_: any, i: number) => (
+              {slides.map((_: Slide, i: number) => (
                 <button key={i}
                   aria-label={`Go to slide ${i + 1}`}
                   onClick={() => setCurrentSlide(i)}
@@ -397,7 +393,7 @@ function UpcomingEventCard({ event }: { event: Event }) {
         .map(ticket => Number(ticket.price))
         .filter(price => !isNaN(price) && isFinite(price));
       return validPrices.length ? Math.min(...validPrices) : 0;
-    } catch (e) {
+    } catch {
       return 0;
     }
   };
