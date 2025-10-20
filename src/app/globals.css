@@ -3,6 +3,23 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #ffffff; /* card/background surface */
+  --border: #e5e7eb;  /* gray-200 */
+}
+
+/* Explicit theme overrides via data attribute (takes precedence over media query) */
+:root[data-theme='light'] {
+  --background: #ffffff;
+  --foreground: #171717;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+}
+
+:root[data-theme='dark'] {
+  --background: #0a0a0a;
+  --foreground: #f9fafb;
+  --surface: #1f2937; /* gray-800 */
+  --border: #374151;  /* gray-700 */
 }
 
 @theme inline {
@@ -15,7 +32,9 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #f9fafb;
+    --surface: #1f2937;
+    --border: #374151;
   }
 }
 

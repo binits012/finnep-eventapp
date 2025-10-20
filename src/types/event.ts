@@ -1,0 +1,86 @@
+export interface Event {
+    _id: string;
+    eventTitle: string;
+    eventDescription?: string;
+    eventDate: string;
+    eventPromotionPhoto?: string;
+    status?: string;
+    venueInfo?: { 
+      name?: string;
+      description?: string;
+      media?: {
+        photo?: string[];
+        social?: {
+          x?: string;
+          fb?: string;
+          insta?: string;
+          tiktok?: string;
+        };
+        website?: string;
+      };
+    };
+    city?: string;
+    country?: string;
+    eventLocationAddress?: string;
+    eventLocationGeoCode?: string;
+    ticketInfo: TicketInfo[];
+    transportLink?: string;
+    socialMedia?: {
+      facebook?: string;
+      twitter?: string;
+      instagram?: string;
+      tiktok?: string;
+    };
+    active?: boolean;
+    occupancy?: number;
+    merchant?: {
+      name?: string;
+      logo?: string;
+      website?: string;
+    };
+    ticketsSold?: number;
+    eventTimezone?: string; 
+    videoUrl?: string;  
+    eventPhoto?: string[];  
+    otherInfo?:object;
+    featured?: {
+      isFeatured?: boolean;
+      featuredType?: string;
+      priority?: number;
+      startDate?: string;
+      endDate?: string;
+    };
+  }
+  
+  export interface TicketInfo {
+    _id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    available?: number;
+    serviceFee?: number;
+    vat?: number;
+    status?: string;
+    createdAt?: string;
+  }
+  
+  export interface Settings {
+    _id?: string;
+    aboutSection?: string;
+    contactInfo?: {
+      email?: string;
+      phone?: string;
+    };
+    socialMedia?: {
+      fb?: string;
+      x?: string;
+      instagram?: string;
+    };
+  }
+  
+  export interface ApiResponse {
+    photo: any[];
+    notification: any[];
+    event: Event[];
+    setting: Settings[];
+  }
