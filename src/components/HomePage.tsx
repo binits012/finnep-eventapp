@@ -355,7 +355,7 @@ function FeaturedEventCard({ event }: { event: Event }) {
             style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
             aria-label={event.ticketsSold ? `${event.ticketsSold} tickets sold` : event.occupancy ? `Capacity ${event.occupancy}` : 'Limited capacity'}
           >
-            {event.ticketsSold ? `${event.ticketsSold} sold` : event.occupancy ? `Capacity ${event.occupancy}` : 'Limited'}
+            {  `Audience: ${event.occupancy}`}
           </span>
         </div>
         <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
@@ -455,7 +455,7 @@ function UpcomingEventCard({ event }: { event: Event }) {
               style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
               aria-label={event.ticketsSold ? `${event.ticketsSold} tickets sold` : event.occupancy ? `Capacity ${event.occupancy}` : 'Limited capacity'}
             >
-              {event.ticketsSold ? `${event.ticketsSold} sold` : event.occupancy ? `Capacity ${event.occupancy}` : 'Limited'}
+              { `Audience: ${event.occupancy}`  }
             </span>
           </div>
 

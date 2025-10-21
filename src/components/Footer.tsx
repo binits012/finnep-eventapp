@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
+import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaTiktok } from 'react-icons/fa';
 import { useData } from '@/contexts/DataContext';
 
 export default function Footer() {
   const { data } = useData();
-  const settings = data?.settings || {};
-  const socialMedia = (settings as { socialMedia?: { facebook?: string; twitter?: string; instagram?: string; linkedin?: string; fb?: string; x?: string; in?: string; ln?: string; } }).socialMedia;
   
+  const settings = data?.setting?.[0] || {};
+  
+  const socialMedia = (settings as { socialMedia: {   fb?: string; x?: string; in?: string; ln?: string; tk?: string; } }).socialMedia;
+
   return (
     <footer className="w-full border-t overflow-x-hidden" style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}>
       {/* Main Footer Content */}
@@ -34,35 +36,43 @@ export default function Footer() {
                 Discover exciting events happening around you. Connect with people who share your interests.
               </p>
               <div className="mt-4 flex justify-center sm:justify-start space-x-6">
-                {socialMedia?.facebook && (
-                  <a href={socialMedia.facebook} target="_blank" rel="noreferrer" 
+                {socialMedia?.fb && (
+                  <a href={socialMedia.fb} target="_blank" rel="noreferrer" 
                      className="transition p-2 opacity-70 hover:opacity-100"
                      style={{ color: 'var(--foreground)' }}>
                     <FaFacebook size={20} />
                     <span className="sr-only">Facebook</span>
                   </a>
                 )}
-                {socialMedia?.twitter && (
-                  <a href={socialMedia.twitter} target="_blank" rel="noreferrer" 
+                {socialMedia?.x && (
+                  <a href={socialMedia.x} target="_blank" rel="noreferrer" 
                      className="transition p-2 opacity-70 hover:opacity-100"
                      style={{ color: 'var(--foreground)' }}>
                     <FaTwitter size={20} />
                     <span className="sr-only">Twitter</span>
                   </a>
                 )}
-                {socialMedia?.instagram && (
-                  <a href={socialMedia.instagram} target="_blank" rel="noreferrer" 
+                {socialMedia?.in && (
+                  <a href={socialMedia?.in} target="_blank" rel="noreferrer" 
                      className="transition p-2 opacity-70 hover:opacity-100"
                      style={{ color: 'var(--foreground)' }}>
                     <FaInstagram size={20} />
                     <span className="sr-only">Instagram</span>
                   </a>
                 )}
-                {socialMedia?.linkedin && (
-                  <a href={socialMedia.linkedin} target="_blank" rel="noreferrer" 
+                {socialMedia?.ln && (
+                  <a href={socialMedia.ln} target="_blank" rel="noreferrer" 
                      className="transition p-2 opacity-70 hover:opacity-100"
                      style={{ color: 'var(--foreground)' }}>
                     <FaLinkedin size={20} />
+                    <span className="sr-only">LinkedIn</span>
+                  </a>
+                )}
+                {socialMedia?.tk && (
+                  <a href={socialMedia.tk} target="_blank" rel="noreferrer" 
+                     className="transition p-2 opacity-70 hover:opacity-100"
+                     style={{ color: 'var(--foreground)' }}>
+                    <FaTiktok size={20} />
                     <span className="sr-only">LinkedIn</span>
                   </a>
                 )}
@@ -189,6 +199,12 @@ export default function Footer() {
                 <a href={socialMedia.ln} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
                   <FaLinkedin size={20} />
                   <span className="sr-only">LinkedIn</span>
+                </a>
+              )}
+              {socialMedia?.tk && (
+                <a href={socialMedia.tk} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
+                  <FaTiktok size={20} />
+                  <span className="sr-only">Tiktok</span>
                 </a>
               )}
             </div>

@@ -38,7 +38,7 @@ export default function TermsPage() {
     );
   }
 
-  const settings = data?.settings || {};
+  const settings = data?.setting?.[0] || {};
   const termsData = (settings as { otherInfo?: { terms_and_conditions?: TermsData } })?.otherInfo?.terms_and_conditions;
 
   const renderTermsSection = (section: TermsSection) => {

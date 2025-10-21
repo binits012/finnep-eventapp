@@ -5,7 +5,7 @@ import { api } from '@/services/apiClient';
 import { Event } from '@/types/event';
 
 interface AppData {
-  settings?: Record<string, unknown>;
+  setting?: Record<string, unknown>;
   about?: Record<string, unknown>;
   contact?: Record<string, unknown>;
   terms?: Record<string, unknown>;

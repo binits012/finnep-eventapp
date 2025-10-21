@@ -37,7 +37,7 @@ export default function PrivacyPage() {
     );
   }
 
-  const settings = data?.settings || {};
+  const settings = data?.setting?.[0] || {};
   const privacyData = (settings as { otherInfo?: { privacy_policy?: PrivacyData } })?.otherInfo?.privacy_policy;
 
   const renderPrivacySection = (section: PrivacySection) => {
