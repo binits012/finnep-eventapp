@@ -3,17 +3,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { formatEventDate } from '@/utils/common';
+import { formatEventDateLocale } from '@/utils/common';
 import {
     FaCalendarAlt, FaMapMarkerAlt, FaTicketAlt, FaInfoCircle, FaGlobe,
     FaFacebookF, FaTwitter, FaInstagram, FaTiktok, FaExternalLinkAlt
 } from 'react-icons/fa';
 import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet';
-import 'leaflet/dist/leaflet.css';  
+import 'leaflet/dist/leaflet.css';
 import {  getCurrencySymbol } from '@/utils/currency';
 import TicketPurchaseModal from '@/components/TicketPurchaseModal';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // Dynamically import the map components with no SSR
 const MapContainer = dynamic(
@@ -48,6 +49,7 @@ function useDebouncedValue<T>(value: T, delay = 250): T {
 }
 
 export default function EventDetail({ event }: { event: Event }) {
+    const { t, locale } = useTranslation();
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
     const [, setIsLeafletReady] = useState(false);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -129,10 +131,10 @@ export default function EventDetail({ event }: { event: Event }) {
     }, [event?.videoUrl]);
 
     if (!event) {
-        return <div className="container mx-auto px-4 py-20 text-center">Loading event...</div>;
+        return <div className="container mx-auto px-4 py-20 text-center">{t('common.loading')}</div>;
     }
 
-    
+
     return (
         <>
             {/* Hero Section */}
@@ -156,7 +158,7 @@ export default function EventDetail({ event }: { event: Event }) {
                         <div className="flex items-center text-white mb-3">
                             <span className="inline-flex items-center bg-indigo-600 px-3 py-1 rounded-full text-sm">
                                 <FaCalendarAlt className="mr-1" />
-                                {formatEventDate(event.eventDate, event.eventTimezone)}
+                                {formatEventDateLocale(event.eventDate, event.eventTimezone, locale)}
                             </span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">{event.eventTitle}</h1>
@@ -180,7 +182,7 @@ export default function EventDetail({ event }: { event: Event }) {
                             {/* YouTube Video */}
                             {youtubeVideoId && (
                                 <div className="rounded-lg shadow p-6 mb-8" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                    <h2 className="text-2xl font-bold mb-4">Event Video</h2>
+                                    <h2 className="text-2xl font-bold mb-4">{t('eventDetail.video.title')}</h2>
                                     <div className="aspect-w-16 aspect-h-9">
                                         <iframe
                                             src={`https://www.youtube.com/embed/${youtubeVideoId}`}
@@ -194,7 +196,7 @@ export default function EventDetail({ event }: { event: Event }) {
                             )}
 
                             <div className="rounded-lg shadow p-6 mb-8" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                <h2 className="text-2xl font-bold mb-4">About This Event</h2>
+                                <h2 className="text-2xl font-bold mb-4">{t('eventDetail.about.title')}</h2>
                                 <div className="prose dark:prose-invert max-w-none">
                                     <p>{event.eventDescription}</p>
                                 </div>
@@ -202,7 +204,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                 {/* Additional Information */}
                                 {event.otherInfo && Object.keys(event.otherInfo).length > 0 && (
                                     <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
-                                        <h3 className="text-xl font-semibold mb-3">Additional Information</h3>
+                                        <h3 className="text-xl font-semibold mb-3">{t('eventDetail.additionalInfo.title')}</h3>
                                         <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
                                             {Object.entries(event.otherInfo).map(([key, value]) => (
                                                 <div key={key} className="flex flex-col">
@@ -217,7 +219,7 @@ export default function EventDetail({ event }: { event: Event }) {
 
                             {/* Venue Information */}
                             <div className="rounded-lg shadow p-6 mb-8" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                <h2 className="text-2xl font-bold mb-4">Venue Information</h2>
+                                <h2 className="text-2xl font-bold mb-4">{t('eventDetail.venue.title')}</h2>
 
                                 <div className="mb-6">
                                     <h3 className="text-lg font-semibold mb-2">{event.venueInfo?.name}</h3>
@@ -252,20 +254,20 @@ export default function EventDetail({ event }: { event: Event }) {
                                                 className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 inline-flex items-center"
                                             >
                                                 <FaGlobe className="mr-2" />
-                                                Visit Venue Website
+                                                {t('eventDetail.venue.visitWebsite')}
                                                 <FaExternalLinkAlt className="ml-2 text-xs" />
                                             </a>
                                         </div>
                                     )}
 
                                     {/* Venue social links */}
-                                    {(event.venueInfo?.media?.social?.fb || event.venueInfo?.media?.social?.x || event.venueInfo?.media?.social?.insta || event.venueInfo?.media?.social?.tiktok) && (
+                                    {(event.venueInfo?.media?.social?.facebook || event.venueInfo?.media?.social?.twitter || event.venueInfo?.media?.social?.instagram || event.venueInfo?.media?.social?.tiktok) && (
                                         <div className="mt-2">
-                                            <div className="text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>Follow the Venue</div>
+                                            <div className="text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>{t('eventDetail.venue.followVenue')}</div>
                                             <div className="flex space-x-3">
-                                                {event.venueInfo?.media?.social?.fb && (
+                                                {event.venueInfo?.media?.social?.facebook && (
                                                     <a
-                                                        href={event.venueInfo.media.social.fb}
+                                                        href={event.venueInfo.media.social.facebook}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors"
@@ -274,9 +276,9 @@ export default function EventDetail({ event }: { event: Event }) {
                                                         <FaFacebookF />
                                                     </a>
                                                 )}
-                                                {event.venueInfo?.media?.social?.x && (
+                                                {event.venueInfo?.media?.social?.twitter && (
                                                     <a
-                                                        href={event.venueInfo.media.social.x}
+                                                        href={event.venueInfo.media.social.twitter}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="bg-sky-500 text-white p-2 rounded-full hover:bg-sky-600 transition-colors"
@@ -285,9 +287,9 @@ export default function EventDetail({ event }: { event: Event }) {
                                                         <FaTwitter />
                                                     </a>
                                                 )}
-                                                {event.venueInfo?.media?.social?.insta && (
+                                                {event.venueInfo?.media?.social?.instagram && (
                                                     <a
-                                                        href={event.venueInfo.media.social.insta}
+                                                        href={event.venueInfo.media.social.instagram}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="bg-gradient-to-tr from-yellow-500 via-pink-600 to-purple-700 text-white p-2 rounded-full hover:opacity-90 transition-opacity"
@@ -319,7 +321,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                             className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 inline-flex items-center mt-4"
                                         >
                                             <FaInfoCircle className="mr-2" />
-                                            Transportation Information
+                                            {t('eventDetail.venue.transportation')}
                                         </a>
                                     )}
                                 </div>
@@ -349,7 +351,7 @@ export default function EventDetail({ event }: { event: Event }) {
 
                             {/* Organizer Information */}
                             <div className="rounded-lg shadow p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                <h2 className="text-2xl font-bold mb-4">Organizer</h2>
+                                <h2 className="text-2xl font-bold mb-4">{t('eventDetail.organizer.title')}</h2>
                                 <div className="flex items-center">
                                     {event.merchant?.logo ? (
                                         <Image
@@ -373,7 +375,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                                 rel="noopener noreferrer"
                                                 className="text-indigo-600 hover:underline text-sm"
                                             >
-                                                Visit Website
+                                                {t('eventDetail.organizer.visitWebsite')}
                                             </a>
                                         )}
                                     </div>
@@ -383,7 +385,7 @@ export default function EventDetail({ event }: { event: Event }) {
                             {/* Event Photo Gallery */}
                             {eventPhotos.length > 0 && (
                                 <div className="rounded-lg shadow p-6 mt-8 mb-8" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                    <h2 className="text-2xl font-bold mb-4">Gallery</h2>
+                                    <h2 className="text-2xl font-bold mb-4">{t('eventDetail.gallery.title')}</h2>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                         {eventPhotos.slice(0, 6).map((photoUrl, index) => {
                                             const remaining = eventPhotos.length - 6;
@@ -405,7 +407,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                                     </div>
                                                     {isLastVisible && remaining > 0 && (
                                                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                                            <span className="text-white font-semibold text-lg">+{remaining} more</span>
+                                                            <span className="text-white font-semibold text-lg">+{remaining} {t('eventDetail.gallery.more')}</span>
                                                         </div>
                                                     )}
                                                 </button>
@@ -450,7 +452,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                                 className="absolute top-3 right-3 text-white/90 hover:text-white bg-black/40 hover:bg-black/60 rounded-full px-3 py-1 text-sm"
                                                 aria-label="Close"
                                             >
-                                                Close
+                                                {t('common.close')}
                                             </button>
 
                                             <button
@@ -499,7 +501,7 @@ export default function EventDetail({ event }: { event: Event }) {
                         <div>
                             {/* Tickets Box */}
                             <div className="rounded-lg shadow p-6 sticky top-24" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                <h2 className="text-2xl font-bold mb-6">Tickets</h2>
+                                <h2 className="text-2xl font-bold mb-6">{t('eventDetail.tickets.title')}</h2>
 
                                 {event.ticketInfo.map((ticket) => {
                                     const isSelected = selectedTicket === ticket._id;
@@ -527,49 +529,49 @@ export default function EventDetail({ event }: { event: Event }) {
                                         >
                                             <div className="flex justify-between items-center mb-2">
                                                 <h3 className={`font-semibold text-lg ${
-                                                    isSelected 
-                                                        ? 'text-indigo-900 dark:text-indigo-100' 
+                                                    isSelected
+                                                        ? 'text-indigo-900 dark:text-indigo-100'
                                                         : 'text-gray-900 dark:text-gray-100'
                                                 }`}>{ticket.name}</h3>
                                                 <span className={`text-lg font-bold ${
-                                                    isSelected 
-                                                        ? 'text-indigo-900 dark:text-indigo-100' 
+                                                    isSelected
+                                                        ? 'text-indigo-900 dark:text-indigo-100'
                                                         : 'text-gray-900 dark:text-gray-100'
                                                 }`}>{ticket.price.toFixed(2)} {getCurrencySymbol(event.country || 'Finland')}</span>
                                             </div>
 
                                             {/* Service Fee and VAT info */}
                                             <div className={`mt-2 text-sm font-medium ${
-                                                isSelected 
-                                                    ? 'text-indigo-800 dark:text-indigo-200' 
+                                                isSelected
+                                                    ? 'text-indigo-800 dark:text-indigo-200'
                                                     : 'text-gray-600 dark:text-gray-400'
                                             }`}>
-                                                Service Fee: +{(ticket.serviceFee ?? 0).toFixed(2)} • VAT: {ticket.vat}%
+                                                {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {ticket.vat}%
                                             </div>
 
                                             {/* Total price calculation */}
                                             <div className="mt-3 flex justify-between items-center mb-2">
                                                 <span className={`text-sm font-semibold ${
-                                                    isSelected 
-                                                        ? 'text-indigo-800 dark:text-indigo-200' 
+                                                    isSelected
+                                                        ? 'text-indigo-800 dark:text-indigo-200'
                                                         : 'text-gray-700 dark:text-gray-300'
-                                                }`}>Total:</span>
+                                                }`}>{t('eventDetail.tickets.total')}:</span>
                                                 <span className={`text-xl font-bold ${
-                                                    isSelected 
-                                                        ? 'text-indigo-800 dark:text-indigo-200' 
+                                                    isSelected
+                                                        ? 'text-indigo-800 dark:text-indigo-200'
                                                         : 'text-indigo-600 dark:text-indigo-400'
                                                 }`}>
                                                     {calculateTotalPrice(ticket)} {getCurrencySymbol(event.country || 'Finland')}
                                                 </span>
                                             </div>
-                                            
+
                                             {isAvailable ? (
                                                 <div className="mt-2 text-sm font-semibold text-green-600 dark:text-green-400">
-                                                    ✓ Available
+                                                    ✓ {t('eventDetail.tickets.available')}
                                                 </div>
                                             ) : (
                                                 <div className="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">
-                                                    ✗ Sold Out
+                                                    ✗ {t('eventDetail.tickets.soldOut')}
                                                 </div>
                                             )}
                                         </div>
@@ -582,20 +584,20 @@ export default function EventDetail({ event }: { event: Event }) {
                                     disabled={!selectedTicket}
                                     onClick={() => { if (selectedTicket) setIsPurchaseOpen(true); }}
                                 >
-                                    {selectedTicket ? 'Buy Ticket' : 'Select a Ticket'}
+                                    {selectedTicket ? t('eventDetail.tickets.buyTicket') : t('eventDetail.tickets.selectTicket')}
                                 </button>
 
                                 {/* Event Details */}
                                 <div className="mt-8 border-t" style={{ borderColor: 'var(--border)' }}>
-                                    <h3 className="text-lg font-semibold mb-4">Event Details</h3>
+                                    <h3 className="text-lg font-semibold mb-4">{t('eventDetail.eventDetails.title')}</h3>
 
                                     <div className="space-y-4">
                                         <div className="flex">
                                             <FaCalendarAlt className="text-gray-500 dark:text-gray-400 mt-1 mr-3" />
                                             <div>
-                                                <div className="font-medium">Date and Time</div>
+                                                <div className="font-medium">{t('eventDetail.eventDetails.dateTime')}</div>
                                                 <div className="text-gray-600 dark:text-gray-400">
-                                                    {formatEventDate(event.eventDate, event.eventTimezone)}
+                                                    {formatEventDateLocale(event.eventDate, event.eventTimezone, locale)}
                                                 </div>
                                             </div>
                                         </div>
@@ -603,7 +605,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                         <div className="flex">
                                             <FaMapMarkerAlt className="text-gray-500 dark:text-gray-400 mt-1 mr-3" />
                                             <div>
-                                                <div className="font-medium">Location</div>
+                                                <div className="font-medium">{t('eventDetail.eventDetails.location')}</div>
                                                 <div className="text-gray-600 dark:text-gray-400">
                                                     {event.venueInfo?.name}
                                                 </div>
@@ -617,9 +619,9 @@ export default function EventDetail({ event }: { event: Event }) {
                                             <div className="flex">
                                                 <FaTicketAlt className="text-gray-500 dark:text-gray-400 mt-1 mr-3" />
                                                 <div>
-                                                    <div className="font-medium">Capacity</div>
+                                                    <div className="font-medium">{t('eventDetail.eventDetails.capacity')}</div>
                                                     <div className="text-gray-600 dark:text-gray-400">
-                                                        {event.occupancy} attendees
+                                                        {event.occupancy} {t('eventDetail.eventDetails.attendees')}
                                                     </div>
                                                 </div>
                                             </div>
@@ -631,7 +633,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                 {(event.socialMedia?.facebook || event.socialMedia?.twitter ||
                                     event.socialMedia?.instagram || event.socialMedia?.tiktok) && (
                                         <div className="mt-6 border-t" style={{ borderColor: 'var(--border)' }}>
-                                            <h3 className="text-lg font-semibold mb-3">Share This Event</h3>
+                                            <h3 className="text-lg font-semibold mb-3">{t('eventDetail.social.shareEvent')}</h3>
                                             <div className="flex space-x-4">
                                                 {event.socialMedia?.facebook && (
                                                     <a
@@ -708,10 +710,10 @@ export default function EventDetail({ event }: { event: Event }) {
 
                     // Encode to base64
                     const encodedData = btoa(JSON.stringify(checkoutData));
-                    
+
                     // Redirect to checkout page with encoded data
                     router.push(`/checkout?data=${encodedData}`);
-                    
+
                     // Close modal
                     setIsPurchaseOpen(false);
                     setSelectedTicket(null);

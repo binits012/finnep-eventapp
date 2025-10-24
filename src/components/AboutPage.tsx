@@ -1,8 +1,12 @@
+'use client';
+
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaFacebookF, FaTwitter, FaInstagram, FaEnvelope, FaPhone } from 'react-icons/fa';
 import type { Settings } from '@/types/event';
+import { useTranslation } from '@/hooks/useTranslation';
+import { formatEventDateLocale } from '@/utils/common';
 
 interface ContactInfo {
   email?: string;
@@ -31,11 +35,12 @@ interface AboutPageProps {
 }
 
 export default function AboutPage({ data }: AboutPageProps) {
+  const { locale } = useTranslation();
   const settings = data?.setting?.[0] || {} as ExtendedSettings;
   const contactEmail = settings?.contactInfo?.email;
   const contactPhone = settings?.contactInfo?.phone;
   const socials = settings?.socialMedia || {};
-  
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
       {/* Hero Section */}
@@ -47,7 +52,7 @@ export default function AboutPage({ data }: AboutPageProps) {
           </div>
         </div>
       </section>
-      
+
       {/* About Content */}
       <section className="py-12 sm:py-16">
         <div className="container mx-auto px-4">
@@ -76,7 +81,7 @@ export default function AboutPage({ data }: AboutPageProps) {
           </div>
         </div>
       </section>
-      
+
       {/* Timeline Section */}
       {settings?.createdAt && (
         <section className="py-8 sm:py-12">
@@ -86,7 +91,7 @@ export default function AboutPage({ data }: AboutPageProps) {
               <ol className="relative border-s" style={{ borderColor: 'var(--border)' }}>
                 <li className="mb-8 ms-4">
                   <div className="absolute w-3 h-3 bg-indigo-600 rounded-full mt-1.5 -start-1.5"></div>
-                  <time className="mb-1 text-sm opacity-70" style={{ color: 'var(--foreground)' }}>{new Date(settings.createdAt).toLocaleDateString()}</time>
+                  <time className="mb-1 text-sm opacity-70" style={{ color: 'var(--foreground)' }}>{formatEventDateLocale(settings.createdAt, undefined, locale)}</time>
                   <h3 className="text-base font-medium">Founded</h3>
                   <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Yellow Bridge begins its journey to connect communities with memorable events.</p>
                 </li>
@@ -153,7 +158,7 @@ export default function AboutPage({ data }: AboutPageProps) {
           </div>
         </div>
       </section>
-      
+
       {/* Contact & Socials */}
       {(contactEmail || contactPhone || Object.values(socials).some(Boolean)) && (
         <section className="pb-16">

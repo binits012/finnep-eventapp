@@ -5,15 +5,15 @@ export interface Event {
     eventDate: string;
     eventPromotionPhoto?: string;
     status?: string;
-    venueInfo?: { 
+    venueInfo?: {
       name?: string;
       description?: string;
       media?: {
         photo?: string[];
         social?: {
-          x?: string;
-          fb?: string;
-          insta?: string;
+          facebook?: string;
+          twitter?: string;
+          instagram?: string;
           tiktok?: string;
         };
         website?: string;
@@ -47,9 +47,9 @@ export interface Event {
     merchantId?: string;
     externalMerchantId?: string;
     ticketsSold?: number;
-    eventTimezone?: string; 
-    videoUrl?: string;  
-    eventPhoto?: string[];  
+    eventTimezone?: string;
+    videoUrl?: string;
+    eventPhoto?: string[];
     otherInfo?:object;
     featured?: {
       isFeatured?: boolean;
@@ -59,7 +59,7 @@ export interface Event {
       endDate?: string;
     };
   }
-  
+
   export interface TicketInfo {
     _id: string;
     name: string;
@@ -71,7 +71,7 @@ export interface Event {
     status?: string;
     createdAt?: string;
   }
-  
+
   export interface Settings {
     _id?: string;
     aboutSection?: string;
@@ -85,7 +85,7 @@ export interface Event {
       instagram?: string;
     };
   }
-  
+
   export interface ApiResponse {
     photo: unknown[];
     notification: unknown[];

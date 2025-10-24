@@ -5,6 +5,7 @@ import { FaBuilding, FaGlobe, FaUser, FaStripe, FaInfoCircle, FaChevronDown, FaS
 
 import crypto from 'crypto-js';
 import querystring from 'querystring';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface MerchantFormData {
   orgName: string;
@@ -230,7 +231,7 @@ function CountryDropdown({ value, onChange, error }: CountryDropdownProps) {
   { "code": "YE", "name": "Yemen" },
   { "code": "ZM", "name": "Zambia" },
   { "code": "ZW", "name": "Zimbabwe" }
-    
+
   ], []);
 
   // Filter countries based on search
@@ -257,8 +258,8 @@ function CountryDropdown({ value, onChange, error }: CountryDropdownProps) {
         className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
           error ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
         }`}
-        style={{ 
-          background: 'var(--surface)', 
+        style={{
+          background: 'var(--surface)',
           color: 'var(--foreground)'
         }}
       >
@@ -280,7 +281,7 @@ function CountryDropdown({ value, onChange, error }: CountryDropdownProps) {
               setSearchTerm('');
             }}
           />
-          
+
           {/* Dropdown */}
           <div className="absolute z-50 w-full mt-2 rounded-xl border-2 border-gray-200 shadow-lg max-h-64 overflow-hidden"
                style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
@@ -294,8 +295,8 @@ function CountryDropdown({ value, onChange, error }: CountryDropdownProps) {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  style={{ 
-                    background: 'var(--surface)', 
+                  style={{
+                    background: 'var(--surface)',
                     color: 'var(--foreground)',
                     borderColor: 'var(--border)'
                   }}
@@ -315,7 +316,7 @@ function CountryDropdown({ value, onChange, error }: CountryDropdownProps) {
                     className={`w-full px-4 py-3 text-left hover:bg-indigo-50 transition-colors ${
                       value === country.name ? 'bg-indigo-100 text-indigo-700' : ''
                     }`}
-                    style={{ 
+                    style={{
                       color: 'var(--foreground)',
                       background: value === country.name ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
                     }}
@@ -340,6 +341,7 @@ function CountryDropdown({ value, onChange, error }: CountryDropdownProps) {
 }
 
 export default function MerchantRegistrationPage() {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<MerchantFormData>({
     orgName: '',
     companyEmail: '',
@@ -394,27 +396,27 @@ export default function MerchantRegistrationPage() {
   // Password validation function
   const validatePassword = (password: string) => {
     const errors = [];
-    
+
     if (password.length < 8) {
       errors.push('at least 8 characters');
     }
-    
+
     if (!/[A-Z]/.test(password)) {
       errors.push('one uppercase letter');
     }
-    
+
     if (!/[a-z]/.test(password)) {
       errors.push('one lowercase letter');
     }
-    
+
     if (!/\d/.test(password)) {
       errors.push('one number');
     }
-    
+
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
       errors.push('one special character');
     }
-    
+
     return {
       isValid: errors.length === 0,
       errors: errors
@@ -433,7 +435,7 @@ export default function MerchantRegistrationPage() {
     // Rate limiting: Max 3 attempts per 5 minutes
     const now = Date.now();
     const fiveMinutesAgo = now - (5 * 60 * 1000);
-    
+
     if (lastOauthAttempt && lastOauthAttempt > fiveMinutesAgo && oauthAttempts >= 3) {
       setSubmitMessage({
         type: 'error',
@@ -441,7 +443,7 @@ export default function MerchantRegistrationPage() {
       });
       return;
     }
-    
+
     // Update rate limiting counters
     if (lastOauthAttempt && lastOauthAttempt > fiveMinutesAgo) {
       setOauthAttempts(prev => prev + 1);
@@ -449,15 +451,15 @@ export default function MerchantRegistrationPage() {
       setOauthAttempts(1);
     }
     setLastOauthAttempt(now);
-    
+
     // Save current form data to session storage before OAuth
     sessionStorage.setItem('merchant_form_data', JSON.stringify(formData));
-    
+
     // Generate secure random state parameter to prevent CSRF attacks
     const state = crypto.lib.WordArray.random(32).toString();
     sessionStorage.setItem('stripe_oauth_state', state);
     sessionStorage.setItem('stripe_oauth_timestamp', Date.now().toString());
-    
+
     const params = querystring.stringify({
       response_type: 'code',
       client_id: process.env.NEXT_PUBLIC_STRIPE_CA_CLIENT_ID,
@@ -467,7 +469,7 @@ export default function MerchantRegistrationPage() {
     });
 
     const stripeConnectUrl = `https://connect.stripe.com/oauth/authorize?${params}`;
-    
+
     // Open OAuth in same window to handle redirect properly
     window.location.href = stripeConnectUrl;
   };
@@ -480,12 +482,12 @@ export default function MerchantRegistrationPage() {
       const code = urlParams.get('code');
       const state = urlParams.get('state');
       const error = urlParams.get('error');
-      
+
       if (code && state) {
         // Verify state parameter to prevent CSRF attacks
         const expectedState = sessionStorage.getItem('stripe_oauth_state');
         const oauthTimestamp = sessionStorage.getItem('stripe_oauth_timestamp');
-        
+
         if (state !== expectedState) {
           console.error('Invalid state parameter - possible CSRF attack');
           setSubmitMessage({
@@ -494,13 +496,13 @@ export default function MerchantRegistrationPage() {
           });
           return;
         }
-        
+
         // Check if OAuth request is not too old (max 10 minutes)
         if (oauthTimestamp) {
           const requestTime = parseInt(oauthTimestamp);
           const now = Date.now();
           const tenMinutesAgo = now - (10 * 60 * 1000);
-          
+
           if (requestTime < tenMinutesAgo) {
             console.error('OAuth request too old - possible replay attack');
             setSubmitMessage({
@@ -510,18 +512,18 @@ export default function MerchantRegistrationPage() {
             return;
           }
         }
-        
+
         // OAuth successful, exchange code for account info
         try {
           console.log('Making request to:', `${process.env.NEXT_PUBLIC_BACKOFFICE_API_URL}/api/stripe/callback`);
           console.log('Request payload:', { code, state, timestamp: Date.now() });
-          
+
           const response = await fetch(`${process.env.NEXT_PUBLIC_BACKOFFICE_API_URL}/api/stripe/callback`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               code,
               state,
               timestamp: Date.now()
@@ -531,17 +533,17 @@ export default function MerchantRegistrationPage() {
           console.log('response.ok:', response.ok);
           console.log('response.status:', response.status);
           console.log('response.statusText:', response.statusText);
-          
+
           if (response.ok && response.status === 200) {
             const data = await response.json();
             console.log('Response data:', data);
-            
+
             // Validate response data
             if (data.accountId && data.connected) {
               // Restore form data from session storage and update with OAuth result
               const savedFormData = sessionStorage.getItem('merchant_form_data');
               let updatedFormData = formData;
-              
+
               if (savedFormData) {
                 try {
                   updatedFormData = JSON.parse(savedFormData);
@@ -549,19 +551,19 @@ export default function MerchantRegistrationPage() {
                   console.error('Error parsing saved form data:', error);
                 }
               }
-              
+
               setFormData({
                 ...updatedFormData,
                 stripeConnected: true,
                 stripeAccount: data.accountId
               });
-              
+
               // Clean up URL and session storage
               window.history.replaceState({}, document.title, window.location.pathname);
               sessionStorage.removeItem('stripe_oauth_state');
               sessionStorage.removeItem('stripe_oauth_timestamp');
               sessionStorage.removeItem('merchant_form_data'); // Clean up saved form data
-              
+
               setSubmitMessage({
                 type: 'success',
                 message: 'Stripe account connected successfully!'
@@ -577,7 +579,7 @@ export default function MerchantRegistrationPage() {
             console.error('Response not OK:', response.status, response.statusText);
             sessionStorage.removeItem('stripe_oauth_state');
             sessionStorage.removeItem('stripe_oauth_timestamp');
-            
+
             let errorMessage = 'Failed to connect Stripe account';
             try {
               const errorData = await response.json();
@@ -587,7 +589,7 @@ export default function MerchantRegistrationPage() {
               console.error('Could not parse error response:', parseError);
               errorMessage = `Server error: ${response.status} ${response.statusText}`;
             }
-            
+
             throw new Error(errorMessage);
           }
         } catch (error) {
@@ -616,8 +618,8 @@ export default function MerchantRegistrationPage() {
   }, [formData]);
 
   const mandatoryFields = useMemo(() => [
-    'orgName', 'companyEmail', 'companyPhoneNumber', 
-    'companyAddress', 'country', 'userName', 'password', 
+    'orgName', 'companyEmail', 'companyPhoneNumber',
+    'companyAddress', 'country', 'userName', 'password',
     'verifyPassword', 'companyDescription'
   ], []);
 
@@ -648,13 +650,13 @@ export default function MerchantRegistrationPage() {
     const websiteValid = !formData.website || /^https?:\/\/.+/.test(formData.website);
     const logoValid = !formData.logo || /^https?:\/\/.+/.test(formData.logo);
 
-    return mandatoryFieldsValid && 
-           emailValid && 
-           userNameValid && 
-           passwordMatch && 
-           phoneValid && 
-           stripeValid && 
-           websiteValid && 
+    return mandatoryFieldsValid &&
+           emailValid &&
+           userNameValid &&
+           passwordMatch &&
+           phoneValid &&
+           stripeValid &&
+           websiteValid &&
            logoValid;
   }, [formData, mandatoryFields]);
 
@@ -706,17 +708,17 @@ export default function MerchantRegistrationPage() {
 
     // Website validation (optional but if provided should be valid)
     if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
-      newErrors.website = 'Website must start with http:// or https://';
+      newErrors.website = t('merchant.validation.validWebsite');
     }
 
     // Logo URL validation (optional but if provided should be valid)
     if (formData.logo && !/^https?:\/\/.+/.test(formData.logo)) {
-      newErrors.logo = 'Logo URL must start with http:// or https://';
+      newErrors.logo = t('merchant.validation.validLogo');
     }
 
     // Custom Stripe account validation
     if (!formData.usePlatformAccount && !formData.stripeConnected) {
-      newErrors.stripeAccount = 'Please connect your Stripe account or use platform account';
+      newErrors.stripeAccount = t('merchant.validation.stripeRequired');
     }
 
     setErrors(newErrors);
@@ -725,7 +727,7 @@ export default function MerchantRegistrationPage() {
 
   const handleInputChange = (field: keyof MerchantFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Real-time validation for verify password
     if (field === 'verifyPassword' && typeof value === 'string') {
       const verifyPasswordValidation = validateVerifyPassword(formData.password, value);
@@ -735,7 +737,7 @@ export default function MerchantRegistrationPage() {
         setErrors(prev => ({ ...prev, verifyPassword: '' }));
       }
     }
-    
+
     // Real-time validation for password (to update verify password if it exists)
     if (field === 'password' && typeof value === 'string' && formData.verifyPassword) {
       const verifyPasswordValidation = validateVerifyPassword(value, formData.verifyPassword);
@@ -745,7 +747,7 @@ export default function MerchantRegistrationPage() {
         setErrors(prev => ({ ...prev, verifyPassword: '' }));
       }
     }
-    
+
     // Clear error when user starts typing (for other fields)
     if (field !== 'verifyPassword' && field !== 'password' && errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -754,7 +756,7 @@ export default function MerchantRegistrationPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -790,7 +792,7 @@ export default function MerchantRegistrationPage() {
       const encryptedTimestamp = crypto.AES.encrypt(timestamp, process.env.NEXT_PUBLIC_CRYPTO_KEY || '').toString();
 
       console.log('Submitting merchant registration:', cleanPayload);
-      
+
       // Make API call to backoffice using fetch with security headers
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKOFFICE_API_URL}/backoffice/merchant/create`, {
         method: 'POST',
@@ -804,19 +806,19 @@ export default function MerchantRegistrationPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
+
         // Handle specific security errors
         if (response.status === 400) {
           if (errorData.message?.includes('too old') || errorData.message?.includes('invalid key')) {
             throw new Error('Request expired or invalid. Please refresh the page and try again.');
           }
         }
-        
+
         throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       await response.json();
-      
+
       setSubmitMessage({
         type: 'success',
         message: 'Merchant registration submitted successfully! We will review your application and get back to you soon.'
@@ -841,13 +843,13 @@ export default function MerchantRegistrationPage() {
         stripeConnected: false,
       });
       setErrors({});
-      
+
       // Keep submit button disabled after success
       setIsSubmitting(true);
 
     } catch (error: unknown) {
       console.error('Registration error:', error);
-      
+
       setSubmitMessage({
         type: 'error',
         message: (error instanceof Error ? error.message : 'Failed to submit registration. Please try again or contact support.')
@@ -869,18 +871,18 @@ export default function MerchantRegistrationPage() {
                              radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 0%, transparent 50%)`
           }}></div>
         </div>
-        
+
         <div className="relative container mx-auto px-4 py-16">
           <div className="max-w-4xl mx-auto text-center text-white">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6">
               <FaBuilding className="mr-2" />
-              <span className="text-sm font-medium">Merchant Portal</span>
+              <span className="text-sm font-medium">{t('merchant.portal')}</span>
             </div>
             <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-transparent">
-              Join Our Platform
+              {t('merchant.title')}
             </h1>
             <p className="text-xl opacity-90 max-w-2xl mx-auto leading-relaxed">
-              Start selling tickets for your events with our powerful merchant tools and reach thousands of potential customers
+              {t('merchant.subtitle')}
             </p>
           </div>
         </div>
@@ -891,10 +893,10 @@ export default function MerchantRegistrationPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             {/* Form Container with Glass Effect */}
-            <div 
+            <div
               className="relative rounded-3xl p-8 md:p-12 backdrop-blur-xl border"
-              style={{ 
-                background: 'var(--surface)', 
+              style={{
+                background: 'var(--surface)',
                 color: 'var(--foreground)',
                 borderColor: 'var(--border)',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
@@ -902,9 +904,9 @@ export default function MerchantRegistrationPage() {
             >
               {/* Decorative Elements */}
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-t-3xl"></div>
-              
+
               <form onSubmit={handleSubmit} className="space-y-12">
-                
+
                 {/* Company Information - Card Style */}
                 <div className="relative">
                   <div className="flex items-center mb-6">
@@ -912,15 +914,15 @@ export default function MerchantRegistrationPage() {
                       <FaBuilding className="text-lg" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold">Company Information</h2>
-                      <p className="text-sm opacity-70">Tell us about your organization</p>
+                      <h2 className="text-2xl font-bold">{t('merchant.companyInfo.title')}</h2>
+                      <p className="text-sm opacity-70">{t('merchant.companyInfo.subtitle')}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label htmlFor="orgName" className="block text-sm font-semibold">
-                        Organization Name *
+                        {t('merchant.fields.orgName')} *
                       </label>
                       <input
                         type="text"
@@ -930,11 +932,11 @@ export default function MerchantRegistrationPage() {
                         className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                           errors.orgName ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ 
-                          background: 'var(--surface)', 
+                        style={{
+                          background: 'var(--surface)',
                           color: 'var(--foreground)'
                         }}
-                        placeholder="Your organization name"
+                        placeholder={t('merchant.placeholders.orgName')}
                       />
                       {errors.orgName && <p className="text-sm text-red-500 flex items-center mt-1">
                         <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -945,7 +947,7 @@ export default function MerchantRegistrationPage() {
                     <div className="space-y-2">
                       <label htmlFor="companyEmail" className="block text-sm font-semibold flex items-center">
                         <FaEnvelope className="mr-2 text-indigo-500" />
-                        Company Email *
+                        {t('merchant.fields.companyEmail')} *
                       </label>
                       <input
                         type="email"
@@ -955,11 +957,11 @@ export default function MerchantRegistrationPage() {
                         className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                           errors.companyEmail ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ 
-                          background: 'var(--surface)', 
+                        style={{
+                          background: 'var(--surface)',
                           color: 'var(--foreground)'
                         }}
-                        placeholder="company@example.com"
+                        placeholder={t('merchant.placeholders.companyEmail')}
                       />
                       {errors.companyEmail && <p className="text-sm text-red-500 flex items-center mt-1">
                         <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -970,7 +972,7 @@ export default function MerchantRegistrationPage() {
                     <div className="space-y-2">
                       <label htmlFor="companyPhoneNumber" className="block text-sm font-semibold flex items-center">
                         <FaPhone className="mr-2 text-indigo-500" />
-                        Company Phone Number *
+                        {t('merchant.fields.companyPhone')} *
                       </label>
                       <input
                         type="tel"
@@ -980,11 +982,11 @@ export default function MerchantRegistrationPage() {
                         className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                           errors.companyPhoneNumber ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ 
-                          background: 'var(--surface)', 
+                        style={{
+                          background: 'var(--surface)',
                           color: 'var(--foreground)'
                         }}
-                        placeholder="+358445359448"
+                        placeholder={t('merchant.placeholders.companyPhone')}
                       />
                       {errors.companyPhoneNumber && <p className="text-sm text-red-500 flex items-center mt-1">
                         <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -994,7 +996,7 @@ export default function MerchantRegistrationPage() {
 
                     <div className="space-y-2">
                       <label htmlFor="code" className="block text-sm font-semibold">
-                        Business Code
+                        {t('merchant.fields.businessCode')}
                       </label>
                       <input
                         type="text"
@@ -1002,11 +1004,11 @@ export default function MerchantRegistrationPage() {
                         value={formData.code}
                         onChange={(e) => handleInputChange('code', e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500"
-                        style={{ 
-                          background: 'var(--surface)', 
+                        style={{
+                          background: 'var(--surface)',
                           color: 'var(--foreground)'
                         }}
-                        placeholder="2589566-4"
+                        placeholder={t('merchant.placeholders.businessCode')}
                       />
                     </div>
                   </div>
@@ -1015,7 +1017,7 @@ export default function MerchantRegistrationPage() {
                     <div className="space-y-2">
                       <label htmlFor="companyAddress" className="block text-sm font-semibold flex items-center">
                         <FaMapMarkerAlt className="mr-2 text-indigo-500" />
-                        Company Address *
+                        {t('merchant.fields.companyAddress')} *
                       </label>
                       <input
                         type="text"
@@ -1025,11 +1027,11 @@ export default function MerchantRegistrationPage() {
                         className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                           errors.companyAddress ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ 
-                          background: 'var(--surface)', 
+                        style={{
+                          background: 'var(--surface)',
                           color: 'var(--foreground)'
                         }}
-                        placeholder="Laajavuorenkuja 3d 36"
+                        placeholder={t('merchant.placeholders.companyAddress')}
                       />
                       {errors.companyAddress && <p className="text-sm text-red-500 flex items-center mt-1">
                         <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -1040,7 +1042,7 @@ export default function MerchantRegistrationPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label htmlFor="country" className="block text-sm font-semibold">
-                          Country *
+                          {t('merchant.fields.country')} *
                         </label>
                         <CountryDropdown
                           value={formData.country}
@@ -1055,7 +1057,7 @@ export default function MerchantRegistrationPage() {
 
                       <div className="space-y-2">
                         <label htmlFor="companyDescription" className="block text-sm font-semibold">
-                          Company Description *
+                          {t('merchant.fields.companyDescription')} *
                         </label>
                         <textarea
                           id="companyDescription"
@@ -1065,11 +1067,11 @@ export default function MerchantRegistrationPage() {
                           className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none ${
                             errors.companyDescription ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                           }`}
-                          style={{ 
-                            background: 'var(--surface)', 
+                          style={{
+                            background: 'var(--surface)',
                             color: 'var(--foreground)'
                           }}
-                          placeholder="Describe your company and what kind of events you organize..."
+                          placeholder={t('merchant.placeholders.companyDescription')}
                         />
                         {errors.companyDescription && <p className="text-sm text-red-500 flex items-center mt-1">
                           <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -1087,15 +1089,15 @@ export default function MerchantRegistrationPage() {
                       <FaUser className="text-lg" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold">User Account</h2>
-                      <p className="text-sm opacity-70">Create your system access credentials</p>
+                      <h2 className="text-2xl font-bold">{t('merchant.userAccount.title')}</h2>
+                      <p className="text-sm opacity-70">{t('merchant.userAccount.subtitle')}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label htmlFor="userName" className="block text-sm font-semibold">
-                        Username (Email) *
+                        {t('merchant.fields.username')} *
                       </label>
                       <input
                         type="email"
@@ -1105,15 +1107,15 @@ export default function MerchantRegistrationPage() {
                         className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                           errors.userName ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ 
-                          background: 'var(--surface)', 
+                        style={{
+                          background: 'var(--surface)',
                           color: 'var(--foreground)'
                         }}
-                        placeholder="user@example.com"
+                        placeholder={t('merchant.placeholders.username')}
                       />
                       <div className="flex items-center text-xs text-gray-500 mt-1">
                         <FaInfoCircle className="mr-1" />
-                        This will be your username to access the system
+                        {t('merchant.messages.usernameHint')}
                       </div>
                       {errors.userName && <p className="text-sm text-red-500 flex items-center mt-1">
                         <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -1123,7 +1125,7 @@ export default function MerchantRegistrationPage() {
 
                     <div className="space-y-2">
                       <label htmlFor="password" className="block text-sm font-semibold">
-                        Password *
+                        {t('merchant.fields.password')} *
                       </label>
                       <div className="relative">
                         <input
@@ -1134,11 +1136,11 @@ export default function MerchantRegistrationPage() {
                           className={`w-full px-4 py-3 pr-12 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                             errors.password ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                           }`}
-                          style={{ 
-                            background: 'var(--surface)', 
+                          style={{
+                            background: 'var(--surface)',
                             color: 'var(--foreground)'
                           }}
-                          placeholder="Enter a strong password"
+                          placeholder={t('merchant.placeholders.password')}
                         />
                         <button
                           type="button"
@@ -1152,7 +1154,7 @@ export default function MerchantRegistrationPage() {
                         <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
                         {errors.password}
                       </p>}
-                      
+
                       {/* Password strength indicator */}
                       {formData.password && (
                         <div className="mt-2 space-y-1">
@@ -1185,7 +1187,7 @@ export default function MerchantRegistrationPage() {
 
                     <div className="space-y-2">
                       <label htmlFor="verifyPassword" className="block text-sm font-semibold">
-                        Verify Password *
+                        {t('merchant.fields.verifyPassword')} *
                       </label>
                       <div className="relative">
                         <input
@@ -1196,11 +1198,11 @@ export default function MerchantRegistrationPage() {
                           className={`w-full px-4 py-3 pr-12 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                             errors.verifyPassword ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                           }`}
-                          style={{ 
-                            background: 'var(--surface)', 
+                          style={{
+                            background: 'var(--surface)',
                             color: 'var(--foreground)'
                           }}
-                          placeholder="Confirm your password"
+                          placeholder={t('merchant.placeholders.verifyPassword')}
                         />
                         <button
                           type="button"
@@ -1225,15 +1227,15 @@ export default function MerchantRegistrationPage() {
                       <FaGlobe className="text-lg" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold">Additional Information</h2>
-                      <p className="text-sm opacity-70">Optional details to enhance your profile</p>
+                      <h2 className="text-2xl font-bold">{t('merchant.additionalInfo.title')}</h2>
+                      <p className="text-sm opacity-70">{t('merchant.additionalInfo.subtitle')}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label htmlFor="website" className="block text-sm font-semibold">
-                        Website
+                        {t('merchant.fields.website')}
                       </label>
                       <input
                         type="url"
@@ -1243,11 +1245,11 @@ export default function MerchantRegistrationPage() {
                         className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                           errors.website ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ 
-                          background: 'var(--surface)', 
+                        style={{
+                          background: 'var(--surface)',
                           color: 'var(--foreground)'
                         }}
-                        placeholder="https://yourcompany.com"
+                        placeholder={t('merchant.placeholders.website')}
                       />
                       {errors.website && <p className="text-sm text-red-500 flex items-center mt-1">
                         <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -1257,7 +1259,7 @@ export default function MerchantRegistrationPage() {
 
                     <div className="space-y-2">
                       <label htmlFor="logo" className="block text-sm font-semibold">
-                        Logo URL
+                        {t('merchant.fields.logo')}
                       </label>
                       <input
                         type="url"
@@ -1267,11 +1269,11 @@ export default function MerchantRegistrationPage() {
                         className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${
                           errors.logo ? 'border-red-400' : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ 
-                          background: 'var(--surface)', 
+                        style={{
+                          background: 'var(--surface)',
                           color: 'var(--foreground)'
                         }}
-                        placeholder="https://example.com/logo.png"
+                        placeholder={t('merchant.placeholders.logo')}
                       />
                       {errors.logo && <p className="text-sm text-red-500 flex items-center mt-1">
                         <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -1288,17 +1290,17 @@ export default function MerchantRegistrationPage() {
                       <FaStripe className="text-lg" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold">Payment Setup</h2>
-                      <p className="text-sm opacity-70">Configure your payment processing</p>
+                      <h2 className="text-2xl font-bold">{t('merchant.paymentSetup.title')}</h2>
+                      <p className="text-sm opacity-70">{t('merchant.paymentSetup.subtitle')}</p>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div 
+                      <div
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                          formData.usePlatformAccount 
-                            ? 'border-indigo-500 bg-indigo-50/50' 
+                          formData.usePlatformAccount
+                            ? 'border-indigo-500 bg-indigo-50/50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => handleInputChange('usePlatformAccount', true)}
@@ -1315,17 +1317,17 @@ export default function MerchantRegistrationPage() {
                           />
                           <div>
                             <label htmlFor="usePlatformAccount" className="text-sm font-semibold cursor-pointer">
-                              Use Platform Account
+                              {t('merchant.stripeOptions.platformAccount')}
                             </label>
-                            <p className="text-xs opacity-70 mt-1">Recommended for most merchants</p>
+                            <p className="text-xs opacity-70 mt-1">{t('merchant.stripeOptions.platformAccountDesc')}</p>
                           </div>
                         </div>
                       </div>
 
-                      <div 
+                      <div
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                          !formData.usePlatformAccount 
-                            ? 'border-indigo-500 bg-indigo-50/50' 
+                          !formData.usePlatformAccount
+                            ? 'border-indigo-500 bg-indigo-50/50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => handleInputChange('usePlatformAccount', false)}
@@ -1342,9 +1344,9 @@ export default function MerchantRegistrationPage() {
                           />
                           <div>
                             <label htmlFor="useCustomAccount" className="text-sm font-semibold cursor-pointer">
-                              Custom Stripe Account
+                              {t('merchant.stripeOptions.customAccount')}
                             </label>
-                            <p className="text-xs opacity-70 mt-1">For advanced users</p>
+                            <p className="text-xs opacity-70 mt-1">{t('merchant.stripeOptions.customAccountDesc')}</p>
                           </div>
                         </div>
                       </div>
@@ -1352,8 +1354,8 @@ export default function MerchantRegistrationPage() {
 
                     {!formData.usePlatformAccount && (
                       <div className="mt-4 space-y-4">
-                        <div className="p-4 rounded-xl border-2 border-dashed" style={{ 
-                          background: 'var(--surface)', 
+                        <div className="p-4 rounded-xl border-2 border-dashed" style={{
+                          background: 'var(--surface)',
                           borderColor: formData.stripeConnected ? '#10B981' : 'var(--border)'
                         }}>
                           <div className="text-center">
@@ -1363,15 +1365,15 @@ export default function MerchantRegistrationPage() {
                                   <span className="text-2xl">✅</span>
                                 </div>
                                 <div>
-                                  <h3 className="text-lg font-semibold text-green-600">Stripe Account Connected!</h3>
-                                  <p className="text-sm text-gray-600 mt-1">Your Stripe account has been successfully connected.</p>
+                                  <h3 className="text-lg font-semibold text-green-600">{t('merchant.stripeOptions.connectedTitle')}</h3>
+                                  <p className="text-sm text-gray-600 mt-1">{t('merchant.stripeOptions.connectedDesc')}</p>
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => setFormData(prev => ({ ...prev, stripeConnected: false, stripeAccount: '' }))}
                                   className="text-sm text-red-600 hover:text-red-700 underline"
                                 >
-                                  Disconnect Account
+                                  {t('merchant.stripeOptions.disconnect')}
                                 </button>
                               </div>
                             ) : (
@@ -1380,8 +1382,8 @@ export default function MerchantRegistrationPage() {
                                   <FaStripe className="text-2xl text-indigo-600" />
                                 </div>
                                 <div>
-                                  <h3 className="text-lg font-semibold">Connect Your Stripe Account</h3>
-                                  <p className="text-sm text-gray-600 mt-1">Click the button below to securely connect your Stripe account</p>
+                                  <h3 className="text-lg font-semibold">{t('merchant.stripeOptions.connectTitle')}</h3>
+                                  <p className="text-sm text-gray-600 mt-1">{t('merchant.stripeOptions.connectDesc')}</p>
                                 </div>
                                 <button
                                   type="button"
@@ -1389,17 +1391,17 @@ export default function MerchantRegistrationPage() {
                                   className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
                                 >
                                   <FaStripe className="mr-2" />
-                                  Connect with Stripe
+                                  {t('merchant.stripeOptions.connectButton')}
                                   <FaExternalLinkAlt className="ml-2 text-sm" />
                                 </button>
                                 <p className="text-xs text-gray-500">
-                                  You&apos;ll be redirected to Stripe to authorize the connection
+                                  {t('merchant.stripeOptions.connectRedirect')}
                                 </p>
                               </div>
                             )}
                           </div>
                         </div>
-                        
+
                         {errors.stripeAccount && (
                           <p className="text-sm text-red-500 flex items-center">
                             <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
@@ -1415,8 +1417,8 @@ export default function MerchantRegistrationPage() {
                 <div className="pt-8">
                   {submitMessage && (
                     <div className={`mb-6 p-4 rounded-xl border ${
-                      submitMessage.type === 'success' 
-                        ? 'bg-green-50 text-green-800 border-green-200' 
+                      submitMessage.type === 'success'
+                        ? 'bg-green-50 text-green-800 border-green-200'
                         : 'bg-red-50 text-red-800 border-red-200'
                     }`}>
                       <div className="flex items-center">
@@ -1443,16 +1445,16 @@ export default function MerchantRegistrationPage() {
                       submitMessage?.type === 'success' ? (
                         <div className="flex items-center justify-center">
                           <span className="mr-2">✅</span>
-                          Registration Submitted Successfully!
+                          {t('merchant.submitButton.success')}
                         </div>
                       ) : (
                         <div className="flex items-center justify-center">
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-3"></div>
-                          Submitting Registration...
+                          {t('merchant.submitButton.submitting')}
                         </div>
                       )
                     ) : (
-                      'Submit Registration'
+                      t('merchant.submitButton.submit')
                     )}
                   </button>
                 </div>

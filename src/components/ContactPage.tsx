@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { api } from '@/services/apiClient';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface ContactPageProps {
   data?: {
@@ -23,6 +24,7 @@ interface ContactPageProps {
 }
 
 export default function ContactPage({ data }: ContactPageProps) {
+  const { t } = useTranslation();
   const settings = data?.setting?.[0] || {};
   const contactInfo = settings?.contactInfo || {};
 
@@ -37,10 +39,10 @@ export default function ContactPage({ data }: ContactPageProps) {
     const num1 = Math.floor(Math.random() * 10) + 1;
     const num2 = Math.floor(Math.random() * 10) + 1;
     const operation = Math.random() > 0.5 ? '+' : '-';
-    
+
     let question = '';
     let answer = 0;
-    
+
     if (operation === '+') {
       question = `${num1} + ${num2} = ?`;
       answer = num1 + num2;
@@ -51,7 +53,7 @@ export default function ContactPage({ data }: ContactPageProps) {
       question = `${larger} - ${smaller} = ?`;
       answer = larger - smaller;
     }
-    
+
     setCaptchaQuestion(question);
     setCaptchaAnswer(answer.toString());
     setCaptchaCorrect(false);
@@ -92,7 +94,7 @@ export default function ContactPage({ data }: ContactPageProps) {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!captchaCorrect) {
       setSubmitStatus('error');
       return;
@@ -104,7 +106,7 @@ export default function ContactPage({ data }: ContactPageProps) {
     try {
       await api.post('/sendFeedback', formData);
       setSubmitStatus('success');
-      
+
       // Reset form and generate new captcha
       setFormData({
         firstName: '',
@@ -128,44 +130,44 @@ export default function ContactPage({ data }: ContactPageProps) {
         {/* Header */}
         <div className="mb-12 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Contact Us
+            {t('contact.title')}
           </h1>
           <div className="w-20 h-1 bg-gradient-to-r from-slate-400 to-slate-600 rounded-full mx-auto mb-6"></div>
           <p className="text-lg opacity-80 max-w-2xl mx-auto" style={{ color: 'var(--foreground)' }}>
-            Get in touch with us. We&apos;d love to hear from you and answer any questions you may have.
+            {t('contact.subtitle')}
           </p>
         </div>
 
         {/* Success/Error Messages */}
         {submitStatus === 'success' && (
-          <div className="mb-8 p-6 rounded-lg border" style={{ 
-            backgroundColor: 'var(--surface)', 
-            borderColor: 'var(--border)' 
+          <div className="mb-8 p-6 rounded-lg border" style={{
+            backgroundColor: 'var(--surface)',
+            borderColor: 'var(--border)'
           }}>
             <div className="flex items-center">
               <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--foreground)' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               <div>
-                <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>Message Sent!</h3>
-                <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Thank you for your message. We&apos;ll get back to you as soon as possible.</p>
+                <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{t('contact.messageSent')}</h3>
+                <p className="opacity-80" style={{ color: 'var(--foreground)' }}>{t('contact.messageSentText')}</p>
               </div>
             </div>
           </div>
         )}
 
         {submitStatus === 'error' && (
-          <div className="mb-8 p-6 rounded-lg border" style={{ 
-            backgroundColor: 'var(--surface)', 
-            borderColor: 'var(--border)' 
+          <div className="mb-8 p-6 rounded-lg border" style={{
+            backgroundColor: 'var(--surface)',
+            borderColor: 'var(--border)'
           }}>
             <div className="flex items-center">
               <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--foreground)' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
               <div>
-                <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>Submission Failed</h3>
-                <p className="opacity-80" style={{ color: 'var(--foreground)' }}>There was an error sending your message. Please try again.</p>
+                <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{t('contact.submissionFailed')}</h3>
+                <p className="opacity-80" style={{ color: 'var(--foreground)' }}>{t('contact.submissionFailedText')}</p>
               </div>
             </div>
           </div>
@@ -175,8 +177,8 @@ export default function ContactPage({ data }: ContactPageProps) {
           {/* Contact Information */}
           <div className="space-y-8">
             <div>
-              <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>Get in Touch</h2>
-              
+              <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>{t('contact.getInTouch')}</h2>
+
               {/* Contact Details */}
               <div className="space-y-6">
                 {contactInfo.email && (
@@ -187,8 +189,8 @@ export default function ContactPage({ data }: ContactPageProps) {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>Email</h3>
-                      <a 
+                      <h3 className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{t('contact.email')}</h3>
+                      <a
                         href={`mailto:${contactInfo.email}`}
                         className="opacity-80 hover:opacity-100 transition-colors"
                         style={{ color: 'var(--foreground)' }}
@@ -207,8 +209,8 @@ export default function ContactPage({ data }: ContactPageProps) {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>Phone</h3>
-                      <a 
+                      <h3 className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{t('contact.phone')}</h3>
+                      <a
                         href={`tel:${contactInfo.phone}`}
                         className="opacity-80 hover:opacity-100 transition-colors"
                         style={{ color: 'var(--foreground)' }}
@@ -228,7 +230,7 @@ export default function ContactPage({ data }: ContactPageProps) {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>Address</h3>
+                      <h3 className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{t('contact.address')}</h3>
                       <p className="opacity-80" style={{ color: 'var(--foreground)' }}>
                         {contactInfo.address}
                       </p>
@@ -241,7 +243,7 @@ export default function ContactPage({ data }: ContactPageProps) {
             {/* Social Media */}
             {settings.socialMedia && (
               <div>
-                <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--foreground)' }}>Follow Us</h3>
+                <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--foreground)' }}>{t('contact.followUs')}</h3>
                 <div className="flex space-x-4">
                   {settings.socialMedia?.fb && (
                     <a
@@ -256,7 +258,7 @@ export default function ContactPage({ data }: ContactPageProps) {
                       </svg>
                     </a>
                   )}
-                  
+
                   {settings.socialMedia.x && (
                     <a
                       href={settings.socialMedia.x}
@@ -269,7 +271,7 @@ export default function ContactPage({ data }: ContactPageProps) {
                       </svg>
                     </a>
                   )}
-                  
+
                   {settings.socialMedia.in && (
                     <a
                       href={settings.socialMedia.in}
@@ -282,7 +284,7 @@ export default function ContactPage({ data }: ContactPageProps) {
                       </svg>
                     </a>
                   )}
-                  
+
                     {settings.socialMedia.ln && (
                       <a
                         href={settings.socialMedia.ln}
@@ -317,12 +319,12 @@ export default function ContactPage({ data }: ContactPageProps) {
 
           {/* Contact Form */}
           <div>
-            <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>Send us a Message</h2>
+            <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>{t('contact.sendMessage')}</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
-                    First Name
+                    {t('contact.firstName')}
                   </label>
                   <input
                     type="text"
@@ -333,12 +335,12 @@ export default function ContactPage({ data }: ContactPageProps) {
                     required
                     className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors"
                     style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                    placeholder="Your first name"
+                    placeholder={t('contact.firstNamePlaceholder')}
                   />
                 </div>
                 <div>
                   <label htmlFor="lastName" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
-                    Last Name
+                    {t('contact.lastName')}
                   </label>
                   <input
                     type="text"
@@ -349,14 +351,14 @@ export default function ContactPage({ data }: ContactPageProps) {
                     required
                     className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors"
                     style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                    placeholder="Your last name"
+                    placeholder={t('contact.lastNamePlaceholder')}
                   />
                 </div>
               </div>
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
-                  Email Address
+                  {t('contact.emailAddress')}
                 </label>
                 <input
                   type="email"
@@ -367,13 +369,13 @@ export default function ContactPage({ data }: ContactPageProps) {
                   required
                   className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors"
                   style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                  placeholder="your.email@example.com"
+                  placeholder={t('contact.emailPlaceholder')}
                 />
               </div>
 
               <div>
                 <label htmlFor="subject" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
-                  Subject
+                  {t('contact.subject')}
                 </label>
                 <input
                   type="text"
@@ -384,13 +386,13 @@ export default function ContactPage({ data }: ContactPageProps) {
                   required
                   className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors"
                   style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                  placeholder="What&apos;s this about?"
+                  placeholder={t('contact.subjectPlaceholder')}
                 />
               </div>
 
               <div>
                 <label htmlFor="message" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
-                  Message
+                  {t('contact.message')}
                 </label>
                 <textarea
                   id="message"
@@ -401,14 +403,14 @@ export default function ContactPage({ data }: ContactPageProps) {
                   required
                   className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors resize-none"
                   style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                  placeholder="Tell us how we can help you..."
+                  placeholder={t('contact.messagePlaceholder')}
                 />
               </div>
 
               {/* Captcha */}
               <div>
                 <label htmlFor="captcha" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                  Security Check
+                  {t('contact.securityCheck')}
                 </label>
                 <div className="flex items-center space-x-4">
                   <div className="flex-1">
@@ -420,7 +422,7 @@ export default function ContactPage({ data }: ContactPageProps) {
                         type="button"
                         onClick={generateCaptcha}
                         className="text-xs px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        title="Generate new question"
+                        title={t('contact.generateNew')}
                       >
                         ↻
                       </button>
@@ -435,7 +437,7 @@ export default function ContactPage({ data }: ContactPageProps) {
                       onChange={(e) => checkCaptcha(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-colors text-center"
                       style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-                      placeholder="?"
+                      placeholder={t('contact.answerPlaceholder')}
                       required
                     />
                   </div>
@@ -443,9 +445,9 @@ export default function ContactPage({ data }: ContactPageProps) {
                 {userCaptchaInput && (
                   <div className="mt-2 text-xs">
                     {captchaCorrect ? (
-                      <span className="text-green-600 dark:text-green-400">✓ Correct!</span>
+                      <span className="text-green-600 dark:text-green-400">✓ {t('contact.correct')}</span>
                     ) : (
-                      <span className="text-red-600 dark:text-red-400">✗ Incorrect answer</span>
+                      <span className="text-red-600 dark:text-red-400">✗ {t('contact.incorrect')}</span>
                     )}
                   </div>
                 )}
@@ -462,10 +464,10 @@ export default function ContactPage({ data }: ContactPageProps) {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Sending...
+                    {t('contact.sending')}
                   </>
                 ) : (
-                  'Send Message'
+                  t('contact.sendButton')
                 )}
               </button>
             </form>

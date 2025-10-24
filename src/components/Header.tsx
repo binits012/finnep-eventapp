@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { FaSun, FaMoon } from 'react-icons/fa';
+import LocaleSelector from './LocaleSelector';
+import { useTranslation } from '@/hooks/useTranslation';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -16,6 +18,7 @@ declare global {
 }
 
 export default function Header() {
+  const { t } = useTranslation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -25,17 +28,17 @@ export default function Header() {
     return (stored === 'light' || stored === 'dark' ) ? stored : 'dark';
   });
   const pathname = usePathname();
-  
+
   useEffect(() => {
     setMounted(true);
   }, []);
-  
+
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -79,8 +82,8 @@ export default function Header() {
   const ButtonIcon = mounted ? (theme === 'dark' ? FaSun : FaMoon) : FaMoon;
 
   return (
-    <header 
-      className={`fixed w-full z-50 transition-all duration-300 overflow-x-hidden ${
+    <header
+      className={`fixed w-full z-50 transition-all duration-300 ${
         isScrolled ? 'backdrop-blur-md shadow-lg' : ''
       }`}
       style={{ background: isScrolled ? 'color-mix(in srgb, var(--background) 90%, transparent)' : 'var(--background)', color: 'var(--foreground)' }}
@@ -89,17 +92,17 @@ export default function Header() {
         <div className="flex justify-between items-center py-4 md:py-6">
           {/* Logo */}
           <Link href="/">
-            <motion.div 
-              className="flex items-center justify-center" 
+            <motion.div
+              className="flex items-center justify-center"
               whileHover={{ scale: 1.03 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
-              <Image 
-                src="/logo.png" 
-                alt="Finnep Logo" 
-                width={140} 
-                height={100} 
-                priority 
+              <Image
+                src="/logo.png"
+                alt="Finnep Logo"
+                width={140}
+                height={100}
+                priority
                 className="h-10 w-auto object-contain"
               />
             </motion.div>
@@ -108,29 +111,30 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {[
-              { href: "/events", label: "Events" },
-              
-              //{ href: "/about", label: "About" },
-              { href: "/merchant", label: "Merchant" },
+              { href: "/events", label: t('header.events') },
+              { href: "/merchant", label: t('header.merchant') },
             ].map((link) => (
-              <Link 
-                key={link.href} 
+              <Link
+                key={link.href}
                 href={link.href}
                 className={`relative font-medium text-base transition-colors duration-200
-                  ${pathname === link.href 
-                    ? 'text-indigo-600 dark:text-indigo-400' 
+                  ${pathname === link.href
+                    ? 'text-indigo-600 dark:text-indigo-400'
                     : 'hover:text-indigo-500 dark:hover:text-indigo-400'
                   }`}
               >
                 {link.label}
                 {pathname === link.href && (
-                  <motion.span 
+                  <motion.span
                     className="absolute bottom-[-8px] left-0 w-full h-[3px] bg-indigo-500 rounded-full"
                     layoutId="underline"
                   />
                 )}
               </Link>
             ))}
+
+            {/* Locale Selector */}
+            <LocaleSelector />
 
             {/* Theme Switcher - Desktop (cycle system -> light -> dark) */}
             <button
@@ -146,6 +150,9 @@ export default function Header() {
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
+            {/* Locale Selector - Mobile */}
+            <LocaleSelector />
+
             {/* Theme Switcher - Mobile */}
             <button
               onClick={cycleTheme}
@@ -157,25 +164,25 @@ export default function Header() {
               <ButtonIcon className={mounted && theme === 'dark' ? 'text-yellow-400' : undefined} />
             </button>
 
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="focus:outline-none"
               style={{ color: 'var(--foreground)' }}
             >
               <span className="sr-only">Open menu</span>
               <div className="w-6 flex items-center justify-center relative">
-                <span 
+                <span
                   className={`block w-6 h-0.5 bg-current transform transition duration-300 ease-in-out ${
                     isMobileMenuOpen ? 'rotate-45 translate-y-1' : ''
                   }`}
                 />
-                <span 
+                <span
                   className={`block absolute h-0.5 bg-current transform transition-all duration-300 ease-in-out ${
                     isMobileMenuOpen ? 'opacity-0 translate-x-3' : 'w-6'
                   }`}
                   style={{ top: '0.55rem' }}
                 />
-                <span 
+                <span
                   className={`block w-6 h-0.5 bg-current transform transition duration-300 ease-in-out ${
                     isMobileMenuOpen ? '-rotate-45 -translate-y-1' : ''
                   }`}
@@ -188,26 +195,25 @@ export default function Header() {
       </div>
 
       {/* Mobile Menu */}
-      <div 
+      <div
         className={`md:hidden transition-all duration-300 ease-in-out ${
-          isMobileMenuOpen 
-            ? 'opacity-100 max-h-64' 
+          isMobileMenuOpen
+            ? 'opacity-100 max-h-64'
             : 'opacity-0 max-h-0 pointer-events-none'
         }`}
       >
         <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
           <nav className="flex flex-col space-y-4">
             {[
-              { href: "/events", label: "Events" },
-              { href: "/dashboard", label: "Dashboard" },
-              { href: "/about", label: "About" }
+              { href: "/events", label: t('header.events') },
+              { href: "/merchant", label: t('header.merchant') }
             ].map((link) => (
-              <Link 
-                key={link.href} 
+              <Link
+                key={link.href}
                 href={link.href}
                 className={`font-medium text-base px-3 py-2 rounded-md transition-colors duration-200
-                  ${pathname === link.href 
-                    ? 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-gray-800' 
+                  ${pathname === link.href
+                    ? 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-gray-800'
                     : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 onClick={() => setIsMobileMenuOpen(false)}

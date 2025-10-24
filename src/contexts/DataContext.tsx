@@ -22,6 +22,8 @@ interface VenueData {
   website?: string;
   socialMedia?: Record<string, string>;
   photos?: string[];
+  country?: string;
+  city?: string;
   events?: Array<{
     id: string;
     name: string;
@@ -75,7 +77,7 @@ export function DataProvider({ children }: DataProviderProps) {
       const response = await api.get('/events');
       // Handle the response structure - it has an 'items' property
       const events = (response as { items?: Event[] }).items || [];
-      
+
       // Transform Event data to VenueData format
       const venuesData: VenueData[] = events.map((event: Event) => ({
         id: event._id,
@@ -85,13 +87,15 @@ export function DataProvider({ children }: DataProviderProps) {
         website: event.venueInfo?.media?.website || '',
         socialMedia: event.venueInfo?.media?.social || {},
         photos: event.venueInfo?.media?.photo || [],
+        country: event.country || '',
+        city: event.city || '',
         events: [{
           id: event._id,
           name: event.eventTitle,
           date: event.eventDate
         }]
       }));
-      
+
       setVenuesData(venuesData);
     } catch (err) {
       console.error('Error fetching venues data:', err);

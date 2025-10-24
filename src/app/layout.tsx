@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Script from 'next/script';
 import { DataProvider } from '@/contexts/DataContext';
+import { LocaleProvider } from '@/contexts/LocaleContext';
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -41,11 +42,13 @@ export default function RootLayout({
           {`(function(){try{var d=document.documentElement;var mq=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)');var osListener=null;function apply(theme){if(theme==='dark'){d.classList.add('dark');d.setAttribute('data-theme','dark');}else if(theme==='light'){d.classList.remove('dark');d.setAttribute('data-theme','light');}else{var effective=(mq&&mq.matches)?'dark':'light';if(effective==='dark'){d.classList.add('dark');d.setAttribute('data-theme','dark');}else{d.classList.remove('dark');d.setAttribute('data-theme','light');}}}function setTheme(mode){try{if(mode!=='light'&&mode!=='dark'&&mode!=='system'){mode='system';}localStorage.setItem('theme',mode);apply(mode);if(osListener&&mq){mq.removeEventListener('change',osListener);osListener=null;}if(mode==='system'&&mq){osListener=function(){apply('system');};mq.addEventListener('change',osListener);} }catch(e){}};window.__setTheme=setTheme;var stored=localStorage.getItem('theme')||'dark';apply(stored);if(stored==='system'&&mq){osListener=function(){apply('system');};mq.addEventListener('change',osListener);}window.addEventListener('storage',function(ev){if(ev.key==='theme'){var val=ev.newValue||'dark';apply(val);}});}catch(e){}})();`}
         </Script>
 
-        <DataProvider>
-          <Header />
-          <main className="pt-24">{children}</main>
-          <Footer />
-        </DataProvider>
+        <LocaleProvider>
+          <DataProvider>
+            <Header />
+            <main className="pt-24">{children}</main>
+            <Footer />
+          </DataProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

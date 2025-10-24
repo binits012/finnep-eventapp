@@ -1,0 +1,480 @@
+export type Locale = 'en-US' | 'fi-FI' | 'sv-SE' | 'da-DK' | 'no-NO';
+
+export interface TranslationParams {
+  [key: string]: string | number;
+}
+
+export interface TranslationKeys {
+  common: {
+    loading: string;
+    error: string;
+    success: string;
+    submit: string;
+    cancel: string;
+    save: string;
+    edit: string;
+    delete: string;
+    close: string;
+    back: string;
+    next: string;
+    previous: string;
+    required: string;
+    optional: string;
+  };
+  header: {
+    home: string;
+    events: string;
+    venues: string;
+    about: string;
+    contact: string;
+    careers: string;
+    themeToggle: string;
+    menuToggle: string;
+  };
+  footer: {
+    tagline: string;
+    explore: string;
+    allEvents: string;
+    venues: string;
+    company: string;
+    aboutUs: string;
+    contact: string;
+    careers: string;
+    blog: string;
+    stayUpdated: string;
+    subscribeText: string;
+    emailPlaceholder: string;
+    subscribe: string;
+    copyright: string;
+    privacyPolicy: string;
+    termsOfService: string;
+    srFacebook: string;
+    srTwitter: string;
+    srInstagram: string;
+    srLinkedIn: string;
+    srTiktok: string;
+  };
+  home: {
+    loading: string;
+    error: string;
+    hero: {
+      title: string;
+      subtitle: string;
+      cta: string;
+      learnMore: string;
+    };
+    featured: {
+      title: string;
+      subtitle: string;
+    };
+    upcoming: {
+      title: string;
+      viewAll: string;
+      noEvents: string;
+      badge: string;
+    };
+    cta: {
+      title: string;
+      subtitle: string;
+      button: string;
+    };
+    discover: {
+      title: string;
+      subtitle: string;
+    };
+    viewDetails: string;
+    audience: string;
+    directions: string;
+    watchVideo: string;
+    video: string;
+    ticketsSold: string;
+    capacity: string;
+    limitedCapacity: string;
+  };
+  contact: {
+    title: string;
+    subtitle: string;
+    getInTouch: string;
+    email: string;
+    phone: string;
+    address: string;
+    followUs: string;
+    sendMessage: string;
+    firstName: string;
+    firstNamePlaceholder: string;
+    lastName: string;
+    lastNamePlaceholder: string;
+    emailAddress: string;
+    emailPlaceholder: string;
+    subject: string;
+    subjectPlaceholder: string;
+    message: string;
+    messagePlaceholder: string;
+    securityCheck: string;
+    generateNew: string;
+    answerPlaceholder: string;
+    sendButton: string;
+    sending: string;
+    correct: string;
+    incorrect: string;
+    messageSent: string;
+    messageSentText: string;
+    submissionFailed: string;
+    submissionFailedText: string;
+  };
+  careers: {
+    title: string;
+    subtitle: string;
+    applicationSubmitted: string;
+    applicationSubmittedText: string;
+    submissionFailed: string;
+    submissionFailedText: string;
+    personalInformation: string;
+    firstName: string;
+    firstNamePlaceholder: string;
+    lastName: string;
+    lastNamePlaceholder: string;
+    emailAddress: string;
+    emailPlaceholder: string;
+    phoneNumber: string;
+    phonePlaceholder: string;
+    professionalInformation: string;
+    positionApplied: string;
+    selectPosition: string;
+    positionFrontend: string;
+    positionBackend: string;
+    positionFullstack: string;
+    positionUiUx: string;
+    positionProduct: string;
+    positionMarketing: string;
+    positionData: string;
+    positionDevops: string;
+    positionSales: string;
+    positionCustomer: string;
+    positionOther: string;
+    yearsExperience: string;
+    selectExperience: string;
+    'experience0-1': string;
+    'experience1-3': string;
+    'experience3-5': string;
+    'experience5-7': string;
+    'experience7-10': string;
+    experience10plus: string;
+    coverLetter: string;
+    coverLetterPlaceholder: string;
+    resumePortfolio: string;
+    resumeCV: string;
+    fileHint: string;
+    portfolioURL: string;
+    portfolioPlaceholder: string;
+    linkedinProfile: string;
+    linkedinPlaceholder: string;
+    additionalInformation: string;
+    availability: string;
+    selectAvailability: string;
+    availImmediate: string;
+    avail2Weeks: string;
+    avail1Month: string;
+    avail2Months: string;
+    availFlexible: string;
+    salaryRange: string;
+    salaryPlaceholder: string;
+    relocate: string;
+    selectOption: string;
+    relocateYes: string;
+    relocateNo: string;
+    relocateMaybe: string;
+    additionalInfo: string;
+    additionalInfoPlaceholder: string;
+    submitButton: string;
+    submittingButton: string;
+    securityCheck: string;
+    correct: string;
+    incorrect: string;
+  };
+  events: {
+    title: string;
+    subtitle: string;
+    searchPlaceholder: string;
+    eventsAtVenue: string;
+    eventCount: string;
+    eventsFoundAtVenue: string;
+    clearVenueFilter: string;
+    filters: string;
+    noEventsFound: string;
+    viewDetails: string;
+    getTickets: string;
+    noEvents: string;
+    loading: string;
+    error: string;
+  };
+  venues: {
+    title: string;
+    subtitle: string;
+    searchPlaceholder: string;
+    discoverVenues: string;
+    exploreVenues: string;
+    venuesFound: string;
+    stunningVenues: string;
+    venueDescription: string;
+    filters: string;
+    filteredBy: string;
+    filterByCountry: string;
+    allCountries: string;
+    noVenuesFound: string;
+    noVenuesMessage: string;
+    event: string;
+    events: string;
+    popular: string;
+    upcomingEvents: string;
+    moreEvents: string;
+    connectWithVenue: string;
+    links: string;
+    link: string;
+    website: string;
+    facebook: string;
+    twitter: string;
+    instagram: string;
+    linkedin: string;
+    viewEventsAtVenue: string;
+    loading: string;
+    error: string;
+  };
+  about: {
+    title: string;
+    subtitle: string;
+  };
+  merchant: {
+    title: string;
+    subtitle: string;
+    portal: string;
+    companyInfo: {
+      title: string;
+      subtitle: string;
+    };
+    userAccount: {
+      title: string;
+      subtitle: string;
+    };
+    additionalInfo: {
+      title: string;
+      subtitle: string;
+    };
+    paymentSetup: {
+      title: string;
+      subtitle: string;
+    };
+    fields: {
+      orgName: string;
+      companyEmail: string;
+      companyPhone: string;
+      companyAddress: string;
+      country: string;
+      businessCode: string;
+      companyDescription: string;
+      username: string;
+      password: string;
+      verifyPassword: string;
+      website: string;
+      logo: string;
+    };
+    placeholders: {
+      orgName: string;
+      companyEmail: string;
+      companyPhone: string;
+      companyAddress: string;
+      businessCode: string;
+      companyDescription: string;
+      username: string;
+      password: string;
+      verifyPassword: string;
+      website: string;
+      logo: string;
+    };
+    passwordRequirements: {
+      title: string;
+      minLength: string;
+      uppercase: string;
+      lowercase: string;
+      number: string;
+      special: string;
+    };
+    stripeOptions: {
+      platformAccount: string;
+      platformAccountDesc: string;
+      customAccount: string;
+      customAccountDesc: string;
+      connectTitle: string;
+      connectDesc: string;
+      connectButton: string;
+      connectRedirect: string;
+      connectedTitle: string;
+      connectedDesc: string;
+      disconnect: string;
+    };
+    submitButton: {
+      submit: string;
+      submitting: string;
+      success: string;
+    };
+    messages: {
+      usernameHint: string;
+      stripeConnected: string;
+      registrationSuccess: string;
+      oauthError: string;
+      securityError: string;
+      expiredError: string;
+      stripeError: string;
+      cancelledError: string;
+      requestExpired: string;
+      submitError: string;
+    };
+    validation: {
+      required: string;
+      validEmail: string;
+      usernameEmail: string;
+      passwordRequirements: string;
+      passwordMatch: string;
+      passwordsMatch: string;
+      validPhone: string;
+      validWebsite: string;
+      validLogo: string;
+      stripeRequired: string;
+    };
+  };
+  eventDetail: {
+    video: {
+      title: string;
+    };
+    about: {
+      title: string;
+    };
+    additionalInfo: {
+      title: string;
+    };
+    venue: {
+      title: string;
+      visitWebsite: string;
+      followVenue: string;
+      transportation: string;
+    };
+    organizer: {
+      title: string;
+      visitWebsite: string;
+    };
+    gallery: {
+      title: string;
+      more: string;
+    };
+    tickets: {
+      title: string;
+      serviceFee: string;
+      vat: string;
+      total: string;
+      available: string;
+      soldOut: string;
+      buyTicket: string;
+      selectTicket: string;
+    };
+    eventDetails: {
+      title: string;
+      dateTime: string;
+      location: string;
+      capacity: string;
+      attendees: string;
+    };
+    social: {
+      shareEvent: string;
+    };
+  };
+  checkout: {
+    title: string;
+    eventDetails: string;
+    event: string;
+    ticketType: string;
+    quantity: string;
+    tickets: string;
+    pricing: string;
+    subtotal: string;
+    serviceFee: string;
+    vat: string;
+    total: string;
+    paymentDetails: string;
+    cardNumber: string;
+    cardNumberPlaceholder: string;
+    expiryDate: string;
+    expiryPlaceholder: string;
+    cvv: string;
+    cvvPlaceholder: string;
+    cardholderName: string;
+    namePlaceholder: string;
+    billingAddress: string;
+    country: string;
+    city: string;
+    postalCode: string;
+    address: string;
+    completePurchase: string;
+    processing: string;
+    securePayment: string;
+    securePaymentText: string;
+    loading: string;
+    error: string;
+    invalidData: string;
+    decodeError: string;
+  };
+  ticketModal: {
+    title: string;
+    email: string;
+    emailPlaceholder: string;
+    confirmEmail: string;
+    confirmEmailPlaceholder: string;
+    quantity: string;
+    quantityPlaceholder: string;
+    quantityHint: string;
+    price: string;
+    serviceFee: string;
+    vat: string;
+    total: string;
+    marketingOptIn: string;
+    readMore: string;
+    cancel: string;
+    proceed: string;
+    validEmail: string;
+    emailsMatch: string;
+  };
+  success: {
+    title: string;
+    subtitle: string;
+    loading: string;
+    error: string;
+    ticketNotFound: string;
+    browseEvents: string;
+    ticketInformation: string;
+    ticketName: string;
+    quantity: string;
+    status: string;
+    purchaseDate: string;
+    ticketCode: string;
+    contactInformation: string;
+    email: string;
+    qrCode: string;
+    qrCodeHint: string;
+    ticketCodeEntry: string;
+    downloadTicket: string;
+    importantInfo: string;
+    arriveEarly: string;
+    bringId: string;
+    contactOrganizer: string;
+    nonRefundable: string;
+    browseMoreEvents: string;
+    goBack: string;
+    totalPaid: string;
+    ticketConfirmed: string;
+    showAtVenue: string;
+  };
+}
+
+export type TranslationKey = keyof TranslationKeys;
+export type NestedTranslationKey<T extends TranslationKey> = keyof TranslationKeys[T];
+export type DeepNestedTranslationKey<T extends TranslationKey, U extends NestedTranslationKey<T>> =
+  U extends keyof TranslationKeys[T] ? keyof TranslationKeys[T][U] : never;

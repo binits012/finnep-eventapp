@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface TicketInfoLite {
   _id: string;
@@ -21,6 +22,7 @@ interface TicketPurchaseModalProps {
 }
 
 export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket, eventId, merchantId, externalMerchantId }: TicketPurchaseModalProps) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
@@ -74,7 +76,7 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
         style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
         role="dialog" aria-modal="true" aria-label="Ticket purchase"
       >
-        <h2 className="text-xl font-semibold mb-2">Purchase Ticket</h2>
+        <h2 className="text-xl font-semibold mb-2">{t('ticketModal.title')}</h2>
         <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium"
           style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'color-mix(in srgb, var(--foreground) 8%, var(--surface))' }}
         >
@@ -84,37 +86,37 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-sm font-medium mb-1">{t('ticketModal.email')}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
-              placeholder="you@example.com"
+              placeholder={t('ticketModal.emailPlaceholder')}
             />
             {!isEmailValid && email.length > 0 && (
-              <p className="mt-1 text-xs text-red-600">Enter a valid email</p>
+              <p className="mt-1 text-xs text-red-600">{t('ticketModal.validEmail')}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Confirm Email</label>
+            <label className="block text-sm font-medium mb-1">{t('ticketModal.confirmEmail')}</label>
             <input
               type="email"
               value={confirmEmail}
               onChange={(e) => setConfirmEmail(e.target.value)}
               className="w-full rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
-              placeholder="re-enter email"
+              placeholder={t('ticketModal.confirmEmailPlaceholder')}
             />
             {confirmEmail.length > 0 && !emailsMatch && (
-              <p className="mt-1 text-xs text-red-600">Emails do not match</p>
+              <p className="mt-1 text-xs text-red-600">{t('ticketModal.emailsMatch')}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Quantity</label>
+            <label className="block text-sm font-medium mb-1">{t('ticketModal.quantity')}</label>
             <input
               type="text"
               value={quantity}
@@ -132,26 +134,26 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
               onFocus={(e) => e.target.select()} // Select all text when focused
               className="w-full rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
-              placeholder="1"
+              placeholder={t('ticketModal.quantityPlaceholder')}
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Enter quantity between 1 and 10</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('ticketModal.quantityHint')}</p>
           </div>
 
           <div className="pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
             <div className="flex justify-between text-sm mb-1">
-              <span className="opacity-80">Price (x{quantity})</span>
+              <span className="opacity-80">{t('ticketModal.price')} (x{quantity})</span>
               <span className="opacity-90">{((ticket?.price ?? 0) * quantity).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm mb-1">
-              <span className="opacity-80">Service Fee (x{quantity})</span>
+              <span className="opacity-80">{t('ticketModal.serviceFee')} (x{quantity})</span>
               <span className="opacity-90">{((ticket?.serviceFee ?? 0) * quantity).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm mb-2">
-              <span className="opacity-80">VAT ({ticket?.vat ?? 0}%)</span>
+              <span className="opacity-80">{t('ticketModal.vat')} ({ticket?.vat ?? 0}%)</span>
               <span className="opacity-90">{(perUnitVat * quantity).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-base font-semibold">
-              <span>Total</span>
+              <span>{t('ticketModal.total')}</span>
               <span>{total.toFixed(2)}</span>
             </div>
           </div>
@@ -159,8 +161,7 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={marketingOptIn} onChange={(e) => setMarketingOptIn(e.target.checked)} />
             <span>
-              Would you like to be contacted for marketing material?{' '}
-              <LinkLike href="/marketing">Read more</LinkLike>
+              {t('ticketModal.marketingOptIn')}
             </span>
           </label>
         </div>
@@ -168,25 +169,17 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
         <div className="mt-6 flex justify-end gap-3">
           <button onClick={onClose} className="px-4 py-2 rounded-md border"
             style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
-            Cancel
+{t('ticketModal.cancel')}
           </button>
           <button
             disabled={!canProceed}
             onClick={() => onProceed({ email, quantity, ticket, eventId, merchantId, externalMerchantId, marketingOptIn, total, perUnitSubtotal, perUnitVat })}
             className={`px-4 py-2 rounded-md text-white ${canProceed ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'}`}
           >
-            Proceed
+{t('ticketModal.proceed')}
           </button>
         </div>
       </div>
     </div>
   );
 }
-
-function LinkLike({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <a href={href} className="underline text-indigo-600 dark:text-indigo-400 hover:opacity-90" target="_blank" rel="noopener noreferrer">
-      {children}
-    </a>
-  );
-} 

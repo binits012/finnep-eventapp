@@ -4,15 +4,17 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  FaCheckCircle, 
-  FaTicketAlt, 
+import {
+  FaCheckCircle,
+  FaTicketAlt,
   FaDownload,
   FaQrcode,
   FaEnvelope,
   FaHome,
   FaArrowLeft
 } from 'react-icons/fa';
+import { useTranslation } from '@/hooks/useTranslation';
+import { formatEventDateLocale } from '@/utils/common';
 
 interface TicketData {
   _id: string;
@@ -74,12 +76,13 @@ function getTicketInfo(ticketData: TicketData | SimpleTicketData | null) {
 }
 
 export default function SuccessPage({ ticketData: propTicketData}: SuccessPageProps = {}) {
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const [ticketData, setTicketData] = useState<TicketData | SimpleTicketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
- 
+
 
   useEffect(() => {
     if (propTicketData) {
@@ -87,11 +90,11 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
       setTicketData(propTicketData);
       setLoading(false);
     }  else {
-      setError('No ticket information found');
+      setError(t('success.ticketNotFound'));
       setLoading(false);
     }
-  }, [propTicketData]);
- 
+  }, [propTicketData, t]);
+
 
 
   const handleDownloadTicket = () => {
@@ -119,14 +122,14 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
               <h1>${isFullTicketData(ticketData) ? ticketData.ticketInfo?.eventName : 'Event'}</h1>
               <h2>${isFullTicketData(ticketData) ? ticketData.ticketInfo?.ticketName : 'Ticket'}</h2>
             </div>
-            
+
             <div class="qr-code">
-              ${isFullTicketData(ticketData) && ticketData?.qrCode && ticketData?.qrCode.data && ticketData?.qrCode.data.length > 0 ? 
+              ${isFullTicketData(ticketData) && ticketData?.qrCode && ticketData?.qrCode.data && ticketData?.qrCode.data.length > 0 ?
                 (() => {
                   try {
                     const dataString = String.fromCharCode(...(ticketData as TicketData).qrCode.data);
                     let dataUrl = '';
-                    
+
                     if (dataString.startsWith('data:image/')) {
                       // It's already a complete data URL
                       dataUrl = dataString;
@@ -140,7 +143,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                       const base64String = btoa(binaryString);
                       dataUrl = `data:image/png;base64,${base64String}`;
                     }
-                    
+
                     return `<img src="${dataUrl}" width="200" height="200" style="border: 2px solid #ccc; border-radius: 8px; padding: 10px; background: white;" />`;
                   } catch {
                     return `<div style="font-size: 32px; color: #4f46e5; font-family: monospace; font-weight: bold; padding: 20px; border: 2px solid #4f46e5; border-radius: 8px; display: inline-block;">${ticketData?.otp}</div>`;
@@ -149,23 +152,17 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                 `<div style="font-size: 32px; color: #4f46e5; font-family: monospace; font-weight: bold; padding: 20px; border: 2px solid #4f46e5; border-radius: 8px; display: inline-block;">${isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</div>`
               }
             </div>
-            
+
             <div class="details">
-              <div><span class="label">Ticket Code:</span><span class="value ticket-code">${isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</span></div>
-              <div><span class="label">Quantity:</span><span class="value">${getTicketInfo(ticketData)?.quantity || 'N/A'}</span></div>
-              <div><span class="label">Price:</span><span class="value">${getTicketInfo(ticketData)?.price || 'N/A'} ${getTicketInfo(ticketData)?.currency?.toUpperCase() || ''}</span></div>
-              <div><span class="label">Email:</span><span class="value">${getTicketInfo(ticketData)?.email || 'N/A'}</span></div>
-              <div><span class="label">Purchase Date:</span><span class="value">${new Date(getTicketInfo(ticketData)?.purchaseDate || (ticketData as TicketData)?.createdAt || '').toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}</span></div>
+              <div><span class="label">${t('success.ticketCode')}:</span><span class="value ticket-code">${isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</span></div>
+              <div><span class="label">${t('success.quantity')}:</span><span class="value">${getTicketInfo(ticketData)?.quantity || 'N/A'}</span></div>
+              <div><span class="label">${t('success.total')}:</span><span class="value">${getTicketInfo(ticketData)?.price || 'N/A'} ${getTicketInfo(ticketData)?.currency?.toUpperCase() || ''}</span></div>
+              <div><span class="label">${t('success.email')}:</span><span class="value">${getTicketInfo(ticketData)?.email || 'N/A'}</span></div>
+              <div><span class="label">${t('success.purchaseDate')}:</span><span class="value">${formatEventDateLocale(getTicketInfo(ticketData)?.purchaseDate || (ticketData as TicketData)?.createdAt || '', undefined, locale)}</span></div>
             </div>
-            
+
             <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #666;">
-              Show this ticket at the venue entrance
+              ${t('success.showAtVenue')}
             </div>
           </div>
         </body>
@@ -195,7 +192,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-lg" style={{ color: 'var(--foreground)' }}>Loading your ticket...</p>
+          <p className="text-lg" style={{ color: 'var(--foreground)' }}>{t('success.loading')}</p>
         </div>
       </div>
     );
@@ -206,11 +203,11 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="text-center max-w-md mx-auto px-4">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Oops!</h1>
-          <p className="mb-6" style={{ color: 'var(--foreground)' }}>{error || 'Ticket not found'}</p>
+          <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>{t('success.error')}</h1>
+          <p className="mb-6" style={{ color: 'var(--foreground)' }}>{error || t('success.ticketNotFound')}</p>
           <Link href="/events">
             <span className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors">
-              Browse Events
+{t('success.browseEvents')}
             </span>
           </Link>
         </div>
@@ -218,7 +215,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
     );
   }
 
-   
+
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
@@ -226,15 +223,15 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
       <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-8">
         <div className="container mx-auto px-4 text-center">
           <FaCheckCircle className="text-6xl mx-auto mb-4" />
-          <h1 className="text-3xl font-bold mb-2">Payment Successful!</h1>
-          <p className="text-lg opacity-90">Your ticket has been confirmed</p>
+          <h1 className="text-3xl font-bold mb-2">{t('success.title')}</h1>
+          <p className="text-lg opacity-90">{t('success.subtitle')}</p>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
         {/* Ticket Card */}
         <div className="max-w-2xl mx-auto">
-          <div 
+          <div
             className="rounded-2xl overflow-hidden shadow-2xl border-2 border-green-200"
             style={{ background: 'var(--surface)' }}
           >
@@ -249,7 +246,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                   <div className="text-3xl font-bold">
                     {getTicketInfo(ticketData)?.price || 'N/A'} {getTicketInfo(ticketData)?.currency?.toUpperCase() || ''}
                   </div>
-                  <div className="text-sm opacity-90">Total Paid</div>
+                  <div className="text-sm opacity-90">{t('success.totalPaid')}</div>
                 </div>
               </div>
             </div>
@@ -259,7 +256,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
               <div className="text-center text-white">
                 <FaTicketAlt className="text-6xl mx-auto mb-4 opacity-80" />
                 <h3 className="text-xl font-bold">{getTicketInfo(ticketData)?.eventName || 'Event'}</h3>
-                <p className="opacity-90">Your ticket is confirmed</p>
+                <p className="opacity-90">{t('success.ticketConfirmed')}</p>
               </div>
             </div>
 
@@ -269,33 +266,27 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <FaTicketAlt className="text-indigo-600" />
-                    Ticket Information
+{t('success.ticketInformation')}
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="opacity-70">Ticket Name:</span>
+                      <span className="opacity-70">{t('success.ticketName')}:</span>
                       <span className="font-medium">{getTicketInfo(ticketData)?.ticketName || 'Ticket'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="opacity-70">Quantity:</span>
+                      <span className="opacity-70">{t('success.quantity')}:</span>
                       <span>{getTicketInfo(ticketData)?.quantity || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="opacity-70">Status:</span>
+                      <span className="opacity-70">{t('success.status')}:</span>
                       <span className="text-green-600 font-medium capitalize">Active</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="opacity-70">Purchase Date:</span>
-                      <span>{new Date(getTicketInfo(ticketData)?.purchaseDate || (ticketData as TicketData)?.createdAt || '').toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}</span>
+                      <span className="opacity-70">{t('success.purchaseDate')}:</span>
+                      <span>{formatEventDateLocale(getTicketInfo(ticketData)?.purchaseDate || (ticketData as TicketData)?.createdAt || '', undefined, locale)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="opacity-70">Ticket Code:</span>
+                      <span className="opacity-70">{t('success.ticketCode')}:</span>
                       <span className="font-mono font-bold text-indigo-600 text-lg">{isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</span>
                     </div>
                   </div>
@@ -304,11 +295,11 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <FaEnvelope className="text-indigo-600" />
-                    Contact Information
+{t('success.contactInformation')}
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="opacity-70">Email:</span>
+                      <span className="opacity-70">{t('success.email')}:</span>
                       <span>{getTicketInfo(ticketData)?.email || 'N/A'}</span>
                     </div>
                   </div>
@@ -325,7 +316,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                       try {
                         // Convert the array of bytes to a string
                         const dataString = String.fromCharCode(...(ticketData as TicketData).qrCode.data);
-                        
+
                         if (dataString.startsWith('data:image/')) {
                           // It's already a complete data URL
                           dataUrl = dataString;
@@ -345,9 +336,9 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                         console.error('Data URL conversion error:', error);
                         dataUrl = '';
                       }
-                      
+
                       return dataUrl ? (
-                        <Image 
+                        <Image
                           src={dataUrl}
                           alt="QR Code"
                           width={256}
@@ -366,16 +357,16 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                     <div style={{ display: 'none' }}>
                       <FaQrcode className="text-6xl text-indigo-600 mx-auto mb-4" />
                       <p className="text-lg font-bold text-indigo-600 font-mono">{ticketData.otp}</p>
-                      <p className="text-sm opacity-70 mt-2">Use this ticket code for entry</p>
+                      <p className="text-sm opacity-70 mt-2">{t('success.ticketCodeEntry')}</p>
                     </div>
-                    <p className="text-sm opacity-70">QR Code for entry</p>
-                    <p className="text-xs opacity-50 mt-1">Show this QR code at the venue entrance</p>
+                    <p className="text-sm opacity-70">{t('success.qrCode')}</p>
+                    <p className="text-xs opacity-50 mt-1">{t('success.qrCodeHint')}</p>
                   </div>
                 ) : (
                   <div>
                     <FaQrcode className="text-6xl text-indigo-600 mx-auto mb-4" />
                     <p className="text-lg font-bold text-indigo-600 font-mono">{isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</p>
-                    <p className="text-sm opacity-70 mt-2">Use this ticket code for entry</p>
+                    <p className="text-sm opacity-70 mt-2">{t('success.ticketCodeEntry')}</p>
                   </div>
                 )}
               </div>
@@ -387,7 +378,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                   className="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <FaDownload />
-                  Download Ticket
+{t('success.downloadTicket')}
                 </button>
               </div>
             </div>
@@ -395,12 +386,12 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
 
           {/* Important Information */}
           <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <h3 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">Important Information</h3>
+            <h3 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">{t('success.importantInfo')}</h3>
             <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-              <li>• Please arrive 15 minutes before the event starts</li>
-              <li>• Bring a valid ID and this ticket (digital or printed)</li>
-              <li>• Contact the organizer if you have any questions</li>
-              <li>• Tickets are non-refundable unless otherwise stated</li>
+              <li>• {t('success.arriveEarly')}</li>
+              <li>• {t('success.bringId')}</li>
+              <li>• {t('success.contactOrganizer')}</li>
+              <li>• {t('success.nonRefundable')}</li>
             </ul>
           </div>
 
@@ -409,7 +400,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
             <Link href="/events">
               <span className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors">
                 <FaHome />
-                Browse More Events
+{t('success.browseMoreEvents')}
               </span>
             </Link>
             <button
@@ -418,7 +409,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
               style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
             >
               <FaArrowLeft />
-              Go Back
+{t('success.goBack')}
             </button>
           </div>
         </div>
