@@ -336,6 +336,46 @@
   "eventDetail": {
     "video": {
       "title": "Begivenhedsvideo"
+    },
+    "about": {
+      "title": "Om denne begivenhed"
+    },
+    "additionalInfo": {
+      "title": "Yderligere information"
+    },
+    "venue": {
+      "title": "Lokaleinformation",
+      "visitWebsite": "Besøg lokalets hjemmeside",
+      "followVenue": "Følg lokalet",
+      "transportation": "Transportinformation"
+    },
+    "organizer": {
+      "title": "Arrangør",
+      "visitWebsite": "Besøg hjemmeside"
+    },
+    "gallery": {
+      "title": "Galleri",
+      "more": "mere"
+    },
+    "tickets": {
+      "title": "Billetter",
+      "serviceFee": "Servicegebyr",
+      "vat": "Moms",
+      "total": "I alt",
+      "available": "Tilgængelig",
+      "soldOut": "Udsolgt",
+      "buyTicket": "Køb billet",
+      "selectTicket": "Vælg billet"
+    },
+    "eventDetails": {
+      "title": "Begivenhedsdetaljer",
+      "dateTime": "Dato og tid",
+      "location": "Sted",
+      "capacity": "Kapacitet",
+      "attendees": "deltagere"
+    },
+    "social": {
+      "shareEvent": "Del denne begivenhed"
     }
   },
   "venues": {
@@ -422,6 +462,8 @@
     "serviceFee": "Servicegebyr",
     "vat": "Moms",
     "total": "I alt",
+    "customerInformation": "Kundeinformation",
+    "email": "E-mail",
     "paymentDetails": "Betalingsdetaljer",
     "cardNumber": "Kortnummer",
     "cardNumberPlaceholder": "1234 5678 9012 3456",
@@ -440,6 +482,7 @@
     "processing": "Behandler...",
     "securePayment": "Sikker betaling",
     "securePaymentText": "Din betalingsinformation er krypteret og sikker",
+    "cardNote": "Bemærk: Vi accepterer kun personlige forbrugerkredit-/debetkort. Forretnings- eller virksomhedskort accepteres ikke til billetkøb.",
     "loading": "Indlæser...",
     "error": "Fejl",
     "invalidData": "Ugyldige kassedata",

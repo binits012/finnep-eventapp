@@ -194,7 +194,7 @@ export default function HomePage() {
             </div>
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-24 sm:bottom-28 z-10">
+        <div className="absolute inset-x-0 bottom-24 sm:bottom-28 z-10 hidden lg:block">
           <div className="container mx-auto px-4 text-white">
             <div className="max-w-xl bg-black/40 backdrop-blur-md rounded-xl p-4 sm:p-6 shadow-lg">
               <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4">{t('home.hero.title')}</h1>
@@ -271,7 +271,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section - Completely hidden on mobile and small screens */}
-      <section className="hidden sm:hidden md:hidden lg:block py-12 xl:py-16 bg-indigo-600 text-white overflow-x-hidden">
+      <section className="hidden lg:block py-12 xl:py-16 bg-indigo-600 text-white overflow-x-hidden">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl xl:text-3xl font-bold mb-4 xl:mb-6 leading-tight">
             {t('home.cta.title')}
@@ -331,11 +331,11 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
         {event.merchant?.name && (
           <div className="mb-2 flex items-center gap-2">
             {event.merchant.logo ? (
-              <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={22} className="rounded-full" />
+              <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
             ) : (
               <div className="h-7 w-7 rounded-full" style={{ background: 'var(--border)' }} />
             )}
-            <span className="text-xs opacity-80" style={{ color: 'var(--foreground)' }}>{event.merchant.name}</span>
+            <span className="text-base font-semibold opacity-80" style={{ color: 'var(--foreground)' }}>{event.merchant.name}</span>
           </div>
         )}
         <Link href={`/events/${event._id}`} className="block">
@@ -435,11 +435,11 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
           {event.merchant?.name && (
             <div className="mb-1 flex items-center gap-2">
               {event.merchant.logo ? (
-                <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={22} className="rounded-full" />
+                <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
               ) : (
                 <div className="h-6 w-6 rounded-full" style={{ background: 'var(--border)' }} />
               )}
-              <span className="text-[11px] opacity-80" style={{ color: 'var(--foreground)' }}>{event.merchant.name}</span>
+              <span className="text-[18px] font-semibold opacity-80" style={{ color: 'var(--foreground)' }}>{event.merchant.name}</span>
             </div>
           )}
           <Link href={`/events/${event._id}`} className="block">

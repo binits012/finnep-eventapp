@@ -3,9 +3,37 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from '@/services/apiClient';
 import { Event } from '@/types/event';
+// DataContext no longer handles translations - that's handled by LocaleContext
 
 interface AppData {
-  setting?: Record<string, unknown>;
+  setting?: Array<{
+    _id: string;
+    aboutSection?: string;
+    contactInfo?: {
+      email: string;
+      phone: string;
+    };
+    socialMedia?: {
+      fb?: string;
+      x?: string;
+      in?: string;
+      ln?: string;
+      tk?: string;
+    };
+    otherInfo?: {
+      locales?: Array<{
+        code: string;
+        name: string;
+        nativeName: string;
+        flag: string;
+        rtl: boolean;
+        currency: string;
+        currencySymbol: string;
+        dateFormat: string;
+        timeFormat: string;
+      }>;
+    };
+  }>;
   about?: Record<string, unknown>;
   contact?: Record<string, unknown>;
   terms?: Record<string, unknown>;
@@ -40,6 +68,18 @@ interface DataContextType {
   venuesError: string | null;
   refetch: () => Promise<void>;
   refetchVenues: () => Promise<void>;
+  // API locales for LocaleContext to use
+  apiLocales: Array<{
+    code: string;
+    name: string;
+    nativeName: string;
+    flag: string;
+    rtl: boolean;
+    currency: string;
+    currencySymbol: string;
+    dateFormat: string;
+    timeFormat: string;
+  }>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -56,12 +96,36 @@ export function DataProvider({ children }: DataProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const [venuesError, setVenuesError] = useState<string | null>(null);
 
+
+
+  // DataContext no longer handles translations - that's handled by LocaleContext
+  const [apiLocales, setApiLocales] = useState<Array<{
+    code: string;
+    name: string;
+    nativeName: string;
+    flag: string;
+    rtl: boolean;
+    currency: string;
+    currencySymbol: string;
+    dateFormat: string;
+    timeFormat: string;
+  }>>([]);
+// DataContext no longer handles locale - that's handled by LocaleContext
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await api.get('/');
-      setData(response as AppData);
+      const appData = response as AppData;
+      setData(appData);
+
+      // Extract locales from API response
+      if (appData.setting && appData.setting.length > 0) {
+        const setting = appData.setting[0];
+        if (setting.otherInfo?.locales) {
+          setApiLocales(setting.otherInfo.locales);
+        }
+      }
     } catch (err) {
       console.error('Error fetching events data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -69,6 +133,8 @@ export function DataProvider({ children }: DataProviderProps) {
       setLoading(false);
     }
   };
+
+  // DataContext no longer handles locale validation - that's handled by LocaleContext
 
   const fetchVenuesData = async () => {
     try {
@@ -105,6 +171,10 @@ export function DataProvider({ children }: DataProviderProps) {
     }
   };
 
+  // DataContext no longer handles translation loading - that's handled by LocaleContext
+
+  // DataContext no longer handles translation functions - that's handled by LocaleContext
+
   useEffect(() => {
     fetchData();
     fetchVenuesData();
@@ -119,7 +189,11 @@ export function DataProvider({ children }: DataProviderProps) {
     venuesError,
     refetch: fetchData,
     refetchVenues: fetchVenuesData,
+    apiLocales,
   };
+
+
+  // DataContext no longer handles locale debugging - that's handled by LocaleContext
 
   return (
     <DataContext.Provider value={value}>

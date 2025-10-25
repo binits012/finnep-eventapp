@@ -336,6 +336,46 @@
   "eventDetail": {
     "video": {
       "title": "Tapahtuman video"
+    },
+    "about": {
+      "title": "Tietoa tapahtumasta"
+    },
+    "additionalInfo": {
+      "title": "Lisätiedot"
+    },
+    "venue": {
+      "title": "Tilan tiedot",
+      "visitWebsite": "Vieraile tilan verkkosivulla",
+      "followVenue": "Seuraa tilaa",
+      "transportation": "Kuljetustiedot"
+    },
+    "organizer": {
+      "title": "Järjestäjä",
+      "visitWebsite": "Vieraile verkkosivulla"
+    },
+    "gallery": {
+      "title": "Galleria",
+      "more": "lisää"
+    },
+    "tickets": {
+      "title": "Liput",
+      "serviceFee": "Palvelumaksu",
+      "vat": "ALV",
+      "total": "Yhteensä",
+      "available": "Saatavilla",
+      "soldOut": "Loppuunmyyty",
+      "buyTicket": "Osta lippu",
+      "selectTicket": "Valitse lippu"
+    },
+    "eventDetails": {
+      "title": "Tapahtuman tiedot",
+      "dateTime": "Päivämäärä ja aika",
+      "location": "Sijainti",
+      "capacity": "Kapasiteetti",
+      "attendees": "osallistujaa"
+    },
+    "social": {
+      "shareEvent": "Jaa tämä tapahtuma"
     }
   },
   "venues": {
@@ -422,6 +462,8 @@
     "serviceFee": "Palvelumaksu",
     "vat": "ALV",
     "total": "Yhteensä",
+    "customerInformation": "Asiakastiedot",
+    "email": "Sähköposti",
     "paymentDetails": "Maksutiedot",
     "cardNumber": "Kortin numero",
     "cardNumberPlaceholder": "1234 5678 9012 3456",
@@ -440,6 +482,7 @@
     "processing": "Käsitellään...",
     "securePayment": "Turvallinen maksu",
     "securePaymentText": "Maksutietosi on salattu ja turvallinen",
+    "cardNote": "Huom: Hyväksymme vain henkilökohtaiset kuluttajakortit. Yritys- tai yrityskortteja ei hyväksytä lippujen ostoon.",
     "loading": "Ladataan...",
     "error": "Virhe",
     "invalidData": "Virheelliset kassatiedot",

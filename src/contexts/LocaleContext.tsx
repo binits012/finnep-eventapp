@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Locale, TranslationKeys, TranslationParams } from '@/types/translations';
-
+import { loadSmartTranslations, loadLocalTranslations } from '@/utils/smartTranslationLoader';
 interface LocaleContextType {
   locale: Locale;
-  setLocale: (locale: Locale) => void;
+  setLocale: (locale: Locale) => Promise<void>;
   translations: TranslationKeys | null;
   isLoading: boolean;
   t: (key: string, params?: TranslationParams) => string;
@@ -15,34 +15,60 @@ const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 
 interface LocaleProviderProps {
   children: ReactNode;
+  apiLocales?: Array<{
+    code: string;
+    name: string;
+    nativeName: string;
+    flag: string;
+    rtl: boolean;
+    currency: string;
+    currencySymbol: string;
+    dateFormat: string;
+    timeFormat: string;
+  }>;
 }
 
-export function LocaleProvider({ children }: LocaleProviderProps) {
-  const [locale, setLocaleState] = useState<Locale>('en-US');
+export function LocaleProvider({ children, apiLocales = [] }: LocaleProviderProps) {
+
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('locale') as Locale) || 'en-US';
+    }
+    return 'en-US';
+  });
+
   const [translations, setTranslations] = useState<TranslationKeys | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load locale from localStorage on mount
+  // Validate locale against API data once it's loaded
   useEffect(() => {
-    const savedLocale = localStorage.getItem('locale') as Locale;
-    if (savedLocale && ['en-US', 'fi-FI', 'sv-SE', 'da-DK', 'no-NO'].includes(savedLocale)) {
-      setLocaleState(savedLocale);
+    if (apiLocales.length > 0) {
+      const validLocales = apiLocales.map(l => l.code);
+      const currentLocale = locale;
+
+      // If current locale is not in the API locales, fallback to first available locale
+      if (!validLocales.includes(currentLocale)) {
+        setLocaleState(validLocales[0] as Locale);
+        localStorage.setItem('locale', validLocales[0]);
+      }
     }
-  }, []);
+  }, [apiLocales, locale]);
 
   // Load translations when locale changes
   useEffect(() => {
     const loadTranslations = async () => {
       setIsLoading(true);
       try {
-        const translationModule = await import(`@/locales/${locale}.json`);
-        setTranslations(translationModule.default);
+        const loadedTranslations = await loadSmartTranslations(locale);
+        setTranslations(loadedTranslations);
       } catch (error) {
         console.error('Failed to load translations:', error);
-        // Fallback to English if loading fails
-        if (locale !== 'en-US') {
-          const fallbackModule = await import('@/locales/en-US.json');
-          setTranslations(fallbackModule.default);
+        // Fallback to en-US
+        try {
+          const fallbackTranslations = await loadLocalTranslations('en-US');
+          setTranslations(fallbackTranslations);
+        } catch (fallbackError) {
+          console.error('Fallback translation loading failed:', fallbackError);
         }
       } finally {
         setIsLoading(false);
@@ -52,13 +78,15 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
     loadTranslations();
   }, [locale]);
 
-  const setLocale = (newLocale: Locale) => {
+  const setLocale = async (newLocale: Locale) => {
     setLocaleState(newLocale);
     localStorage.setItem('locale', newLocale);
   };
 
   const t = (key: string, params?: TranslationParams): string => {
-    if (!translations) return key;
+    if (!translations) {
+      return key;
+    }
 
     const keys = key.split('.');
     let value: unknown = translations;
@@ -67,7 +95,7 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
       if (value && typeof value === 'object' && k in (value as Record<string, unknown>)) {
         value = (value as Record<string, unknown>)[k];
       } else {
-        return key; // Return key if translation not found
+        return key;
       }
     }
 

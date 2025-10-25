@@ -336,6 +336,46 @@
   "eventDetail": {
     "video": {
       "title": "Evenemangsvideo"
+    },
+    "about": {
+      "title": "Om detta evenemang"
+    },
+    "additionalInfo": {
+      "title": "Ytterligare information"
+    },
+    "venue": {
+      "title": "Lokalinformation",
+      "visitWebsite": "Besök lokalen webbplats",
+      "followVenue": "Följ lokalen",
+      "transportation": "Transportinformation"
+    },
+    "organizer": {
+      "title": "Arrangör",
+      "visitWebsite": "Besök webbplats"
+    },
+    "gallery": {
+      "title": "Galleri",
+      "more": "mer"
+    },
+    "tickets": {
+      "title": "Biljetter",
+      "serviceFee": "Serviceavgift",
+      "vat": "Moms",
+      "total": "Totalt",
+      "available": "Tillgänglig",
+      "soldOut": "Utsåld",
+      "buyTicket": "Köp biljett",
+      "selectTicket": "Välj biljett"
+    },
+    "eventDetails": {
+      "title": "Evenemangsdetaljer",
+      "dateTime": "Datum och tid",
+      "location": "Plats",
+      "capacity": "Kapacitet",
+      "attendees": "deltagare"
+    },
+    "social": {
+      "shareEvent": "Dela detta evenemang"
     }
   },
   "venues": {
@@ -422,6 +462,8 @@
     "serviceFee": "Serviceavgift",
     "vat": "Moms",
     "total": "Totalt",
+    "customerInformation": "Kundinformation",
+    "email": "E-post",
     "paymentDetails": "Betalningsdetaljer",
     "cardNumber": "Kortnummer",
     "cardNumberPlaceholder": "1234 5678 9012 3456",
@@ -440,6 +482,7 @@
     "processing": "Bearbetar...",
     "securePayment": "Säker betalning",
     "securePaymentText": "Din betalningsinformation är krypterad och säker",
+    "cardNote": "Obs: Vi accepterar endast personliga konsumentkredit-/debetkort. Företags- eller företagskort accepteras inte för biljettköp.",
     "loading": "Laddar...",
     "error": "Fel",
     "invalidData": "Ogiltiga kassadata",

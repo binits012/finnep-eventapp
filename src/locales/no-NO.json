@@ -336,6 +336,46 @@
   "eventDetail": {
     "video": {
       "title": "Arrangementsvideo"
+    },
+    "about": {
+      "title": "Om dette arrangement"
+    },
+    "additionalInfo": {
+      "title": "Tilleggsinformasjon"
+    },
+    "venue": {
+      "title": "Lokaleinformasjon",
+      "visitWebsite": "Besøk lokalets nettside",
+      "followVenue": "Følg lokalet",
+      "transportation": "Transportinformasjon"
+    },
+    "organizer": {
+      "title": "Arrangør",
+      "visitWebsite": "Besøk nettside"
+    },
+    "gallery": {
+      "title": "Galleri",
+      "more": "mer"
+    },
+    "tickets": {
+      "title": "Billetter",
+      "serviceFee": "Servicegebyr",
+      "vat": "MVA",
+      "total": "Totalt",
+      "available": "Tilgjengelig",
+      "soldOut": "Utsolgt",
+      "buyTicket": "Kjøp billett",
+      "selectTicket": "Velg billett"
+    },
+    "eventDetails": {
+      "title": "Arrangementsdetaljer",
+      "dateTime": "Dato og tid",
+      "location": "Sted",
+      "capacity": "Kapasitet",
+      "attendees": "deltakere"
+    },
+    "social": {
+      "shareEvent": "Del dette arrangementet"
     }
   },
   "venues": {
@@ -422,6 +462,8 @@
     "serviceFee": "Servicegebyr",
     "vat": "MVA",
     "total": "Totalt",
+    "customerInformation": "Kundeinformasjon",
+    "email": "E-post",
     "paymentDetails": "Betalingsdetaljer",
     "cardNumber": "Kortnummer",
     "cardNumberPlaceholder": "1234 5678 9012 3456",
@@ -440,6 +482,7 @@
     "processing": "Behandler...",
     "securePayment": "Sikker betaling",
     "securePaymentText": "Din betalingsinformasjon er kryptert og sikker",
+    "cardNote": "Merk: Vi godtar kun personlige forbrukerkreditt-/debetkort. Forretnings- eller bedriftskort godtas ikke for billettkjøp.",
     "loading": "Laster...",
     "error": "Feil",
     "invalidData": "Ugyldige kassedata",

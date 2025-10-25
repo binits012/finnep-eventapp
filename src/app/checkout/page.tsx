@@ -227,11 +227,11 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
       <div className="rounded-xl p-6 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <FaUser className="mr-2 text-indigo-600" />
-          Customer Information
+          {t('checkout.customerInformation')}
         </h2>
         <div className="space-y-3">
           <div>
-            <div className="text-sm opacity-80">Email</div>
+            <div className="text-sm opacity-80">{t('checkout.email')}</div>
             <div className="text-base font-medium">{checkoutData.email}</div>
           </div>
         </div>
@@ -288,8 +288,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
           <div className="flex items-start">
             <div className="text-blue-600 dark:text-blue-400 text-sm">
-              <strong>Note:</strong> We only accept personal consumer credit/debit cards.
-              Business or corporate cards are not accepted for ticket purchases.
+              {t('checkout.cardNote')}
             </div>
           </div>
         </div>
@@ -447,9 +446,14 @@ function CheckoutContent() {
   );
 }
 
+function CheckoutLoading() {
+  const { t } = useTranslation();
+  return <div>{t('common.loading')}</div>;
+}
+
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<CheckoutLoading />}>
       <CheckoutContent />
     </Suspense>
   );

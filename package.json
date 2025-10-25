@@ -6,7 +6,12 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "upload-translations": "node scripts/upload-translations.mjs",
+    "upload-translations:all": "node scripts/upload-translations.mjs all",
+    "test-translations": "node scripts/test-s3-translations.mjs",
+    "test-translations:all": "node scripts/test-s3-translations.mjs all",
+    "test-smart-translations": "node scripts/test-smart-translations.mjs"
   },
   "dependencies": {
     "@fortawesome/free-brands-svg-icons": "^7.0.1",
