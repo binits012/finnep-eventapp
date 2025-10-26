@@ -16,6 +16,7 @@ import TicketPurchaseModal from '@/components/TicketPurchaseModal';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 
+
 // Dynamically import the map components with no SSR
 const MapContainer = dynamic(
     () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -90,6 +91,19 @@ export default function EventDetail({ event }: { event: Event }) {
     };
 
 
+
+    // YouTube video ID extraction
+    interface YoutubeVideoIdExtractor {
+        (url: string | null | undefined): string | null;
+    }
+
+    const getYoutubeVideoId: YoutubeVideoIdExtractor = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
     useEffect(() => {
         // Dynamically import Leaflet and set up icons on client side only
         Promise.all([
@@ -105,21 +119,10 @@ export default function EventDetail({ event }: { event: Event }) {
         });
     }, []);
 
-    // YouTube video ID extraction
-    interface YoutubeVideoIdExtractor {
-        (url: string | null | undefined): string | null;
-    }
-
-    const getYoutubeVideoId: YoutubeVideoIdExtractor = (url) => {
-        if (!url) return null;
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
-    };
-
     const [lat, lng] = event?.eventLocationGeoCode
         ? event.eventLocationGeoCode.split(',').map(coord => parseFloat(coord.trim()))
         : [0, 0];
+
 
     // Normalize then debounce, then memoize for stable references in render
     const normalizedPhotos = useMemo(() => (Array.isArray(event?.eventPhoto) ? event.eventPhoto : []), [event?.eventPhoto]);
@@ -350,37 +353,39 @@ export default function EventDetail({ event }: { event: Event }) {
                             </div>
 
                             {/* Organizer Information */}
-                            <div className="rounded-lg shadow p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                <h2 className="text-2xl font-bold mb-4">{t('eventDetail.organizer.title')}</h2>
-                                <div className="flex items-center">
-                                    {event.merchant?.logo ? (
-                                        <Image
-                                            src={event.merchant.logo}
-                                            alt={event.merchant.name || 'Merchant Logo'}
-                                            width={60}
-                                            height={60}
-                                            className="rounded-full"
-                                        />
-                                    ) : (
-                                        <div className="w-15 h-15 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-500">
-                                            {event.merchant?.name?.[0]}
-                                        </div>
-                                    )}
-                                    <div className="ml-4">
-                                        <h3 className="text-lg font-medium">{event.merchant?.name}</h3>
-                                        {event.merchant?.website && (
-                                            <a
-                                                href={event.merchant.website}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-indigo-600 hover:underline text-sm"
-                                            >
-                                                {t('eventDetail.organizer.visitWebsite')}
-                                            </a>
+                            {event?.merchant && (
+                                <div className="rounded-lg shadow p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
+                                    <h2 className="text-2xl font-bold mb-4">{t('eventDetail.organizer.title')}</h2>
+                                    <div className="flex items-center">
+                                        {event.merchant?.logo ? (
+                                            <Image
+                                                src={event.merchant.logo}
+                                                alt={event.merchant.name || 'Merchant Logo'}
+                                                width={60}
+                                                height={60}
+                                                className="rounded-full"
+                                            />
+                                        ) : (
+                                            <div className="w-15 h-15 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-500">
+                                                {event.merchant?.name?.[0] || 'O'}
+                                            </div>
                                         )}
+                                        <div className="ml-4">
+                                            <h3 className="text-lg font-medium">{event.merchant?.name || 'Event Organizer'}</h3>
+                                            {event.merchant?.website && (
+                                                <a
+                                                    href={event.merchant.website}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-indigo-600 hover:underline text-sm"
+                                                >
+                                                    {t('eventDetail.organizer.visitWebsite')}
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Event Photo Gallery */}
                             {eventPhotos.length > 0 && (
@@ -503,7 +508,7 @@ export default function EventDetail({ event }: { event: Event }) {
                             <div className="rounded-lg shadow p-6 sticky top-24" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
                                 <h2 className="text-2xl font-bold mb-6">{t('eventDetail.tickets.title')}</h2>
 
-                                {event.ticketInfo.map((ticket) => {
+                                {event?.ticketInfo?.map((ticket) => {
                                     const isSelected = selectedTicket === ticket._id;
                                     const isAvailable = ticket.status === 'available';
                                     return (
@@ -720,15 +725,8 @@ export default function EventDetail({ event }: { event: Event }) {
                 }}
                 ticket={selectedTicketObj!}
                 eventId={event._id}
-                merchantId={event?.merchant?._id}
-                externalMerchantId={(() => {
-                    console.log('Event merchant data:', {
-                        merchant: event?.merchant,
-                        merchantId: event?.merchant?.merchantId,
-                        externalMerchantId: event?.externalMerchantId
-                    });
-                    return event?.merchant?.merchantId ?? event?.externalMerchantId;
-                })()}
+                merchantId={event?.merchant?._id || event?.merchantId}
+                externalMerchantId={event?.externalMerchantId}
             />
         </>
     );

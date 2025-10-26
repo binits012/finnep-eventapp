@@ -89,7 +89,7 @@ export default function Header() {
       style={{ background: isScrolled ? 'color-mix(in srgb, var(--background) 90%, transparent)' : 'var(--background)', color: 'var(--foreground)' }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4 md:py-6">
+        <div className="flex justify-between items-center py-3 sm:py-4 md:py-6">
           {/* Logo */}
           <Link href="/">
             <motion.div
@@ -100,10 +100,10 @@ export default function Header() {
               <Image
                 src="/logo.png"
                 alt="Finnep Logo"
-                width={140}
-                height={100}
+                width={100}
+                height={80}
                 priority
-                className="h-10 w-auto object-contain"
+                className="h-8 sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-none"
               />
             </motion.div>
           </Link>

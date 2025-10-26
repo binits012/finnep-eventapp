@@ -133,6 +133,7 @@ export default function Footer() {
             </div>
 
             {/* Newsletter - Mobile */}
+            {/*
             <div>
               <h3 className="text-sm font-semibold uppercase tracking-wider text-center sm:text-left" style={{ color: 'var(--foreground)' }}>
                 {t('footer.stayUpdated')}
@@ -157,6 +158,7 @@ export default function Footer() {
                 </div>
               </form>
             </div>
+            */}
           </div>
         </div>
 

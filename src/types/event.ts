@@ -58,6 +58,7 @@ export interface Event {
       startDate?: string;
       endDate?: string;
     };
+    tags?: string[];
   }
 
   export interface TicketInfo {

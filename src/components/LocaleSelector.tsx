@@ -41,7 +41,7 @@ export default function LocaleSelector() {
     <div className="relative inline-block" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-1 px-2 py-1.5 rounded-md border transition-colors hover:bg-opacity-10 text-sm"
+        className="flex items-center space-x-1 px-2 py-1.5 rounded-md border transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 text-sm"
         style={{
           background: 'var(--surface)',
           color: 'var(--foreground)',
@@ -79,10 +79,9 @@ export default function LocaleSelector() {
               onClick={() => handleLocaleChange(localeOption.code)}
               className={`w-full flex items-center space-x-2 px-3 py-2 text-left transition-colors first:rounded-t-md last:rounded-b-md text-sm ${
                 locale === localeOption.code
-                  ? 'bg-indigo-50 dark:bg-indigo-900/20'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
               }`}
-              style={{ color: 'var(--foreground)' }}
             >
               <span className="text-sm">{localeOption.flag}</span>
               <span className="text-xs font-medium">{localeOption.name}</span>
