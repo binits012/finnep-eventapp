@@ -65,7 +65,11 @@
     "ongoing": {
       "title": "Skjer i dag",
       "subtitle": "Arrangementer som skjer akkurat nå i ditt område",
-      "badge": "LIVE NÅ"
+      "badge": "LIVE NÅ",
+      "badgeTextSingular": "Skjer om {{hours}} time",
+      "badgeTextPlural": "Skjer om {{hours}} timer",
+      "badgeTextMinutesSingular": "Skjer om {{minutes}} minutt",
+      "badgeTextMinutesPlural": "Skjer om {{minutes}} minutter"
     },
     "upcoming": {
       "title": "Kommende",

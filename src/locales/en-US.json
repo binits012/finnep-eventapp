@@ -65,7 +65,11 @@
     "ongoing": {
       "title": "Happening Today",
       "subtitle": "Events happening right now in your area",
-      "badge": "LIVE NOW"
+      "badge": "LIVE NOW",
+      "badgeTextSingular": "Happening in {{hours}} hour",
+      "badgeTextPlural": "Happening in {{hours}} hours",
+      "badgeTextMinutesSingular": "Happening in {{minutes}} minute",
+      "badgeTextMinutesPlural": "Happening in {{minutes}} minutes"
     },
     "upcoming": {
       "title": "Upcoming Events",
@@ -190,6 +194,8 @@
     "submitButton": "Submit Application",
     "submittingButton": "Submitting Application...",
     "securityCheck": "Security Check",
+    "generateNew": "Generate new question",
+    "answerPlaceholder": "?",
     "correct": "Correct!",
     "incorrect": "Incorrect answer"
   },

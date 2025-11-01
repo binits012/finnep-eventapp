@@ -65,7 +65,11 @@
     "ongoing": {
       "title": "Tapahtuu tänään",
       "subtitle": "Tapahtumat, joita tapahtuu juuri nyt alueellasi",
-      "badge": "SUORASSA LÄHETYKSESSÄ"
+      "badge": "SUORASSA LÄHETYKSESSÄ",
+      "badgeTextSingular": "Tapahtuu {{hours}} tunnin kuluttua",
+      "badgeTextPlural": "Tapahtuu {{hours}} tunnin kuluttua",
+      "badgeTextMinutesSingular": "Tapahtuu {{minutes}} minuutin kuluttua",
+      "badgeTextMinutesPlural": "Tapahtuu {{minutes}} minuutin kuluttua"
     },
     "upcoming": {
       "title": "Tulossa",

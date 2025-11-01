@@ -556,6 +556,43 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
 
   const promoImg = event.eventPromotionPhoto || event.venueInfo?.media?.photo?.[0] || "https://via.placeholder.com/400x240";
 
+  // Calculate precise difference in decimal hours using event timezone
+  let eventDateParsed;
+  let nowInEventTz;
+
+  if (event.eventTimezone) {
+    // Parse event date in its timezone
+    eventDateParsed = dayjs.tz(event.eventDate, event.eventTimezone);
+    // Get current time in the event's timezone
+    nowInEventTz = dayjs().tz(event.eventTimezone);
+  } else {
+    // Fallback to local timezone if no timezone specified
+    eventDateParsed = dayjs(event.eventDate);
+    nowInEventTz = dayjs();
+  }
+
+  const diffInMinutes = eventDateParsed.diff(nowInEventTz, 'minutes', true);
+
+  let eventDateCompareText;
+
+  if (diffInMinutes <= 0) {
+    // Event is happening now or has passed
+    eventDateCompareText = t('home.ongoing.badge');
+  } else if (diffInMinutes < 60) {
+    // Less than 1 hour, show minutes
+    const minutes = Math.round(diffInMinutes);
+    eventDateCompareText = minutes === 1
+      ? t('home.ongoing.badgeTextMinutesSingular', { minutes })
+      : t('home.ongoing.badgeTextMinutesPlural', { minutes });
+  } else {
+    // 1 hour or more, show hours with decimals
+    const hours = diffInMinutes / 60;
+    const formattedHours = hours.toFixed(2);
+    const useSingular = Math.abs(hours - 1) < 0.01;
+    eventDateCompareText = useSingular
+      ? t('home.ongoing.badgeTextSingular', { hours: formattedHours })
+      : t('home.ongoing.badgeTextPlural', { hours: formattedHours });
+  }
   return (
     <div
       className="rounded-xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md"
@@ -570,7 +607,7 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
             className="object-cover max-w-full"
           />
           <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[11px] sm:text-xs px-2 py-1 rounded font-semibold">
-            {t('home.ongoing.badge')}
+            {eventDateCompareText}
           </div>
           <div className="absolute top-2 right-2 bg-black/60 text-white text-[11px] sm:text-xs px-2 py-1 rounded">
             {formatEventDateLocale(event.eventDate, event.eventTimezone, locale)}

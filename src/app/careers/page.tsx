@@ -285,7 +285,7 @@ export default function CareersPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="position" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+                <label htmlFor="position" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                   {t('careers.positionApplied')} *
                 </label>
                 <select
@@ -294,8 +294,18 @@ export default function CareersPage() {
                   required
                   value={formData.position}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                  style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+                  className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors appearance-none"
+                  style={{
+                    background: 'var(--surface)',
+                    color: 'var(--foreground)',
+                    borderColor: 'var(--border)',
+                    backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 0.5rem center',
+                    backgroundSize: '1.5em 1.5em',
+                    paddingRight: '2.5rem',
+                    textAlign: 'left'
+                  }}
                 >
                   <option value="">{t('careers.selectPosition')}</option>
                   <option value="frontend-developer">{t('careers.positionFrontend')}</option>
@@ -313,7 +323,7 @@ export default function CareersPage() {
               </div>
 
               <div>
-                <label htmlFor="experience" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+                <label htmlFor="experience" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                   {t('careers.yearsExperience')} *
                 </label>
                 <select
@@ -322,8 +332,18 @@ export default function CareersPage() {
                   required
                   value={formData.experience}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                  style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+                  className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors appearance-none"
+                  style={{
+                    background: 'var(--surface)',
+                    color: 'var(--foreground)',
+                    borderColor: 'var(--border)',
+                    backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 0.5rem center',
+                    backgroundSize: '1.5em 1.5em',
+                    paddingRight: '2.5rem',
+                    textAlign: 'left'
+                  }}
                 >
                   <option value="">{t('careers.selectExperience')}</option>
                   <option value="0-1">{t('careers.experience0-1')}</option>
@@ -337,7 +357,7 @@ export default function CareersPage() {
             </div>
 
             <div className="mt-6">
-              <label htmlFor="coverLetter" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+              <label htmlFor="coverLetter" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                 {t('careers.coverLetter')} *
               </label>
               <textarea
@@ -365,7 +385,7 @@ export default function CareersPage() {
 
             <div className="space-y-6">
               <div>
-                <label htmlFor="resume" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+                <label htmlFor="resume" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                   {t('careers.resumeCV')} *
                 </label>
                 <div className="relative">
@@ -400,7 +420,7 @@ export default function CareersPage() {
               </div>
 
               <div>
-                <label htmlFor="linkedin" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+                <label htmlFor="linkedin" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                   {t('careers.linkedinProfile')}
                 </label>
                 <input
@@ -428,7 +448,7 @@ export default function CareersPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="availability" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+                <label htmlFor="availability" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                   {t('careers.availability')}
                 </label>
                 <select
@@ -436,8 +456,18 @@ export default function CareersPage() {
                   name="availability"
                   value={formData.availability}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                  style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+                  className="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors appearance-none"
+                  style={{
+                    background: 'var(--surface)',
+                    color: 'var(--foreground)',
+                    borderColor: 'var(--border)',
+                    backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 0.5rem center',
+                    backgroundSize: '1.5em 1.5em',
+                    paddingRight: '2.5rem',
+                    textAlign: 'left'
+                  }}
                 >
                   <option value="">{t('careers.selectAvailability')}</option>
                   <option value="immediate">{t('careers.availImmediate')}</option>
@@ -449,7 +479,7 @@ export default function CareersPage() {
               </div>
 
               <div>
-                <label htmlFor="salary" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+                <label htmlFor="salary" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                   {t('careers.salaryRange')}
                 </label>
                 <input
@@ -466,7 +496,7 @@ export default function CareersPage() {
             </div>
 
             <div className="mt-6">
-              <label htmlFor="relocate" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+              <label htmlFor="relocate" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                 {t('careers.relocate')}
               </label>
               <select
@@ -474,8 +504,18 @@ export default function CareersPage() {
                 name="relocate"
                 value={formData.relocate}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                style={{ background: 'var(--surface)', color: 'var(--foreground)' }}
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors appearance-none"
+                  style={{
+                    background: 'var(--surface)',
+                    color: 'var(--foreground)',
+                    borderColor: 'var(--border)',
+                    backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 0.5rem center',
+                    backgroundSize: '1.5em 1.5em',
+                    paddingRight: '2.5rem',
+                    textAlign: 'left'
+                  }}
               >
                 <option value="">{t('careers.selectOption')}</option>
                 <option value="yes">{t('careers.relocateYes')}</option>
@@ -485,7 +525,7 @@ export default function CareersPage() {
             </div>
 
             <div className="mt-6">
-              <label htmlFor="additionalInfo" className="block text-sm font-medium style={{ color: 'var(--foreground)' }} mb-2">
+              <label htmlFor="additionalInfo" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                 {t('careers.additionalInfo')}
               </label>
               <textarea

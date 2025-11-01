@@ -124,11 +124,13 @@ export default function Footer() {
                     {t('footer.careers')}
                   </Link>
                 </li>
+                {/*
                 <li className="w-1/2 text-center sm:text-left py-2">
                   <Link href="/blog" className="text-base transition p-2 opacity-80 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
                     {t('footer.blog')}
                   </Link>
                 </li>
+                */}
               </ul>
             </div>
 
