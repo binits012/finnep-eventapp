@@ -62,6 +62,11 @@
       "title": "Utvalda Evenemang",
       "subtitle": "Handplockade händelser du inte bör missa."
     },
+    "ongoing": {
+      "title": "Händer idag",
+      "subtitle": "Evenemang som händer just nu i ditt område",
+      "badge": "LIVE NU"
+    },
     "upcoming": {
       "title": "Kommande",
       "viewAll": "Visa alla",
@@ -78,6 +83,7 @@
       "subtitle": "Hitta evenemang som matchar dina intressen"
     },
     "viewDetails": "Visa Detaljer",
+    "from": "Från",
     "audience": "Publik: {{capacity}}",
     "directions": "Vägbeskrivning",
     "watchVideo": "Titta på video",
@@ -191,14 +197,22 @@
     "eventsAtVenue": "Evenemang på {{venue}}",
     "eventCount": "{{count}} evenemang hittades",
     "eventsFoundAtVenue": "{{count}} evenemang hittades på denna plats",
+    "eventsFound": "{{count}} evenemang hittades",
     "clearVenueFilter": "Rensa filter",
+    "clearOrganizerFilter": "Rensa arrangörsfilter",
     "filters": "Filter",
     "noEventsFound": "Inga evenemang hittades",
     "viewDetails": "Visa detaljer",
     "getTickets": "Hämta biljetter",
     "noEvents": "Inga evenemang hittades",
     "loading": "Laddar evenemang...",
-    "error": "Fel vid laddning av evenemang"
+    "error": "Fel vid laddning av evenemang",
+    "allCountries": "Alla länder",
+    "allVenues": "Alla platser",
+    "allOrganizers": "Alla arrangörer",
+    "country": "Land",
+    "venue": "Plats",
+    "organizer": "Arrangör"
   },
   "success": {
     "title": "Betalning lyckades!",
@@ -411,45 +425,9 @@
     "error": "Fel vid laddning av lokaler"
   },
   "about": {
-      "title": "Om detta evenemang"
-    },
-    "additionalInfo": {
-      "title": "Ytterligare information"
-    },
-    "venue": {
-      "title": "Platsinformation",
-      "visitWebsite": "Besök platsens webbplats",
-      "followVenue": "Följ platsen",
-      "transportation": "Transportinformation"
-    },
-    "organizer": {
-      "title": "Arrangör",
-      "visitWebsite": "Besök webbplats"
-    },
-    "gallery": {
-      "title": "Galleri",
-      "more": "mer"
-    },
-    "tickets": {
-      "title": "Biljetter",
-      "serviceFee": "Serviceavgift",
-      "vat": "Moms",
-      "total": "Totalt",
-      "available": "Tillgänglig",
-      "soldOut": "Utsåld",
-      "buyTicket": "Köp biljett",
-      "selectTicket": "Välj en biljett"
-    },
-    "eventDetails": {
-      "title": "Evenemangsdetaljer",
-      "dateTime": "Datum och tid",
-      "location": "Plats",
-      "capacity": "Kapacitet",
-      "attendees": "deltagare"
-    },
-    "social": {
-      "shareEvent": "Dela detta evenemang"
-    },
+    "title": "Om Oss",
+    "subtitle": "Läs mer om vårt uppdrag och värderingar"
+  },
   "checkout": {
     "title": "Slutför ditt köp",
     "eventDetails": "Evenemangsdetaljer",

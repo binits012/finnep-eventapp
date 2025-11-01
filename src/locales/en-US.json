@@ -62,6 +62,11 @@
       "title": "Featured Events",
       "subtitle": "Hand-picked happenings you shouldn't miss."
     },
+    "ongoing": {
+      "title": "Happening Today",
+      "subtitle": "Events happening right now in your area",
+      "badge": "LIVE NOW"
+    },
     "upcoming": {
       "title": "Upcoming Events",
       "viewAll": "View All",
@@ -78,6 +83,7 @@
       "subtitle": "Find events that match your interests"
     },
     "viewDetails": "View Details",
+    "from": "From",
     "audience": "Audience: {{capacity}}",
     "directions": "Directions",
     "watchVideo": "Watch video",
@@ -194,14 +200,22 @@
     "eventsAtVenue": "Events at {{venue}}",
     "eventCount": "{{count}} Events Found",
     "eventsFoundAtVenue": "{{count}} events found at this venue",
+    "eventsFound": "{{count}} events found",
     "clearVenueFilter": "Clear Filter",
+    "clearOrganizerFilter": "Clear organizer filter",
     "filters": "Filters",
     "noEventsFound": "No events found",
     "viewDetails": "View Details",
     "getTickets": "Get Tickets",
     "noEvents": "No events found",
     "loading": "Loading events...",
-    "error": "Error loading events"
+    "error": "Error loading events",
+    "allCountries": "All Countries",
+    "allVenues": "All Venues",
+    "allOrganizers": "All Organizers",
+    "country": "Country",
+    "venue": "Venue",
+    "organizer": "Organizer"
   },
   "venues": {
     "title": "Venues",

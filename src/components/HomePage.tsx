@@ -43,6 +43,22 @@ function isEventInFuture(eventDate: string): boolean {
   return dayjs(eventDate).isAfter(dayjs());
 }
 
+function isEventHappeningToday(eventDate: string, eventTimezone?: string): boolean {
+  const now = dayjs();
+  let eventDateParsed;
+
+  if (eventTimezone) {
+    eventDateParsed = dayjs.tz(eventDate, eventTimezone);
+    // Convert to local time for comparison
+    eventDateParsed = eventDateParsed.local();
+  } else {
+    eventDateParsed = dayjs(eventDate);
+  }
+
+  // Check if the event date is today (ignoring time)
+  return eventDateParsed.isSame(now, 'day');
+}
+
 export default function HomePage() {
   const { t, locale } = useTranslation();
   const { data, loading, error } = useData();
@@ -67,8 +83,15 @@ export default function HomePage() {
     });
 
   const featuredIds = new Set(featuredEvents.map((e: Event) => e._id));
-  const upcomingEvents = events
-    .filter((event: Event) => isEventInFuture(event.eventDate) && !featuredIds.has(event._id))
+
+  // Filter events happening today (status: 'on-going' or happening today)
+  const ongoingEvents = events.filter((event: Event) =>
+    (event.status === 'on-going' || isEventHappeningToday(event.eventDate, event.eventTimezone)) &&
+    !featuredIds.has(event._id)
+  ).sort((a: Event, b: Event) => dayjs(a.eventDate).valueOf() - dayjs(b.eventDate).valueOf());
+
+  const upcomingEvents = events.filter((event: Event) => !featuredIds.has(event._id))
+    .filter((event: Event) => isEventInFuture(event.eventDate) && !ongoingEvents.some((e: Event) => e._id === event._id))
     .sort((a: Event, b: Event) => dayjs(a.eventDate).valueOf() - dayjs(b.eventDate).valueOf());
 
   // Hero carousel state
@@ -227,13 +250,34 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {featuredEvents.length > 0 ? (
-              featuredEvents.map((event: Event) => (
+              featuredEvents?.slice(0, 10)?.map((event: Event) => (
                 <FeaturedEventCard key={event._id} event={event} t={t} locale={locale} />
               ))
             ) : <></>}
           </div>
         </div>
       </section>
+
+      {/* On-Going Events Section */}
+      {ongoingEvents.length > 0 && (
+        <section className="py-6 sm:py-10 md:py-16 lg:py-20 overflow-x-hidden">
+          <div className="container mx-auto px-4">
+            <div className="mb-8 sm:mb-12 text-center">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-2">{t('home.ongoing.title')}</h2>
+              <div className="w-20 h-1 bg-indigo-600 mx-auto"></div>
+              <p className="mt-3 text-sm sm:text-base opacity-80" style={{ color: 'var(--foreground)' }}>
+                {t('home.ongoing.subtitle')}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {ongoingEvents.slice(0, 9).map((event: Event) => (
+                <OngoingEventCard key={event._id} event={event} t={t} locale={locale} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Upcoming Events Section */}
       <section
@@ -258,7 +302,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {upcomingEvents.length > 0 ? (
-              upcomingEvents.slice(0, 6).map((event: Event) => (
+              upcomingEvents?.slice(0, 10)?.map((event: Event) => (
                 <UpcomingEventCard key={event._id} event={event} t={t} locale={locale} />
               ))
             ) : (
@@ -329,14 +373,19 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
       <div className="p-4 sm:p-6">
         {/* Merchant chip */}
         {event.merchant?.name && (
-          <div className="mb-2 flex items-center gap-2">
-            {event.merchant.logo ? (
-              <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
-            ) : (
-              <div className="h-7 w-7 rounded-full" style={{ background: 'var(--border)' }} />
-            )}
-            <span className="text-base font-semibold opacity-80" style={{ color: 'var(--foreground)' }}>{event.merchant.name}</span>
-          </div>
+          <Link href={`/events?merchant=${encodeURIComponent(event.merchant.name)}`}>
+            <div className="mb-2 flex items-center gap-2 cursor-pointer transition-all duration-200 w-fit px-2 py-1 -ml-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-700">
+              {event.merchant.logo ? (
+                <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
+              ) : (
+                <div className="h-7 w-7 rounded-full" style={{ background: 'var(--border)' }} />
+              )}
+              <span className="text-sm sm:text-base font-medium text-indigo-600 dark:text-indigo-400">{event.merchant.name}</span>
+              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
         )}
         <Link href={`/events/${event._id}`} className="block">
           <h3 className="text-lg sm:text-xl font-semibold mb-2 line-clamp-1">{event.eventTitle}</h3>
@@ -353,7 +402,7 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
           <div className="flex items-center text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
             <FaTicketAlt className="mr-2 flex-shrink-0" />
             <span>
-              From {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+              {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
             </span>
           </div>
           <span
@@ -433,14 +482,19 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
         <div className="p-3 sm:p-4">
           {/* Merchant chip (compact) */}
           {event.merchant?.name && (
-            <div className="mb-1 flex items-center gap-2">
-              {event.merchant.logo ? (
-                <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
-              ) : (
-                <div className="h-6 w-6 rounded-full" style={{ background: 'var(--border)' }} />
-              )}
-              <span className="text-[18px] font-semibold opacity-80" style={{ color: 'var(--foreground)' }}>{event.merchant.name}</span>
-            </div>
+            <Link href={`/events?merchant=${encodeURIComponent(event.merchant.name)}`}>
+              <div className="mb-1 flex items-center gap-2 cursor-pointer transition-all duration-200 w-fit px-2 py-1 -ml-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-700">
+                {event.merchant.logo ? (
+                  <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
+                ) : (
+                  <div className="h-6 w-6 rounded-full" style={{ background: 'var(--border)' }} />
+                )}
+                <span className="text-xs sm:text-sm font-medium text-indigo-600 dark:text-indigo-400">{event.merchant.name}</span>
+                <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
           )}
           <Link href={`/events/${event._id}`} className="block">
             <h3 className="font-semibold text-sm sm:text-base line-clamp-1" style={{ color: 'var(--foreground)' }}>
@@ -454,7 +508,7 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
 
           <div className="mt-3 flex items-center justify-between">
             <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              From   {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+              {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
             </span>
             <span
               className="text-[11px] sm:text-xs px-2 py-1 rounded border"
@@ -483,5 +537,104 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
           )}
         </div>
       </div>
+  );
+}
+
+// Ongoing Event Card (for events happening today)
+function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string, params?: Record<string, string | number>) => string; locale: string }) {
+  const getMinPrice = () => {
+    try {
+      if (!event.ticketInfo || !event.ticketInfo.length) return 0;
+      const validPrices = event.ticketInfo
+        .map(ticket => Number(ticket.price))
+        .filter(price => !isNaN(price) && isFinite(price));
+      return validPrices.length ? Math.min(...validPrices) : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const promoImg = event.eventPromotionPhoto || event.venueInfo?.media?.photo?.[0] || "https://via.placeholder.com/400x240";
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md"
+      style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}
+    >
+      <Link href={`/events/${event._id}`} className="block">
+        <div className="relative h-40 sm:h-44">
+          <Image
+            src={promoImg}
+            alt={event.eventTitle}
+            fill
+            className="object-cover max-w-full"
+          />
+          <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[11px] sm:text-xs px-2 py-1 rounded font-semibold">
+            {t('home.ongoing.badge')}
+          </div>
+          <div className="absolute top-2 right-2 bg-black/60 text-white text-[11px] sm:text-xs px-2 py-1 rounded">
+            {formatEventDateLocale(event.eventDate, event.eventTimezone, locale)}
+          </div>
+        </div>
+      </Link>
+
+      <div className="p-3 sm:p-4">
+        {/* Merchant chip */}
+        {event.merchant?.name && (
+          <Link href={`/events?merchant=${encodeURIComponent(event.merchant.name)}`}>
+            <div className="mb-1 flex items-center gap-2 cursor-pointer transition-all duration-200 w-fit px-2 py-1 -ml-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-700">
+              {event.merchant.logo ? (
+                <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
+              ) : (
+                <div className="h-6 w-6 rounded-full" style={{ background: 'var(--border)' }} />
+              )}
+              <span className="text-xs sm:text-sm font-medium text-indigo-600 dark:text-indigo-400">{event.merchant.name}</span>
+              <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
+        )}
+        <Link href={`/events/${event._id}`} className="block">
+          <h3 className="font-semibold text-sm sm:text-base line-clamp-1" style={{ color: 'var(--foreground)' }}>
+            {event.eventTitle}
+          </h3>
+        </Link>
+        <div className="mt-1 flex items-center text-xs sm:text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
+          <FaMapMarkerAlt className="mr-1 flex-shrink-0" size={12} />
+          <span className="truncate">{event.venueInfo?.name || event.city}{event.city ? `, ${event.city}` : ''}</span>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+          </span>
+          <span
+            className="text-[11px] sm:text-xs px-2 py-1 rounded border"
+            style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+            aria-label={event.ticketsSold ? t('home.ticketsSold', { count: event.ticketsSold }) : event.occupancy ? t('home.capacity', { capacity: event.occupancy }) : t('home.limitedCapacity')}
+          >
+            {t('home.audience', { capacity: event.occupancy || 0 })}
+          </span>
+        </div>
+
+        {(event.transportLink || event.videoUrl) && (
+          <div className="mt-2 flex items-center gap-3 text-[11px] opacity-80" style={{ color: 'var(--foreground)' }}>
+            {event.transportLink && (
+              <a href={event.transportLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
+                <FaExternalLinkAlt className="text-[9px]" />
+                <span>{t('home.directions')}</span>
+              </a>
+            )}
+            {event.videoUrl && (
+              <a href={event.videoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
+                <FaPlay className="text-[9px]" />
+                <span>{t('home.watchVideo')}</span>
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

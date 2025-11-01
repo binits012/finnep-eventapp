@@ -62,6 +62,7 @@ interface VenueData {
 interface DataContextType {
   data: AppData | null;
   venuesData: VenueData[] | null;
+  eventsData: Event[] | null;
   loading: boolean;
   venuesLoading: boolean;
   error: string | null;
@@ -91,6 +92,7 @@ interface DataProviderProps {
 export function DataProvider({ children }: DataProviderProps) {
   const [data, setData] = useState<AppData | null>(null);
   const [venuesData, setVenuesData] = useState<VenueData[] | null>(null);
+  const [eventsData, setEventsData] = useState<Event[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [venuesLoading, setVenuesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +146,9 @@ export function DataProvider({ children }: DataProviderProps) {
       // Handle the response structure - it has an 'items' property
       const events = (response as { items?: Event[] }).items || [];
 
+      // Store the raw events data for the events page
+      setEventsData(events);
+
       // Transform Event data to VenueData format
       const venuesData: VenueData[] = events.map((event: Event) => ({
         id: event._id,
@@ -183,6 +188,7 @@ export function DataProvider({ children }: DataProviderProps) {
   const value: DataContextType = {
     data,
     venuesData,
+    eventsData,
     loading,
     venuesLoading,
     error,

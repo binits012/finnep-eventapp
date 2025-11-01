@@ -22,16 +22,19 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
 
   const searchParams = useSearchParams();
   const venueFromUrl = searchParams.get('venue');
+  const merchantFromUrl = searchParams.get('merchant');
 
   const [events, setEvents] = useState<Event[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedVenue, setSelectedVenue] = useState(venueFromUrl || "");
+  const [selectedMerchant, setSelectedMerchant] = useState(merchantFromUrl || "");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Get unique countries and venues for filter
+  // Get unique countries, venues, and merchants for filter
   const countries = [...new Set(allEvents.map((event: Event) => event.country).filter(Boolean))];
   const venues = [...new Set(allEvents.map((event: Event) => event.venueInfo?.name).filter(Boolean))];
+  const merchants = [...new Set(allEvents.map((event: Event) => event.merchant?.name).filter(Boolean))];
 
   // Filter events based on search and filters (client-side refinement on server slice)
   useEffect(() => {
@@ -55,8 +58,14 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
       );
     }
 
+    if (selectedMerchant) {
+      filtered = filtered.filter((event: Event) =>
+        (event.merchant?.name || '').toLowerCase().includes(selectedMerchant.toLowerCase())
+      );
+    }
+
     setEvents(filtered);
-  }, [searchTerm, selectedCountry, selectedVenue, allEvents]);
+  }, [searchTerm, selectedCountry, selectedVenue, selectedMerchant, allEvents]);
 
   // build qs helper
   const buildHref = (page: number, limit = serverLimit) => {
@@ -65,6 +74,7 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
     params.set('limit', String(limit));
     if (selectedCountry) params.set('country', selectedCountry);
     if (selectedVenue) params.set('venue', selectedVenue);
+    if (selectedMerchant) params.set('merchant', selectedMerchant);
     if (searchTerm) params.set('q', searchTerm);
     return `?${params.toString()}`;
   };
@@ -99,7 +109,11 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
           <div className="flex justify-between items-center mb-8">
             <div>
               <h2 className="text-2xl font-bold">
-                {selectedVenue ? t('events.eventsAtVenue', { venue: selectedVenue }) : t('events.eventCount', { count: events.length })}
+                {selectedVenue
+                  ? t('events.eventsAtVenue', { venue: selectedVenue })
+                  : selectedMerchant
+                  ? `Events by ${selectedMerchant}`
+                  : t('events.eventCount', { count: events.length })}
               </h2>
               {selectedVenue && (
                 <div className="flex items-center gap-2">
@@ -109,6 +123,17 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                     className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
                     {t('events.clearVenueFilter')}
+                  </button>
+                </div>
+              )}
+              {selectedMerchant && !selectedVenue && (
+                <div className="flex items-center gap-2">
+                  <p className="text-sm opacity-70">{t('events.eventsFound', { count: events.length })}</p>
+                  <button
+                    onClick={() => setSelectedMerchant("")}
+                    className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    {t('events.clearOrganizerFilter')}
                   </button>
                 </div>
               )}
@@ -137,7 +162,7 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                 className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
               >
-                <option value="">All Countries</option>
+                <option value="">{t('events.allCountries')}</option>
                 {countries.map((country) => (
                   <option key={country} value={country}>{country}</option>
                 ))}
@@ -149,9 +174,21 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                 className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
               >
-                <option value="">All Venues</option>
+                <option value="">{t('events.allVenues')}</option>
                 {venues.map((venue) => (
                   <option key={venue} value={venue}>{venue}</option>
+                ))}
+              </select>
+
+              <select
+                value={selectedMerchant}
+                onChange={(e) => setSelectedMerchant(e.target.value)}
+                className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+              >
+                <option value="">{t('events.allOrganizers')}</option>
+                {merchants.map((merchant) => (
+                  <option key={merchant} value={merchant}>{merchant}</option>
                 ))}
               </select>
             </div>
@@ -161,14 +198,14 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
           {showFilters && (
             <div className="md:hidden mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="mb-4">
-                <label className="block mb-2 text-sm font-medium">Country</label>
+                <label className="block mb-2 text-sm font-medium">{t('events.country')}</label>
                 <select
                   value={selectedCountry}
                   onChange={(e) => setSelectedCountry(e.target.value)}
                   className="w-full rounded-lg py-2 px-4"
                   style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
                 >
-                  <option value="">All Countries</option>
+                  <option value="">{t('events.allCountries')}</option>
                   {countries.map((country) => (
                     <option key={country} value={country}>{country}</option>
                   ))}
@@ -176,16 +213,31 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
               </div>
 
               <div className="mb-4">
-                <label className="block mb-2 text-sm font-medium">Venue</label>
+                <label className="block mb-2 text-sm font-medium">{t('events.venue')}</label>
                 <select
                   value={selectedVenue}
                   onChange={(e) => setSelectedVenue(e.target.value)}
                   className="w-full rounded-lg py-2 px-4"
                   style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
                 >
-                  <option value="">All Venues</option>
+                  <option value="">{t('events.allVenues')}</option>
                   {venues.map((venue) => (
                     <option key={venue} value={venue}>{venue}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium">{t('events.organizer')}</label>
+                <select
+                  value={selectedMerchant}
+                  onChange={(e) => setSelectedMerchant(e.target.value)}
+                  className="w-full rounded-lg py-2 px-4"
+                  style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                >
+                  <option value="">{t('events.allOrganizers')}</option>
+                  {merchants.map((merchant) => (
+                    <option key={merchant} value={merchant}>{merchant}</option>
                   ))}
                 </select>
               </div>
@@ -196,7 +248,7 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
           {events.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {events.map((event: Event) => (
-                <EventCard key={event._id} event={event} locale={locale} />
+                <EventCard key={event._id} event={event} locale={locale} t={t} />
               ))}
             </div>
           ) : (
@@ -233,9 +285,9 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
   );
 }
 
-function EventCard({ event, locale }: { event: Event; locale: string }) {
+function EventCard({ event, locale, t }: { event: Event; locale: string; t: (key: string, params?: Record<string, string | number>) => string }) {
   const minPrice = Array.isArray(event.ticketInfo) && event.ticketInfo.length
-    ? Math.min(...event.ticketInfo.map((t) => Number(t.price) || 0))
+    ? Math.min(...event.ticketInfo.map((ticket) => Number(ticket.price) || 0))
     : 0;
 
   return (
@@ -264,33 +316,41 @@ function EventCard({ event, locale }: { event: Event; locale: string }) {
             </span>
           </div>
         </div>
+      </Link>
 
-        <div className="p-6">
-          {/* Merchant chip */}
-          {event.merchant?.name && (
-            <div className="mb-2 flex items-center gap-2">
+      <div className="p-6">
+        {/* Merchant chip */}
+        {event.merchant?.name && (
+          <Link href={`/events?merchant=${encodeURIComponent(event.merchant.name)}`}>
+            <div className="mb-2 flex items-center gap-2 cursor-pointer transition-all duration-200 w-fit px-2 py-1 -ml-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-700">
               {event.merchant.logo ? (
                 <Image src={event.merchant.logo} alt={event.merchant.name} width={28} height={28} className="rounded-full" />
               ) : (
                 <div className="h-7 w-7 rounded-full" style={{ background: 'var(--border)' }} />
               )}
-              <span className="text-xs opacity-80" style={{ color: 'var(--foreground)' }}>{event.merchant.name}</span>
+              <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">{event.merchant.name}</span>
+              <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
-          )}
+          </Link>
+        )}
+        <Link href={`/events/${event._id}`}>
           <h3 className="text-xl font-semibold mb-2 line-clamp-1">{event.eventTitle}</h3>
-          <p className="opacity-80 text-sm mb-4 line-clamp-2" style={{ color: 'var(--foreground)' }}>
-            {event.eventDescription}
-          </p>
+        </Link>
+        <p className="opacity-80 text-sm mb-4 line-clamp-2" style={{ color: 'var(--foreground)' }}>
+          {event.eventDescription}
+        </p>
 
-          <div className="flex items-center text-sm opacity-80 mb-3" style={{ color: 'var(--foreground)' }}>
-            <FaCalendarAlt className="mr-2" size={14} />
-            <span>{formatEventDateLocale(event.eventDate, event.eventTimezone, locale)}</span>
-          </div>
+        <div className="flex items-center text-sm opacity-80 mb-3" style={{ color: 'var(--foreground)' }}>
+          <FaCalendarAlt className="mr-2" size={14} />
+          <span>{formatEventDateLocale(event.eventDate, event.eventTimezone, locale)}</span>
+        </div>
 
-          <div className="flex items-center text-sm opacity-80">
-            <FaMapMarkerAlt className="mr-2" size={14} />
-            <span className="line-clamp-1">{event.venueInfo?.name || ''}{event.city ? `, ${event.city}` : ''}</span>
-          </div>
+        <div className="flex items-center text-sm opacity-80">
+          <FaMapMarkerAlt className="mr-2" size={14} />
+          <span className="line-clamp-1">{event.venueInfo?.name || ''}{event.city ? `, ${event.city}` : ''}</span>
+        </div>
 
           {/* Price & Status Tag */}
           <div className="mt-4 flex justify-between items-center">
@@ -299,12 +359,11 @@ function EventCard({ event, locale }: { event: Event; locale: string }) {
             </span>
             {(event.active ?? true) && (
               <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                Available
+                {t('home.upcoming.badge')}
               </span>
             )}
           </div>
-        </div>
-      </Link>
+      </div>
     </motion.div>
   );
 }

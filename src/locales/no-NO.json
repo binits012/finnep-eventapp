@@ -62,6 +62,11 @@
       "title": "Utvalgte Arrangementer",
       "subtitle": "Håndplukkede arrangementer du ikke bør gå glipp av."
     },
+    "ongoing": {
+      "title": "Skjer i dag",
+      "subtitle": "Arrangementer som skjer akkurat nå i ditt område",
+      "badge": "LIVE NÅ"
+    },
     "upcoming": {
       "title": "Kommende",
       "viewAll": "Se alle",
@@ -78,6 +83,7 @@
       "subtitle": "Finn arrangementer som matcher dine interesser"
     },
     "viewDetails": "Se Detaljer",
+    "from": "Fra",
     "audience": "Publikum: {{capacity}}",
     "directions": "Veibeskrivelse",
     "watchVideo": "Se video",
@@ -191,14 +197,22 @@
     "eventsAtVenue": "Arrangementer på {{venue}}",
     "eventCount": "{{count}} arrangementer funnet",
     "eventsFoundAtVenue": "{{count}} arrangementer funnet på dette stedet",
+    "eventsFound": "{{count}} arrangementer funnet",
     "clearVenueFilter": "Tøm filter",
+    "clearOrganizerFilter": "Tøm arrangørfilter",
     "filters": "Filtre",
     "noEventsFound": "Ingen arrangementer funnet",
     "viewDetails": "Vis detaljer",
     "getTickets": "Hent billetter",
     "noEvents": "Ingen arrangementer funnet",
     "loading": "Laster arrangementer...",
-    "error": "Feil ved lasting av arrangementer"
+    "error": "Feil ved lasting av arrangementer",
+    "allCountries": "Alle land",
+    "allVenues": "Alle steder",
+    "allOrganizers": "Alle arrangører",
+    "country": "Land",
+    "venue": "Sted",
+    "organizer": "Arrangør"
   },
   "success": {
     "title": "Betaling lyktes!",
@@ -411,45 +425,9 @@
     "error": "Feil ved lasting av lokaler"
   },
   "about": {
-      "title": "Om dette arrangement"
-    },
-    "additionalInfo": {
-      "title": "Tilleggsinformasjon"
-    },
-    "venue": {
-      "title": "Stedsinformasjon",
-      "visitWebsite": "Besøk stedets nettside",
-      "followVenue": "Følg stedet",
-      "transportation": "Transportinformasjon"
-    },
-    "organizer": {
-      "title": "Arrangør",
-      "visitWebsite": "Besøk nettside"
-    },
-    "gallery": {
-      "title": "Galleri",
-      "more": "mer"
-    },
-    "tickets": {
-      "title": "Billetter",
-      "serviceFee": "Servicegebyr",
-      "vat": "MVA",
-      "total": "Totalt",
-      "available": "Tilgjengelig",
-      "soldOut": "Utsolgt",
-      "buyTicket": "Kjøp billett",
-      "selectTicket": "Velg en billett"
-    },
-    "eventDetails": {
-      "title": "Arrangementsdetaljer",
-      "dateTime": "Dato og tid",
-      "location": "Sted",
-      "capacity": "Kapasitet",
-      "attendees": "deltakere"
-    },
-    "social": {
-      "shareEvent": "Del dette arrangementet"
-    },
+    "title": "Om Oss",
+    "subtitle": "Les mer om vårt oppdrag og verdier"
+  },
   "checkout": {
     "title": "Fullfør kjøpet ditt",
     "eventDetails": "Arrangementsdetaljer",

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useData } from '@/contexts/DataContext';
 import { Locale } from '@/types/translations';
 
-const locales: { code: Locale; name: string; flag: string }[] = [
+// Fallback locales if API doesn't provide them
+const fallbackLocales: { code: Locale; name: string; flag: string }[] = [
   { code: 'en-US', name: 'English', flag: '🇺🇸' },
   { code: 'fi-FI', name: 'Suomi', flag: '🇫🇮' },
   { code: 'sv-SE', name: 'Svenska', flag: '🇸🇪' },
@@ -14,8 +16,21 @@ const locales: { code: Locale; name: string; flag: string }[] = [
 
 export default function LocaleSelector() {
   const { locale, setLocale } = useTranslation();
+  const { apiLocales } = useData();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Use API locales if available, otherwise fall back to hardcoded
+  const locales = useMemo(() => {
+    if (apiLocales && apiLocales.length > 0) {
+      return apiLocales.map(apiLocale => ({
+        code: apiLocale.code as Locale,
+        name: apiLocale.nativeName || apiLocale.name,
+        flag: apiLocale.flag
+      }));
+    }
+    return fallbackLocales;
+  }, [apiLocales]);
 
   const currentLocale = locales.find(l => l.code === locale) || locales[0];
 

@@ -1,35 +1,25 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import EventsPage from "@/components/EventsPage";
-import api from "@/services/apiClient";
-import { Event } from '@/types/event';
+import { useData } from '@/contexts/DataContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function Events() {
-  const [data, setData] = useState<{ photo: unknown[]; notification: unknown[]; event: Event[]; setting: unknown[] }>({ photo: [], notification: [], event: [], setting: [] });
-  const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
+  const { eventsData, venuesLoading } = useData();
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const response = await api.get('/events');
-        setData(response as { photo: unknown[]; notification: unknown[]; event: Event[]; setting: unknown[] });
-      } catch (error) {
-        console.error('Error fetching events data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Transform eventsData to the format EventsPage expects
+  const data = useMemo(() => {
+    return { items: eventsData || [] };
+  }, [eventsData]);
 
-    fetchEvents();
-  }, []);
-
-  if (loading) {
+  if (venuesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading events...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('events.loading') || 'Loading events...'}</p>
         </div>
       </div>
     );

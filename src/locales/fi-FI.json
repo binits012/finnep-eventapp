@@ -62,6 +62,11 @@
       "title": "Esittelyssä",
       "subtitle": "Käsinkäyrityt tapahtumat, joita et saa missata."
     },
+    "ongoing": {
+      "title": "Tapahtuu tänään",
+      "subtitle": "Tapahtumat, joita tapahtuu juuri nyt alueellasi",
+      "badge": "SUORASSA LÄHETYKSESSÄ"
+    },
     "upcoming": {
       "title": "Tulossa",
       "viewAll": "Näytä kaikki",
@@ -78,6 +83,7 @@
       "subtitle": "Löydä tapahtumia, jotka vastaavat kiinnostuksiasi"
     },
     "viewDetails": "Näytä Tiedot",
+    "from": "Alkaen",
     "audience": "Yleisö: {{capacity}}",
     "directions": "Reittiohjeet",
     "watchVideo": "Katso video",
@@ -191,14 +197,22 @@
     "eventsAtVenue": "Tapahtumat paikassa {{venue}}",
     "eventCount": "{{count}} tapahtumaa löytyi",
     "eventsFoundAtVenue": "{{count}} tapahtumaa löytyi tästä paikasta",
+    "eventsFound": "{{count}} tapahtumaa löytyi",
     "clearVenueFilter": "Tyhjennä suodatin",
+    "clearOrganizerFilter": "Tyhjennä järjestäjän suodatin",
     "filters": "Suodattimet",
     "noEventsFound": "Tapahtumia ei löytynyt",
     "viewDetails": "Näytä tiedot",
     "getTickets": "Hanki liput",
     "noEvents": "Tapahtumia ei löytynyt",
     "loading": "Ladataan tapahtumia...",
-    "error": "Virhe tapahtumien lataamisessa"
+    "error": "Virhe tapahtumien lataamisessa",
+    "allCountries": "Kaikki maat",
+    "allVenues": "Kaikki paikat",
+    "allOrganizers": "Kaikki järjestäjät",
+    "country": "Maa",
+    "venue": "Paikka",
+    "organizer": "Järjestäjä"
   },
   "success": {
     "title": "Maksu onnistui!",
@@ -411,45 +425,9 @@
     "error": "Virhe tilojen lataamisessa"
   },
   "about": {
-      "title": "Tietoa tapahtumasta"
-    },
-    "additionalInfo": {
-      "title": "Lisätiedot"
-    },
-    "venue": {
-      "title": "Tapahtumapaikan tiedot",
-      "visitWebsite": "Vieraile tapahtumapaikan sivustolla",
-      "followVenue": "Seuraa tapahtumapaikkaa",
-      "transportation": "Kuljetustiedot"
-    },
-    "organizer": {
-      "title": "Järjestäjä",
-      "visitWebsite": "Vieraile sivustolla"
-    },
-    "gallery": {
-      "title": "Galleria",
-      "more": "lisää"
-    },
-    "tickets": {
-      "title": "Liput",
-      "serviceFee": "Palvelumaksu",
-      "vat": "ALV",
-      "total": "Yhteensä",
-      "available": "Saatavilla",
-      "soldOut": "Loppuunmyyty",
-      "buyTicket": "Osta lippu",
-      "selectTicket": "Valitse lippu"
-    },
-    "eventDetails": {
-      "title": "Tapahtuman tiedot",
-      "dateTime": "Päivämäärä ja aika",
-      "location": "Sijainti",
-      "capacity": "Kapasiteetti",
-      "attendees": "osallistujaa"
-    },
-    "social": {
-      "shareEvent": "Jaa tämä tapahtuma"
-    },
+    "title": "Tietoa Meistä",
+    "subtitle": "Lue lisää tehtävästämme ja arvoistamme"
+  },
   "checkout": {
     "title": "Viimeistele ostoksesi",
     "eventDetails": "Tapahtuman tiedot",

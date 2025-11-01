@@ -62,6 +62,11 @@
       "title": "Fremhævede Begivenheder",
       "subtitle": "Håndplukkede begivenheder du ikke bør gå glip af."
     },
+    "ongoing": {
+      "title": "Sker i dag",
+      "subtitle": "Begivenheder, der sker lige nu i dit område",
+      "badge": "LIVE NU"
+    },
     "upcoming": {
       "title": "Kommende",
       "viewAll": "Se alle",
@@ -78,6 +83,7 @@
       "subtitle": "Find begivenheder der matcher dine interesser"
     },
     "viewDetails": "Se Detaljer",
+    "from": "Fra",
     "audience": "Publik: {{capacity}}",
     "directions": "Vejbeskrivelse",
     "watchVideo": "Se video",
@@ -191,14 +197,22 @@
     "eventsAtVenue": "Begivenheder på {{venue}}",
     "eventCount": "{{count}} begivenheder fundet",
     "eventsFoundAtVenue": "{{count}} begivenheder fundet på dette sted",
+    "eventsFound": "{{count}} begivenheder fundet",
     "clearVenueFilter": "Ryd filter",
+    "clearOrganizerFilter": "Ryd arrangørfilter",
     "filters": "Filtre",
     "noEventsFound": "Ingen begivenheder fundet",
     "viewDetails": "Vis detaljer",
     "getTickets": "Hent billetter",
     "noEvents": "Ingen begivenheder fundet",
     "loading": "Indlæser begivenheder...",
-    "error": "Fejl ved indlæsning af begivenheder"
+    "error": "Fejl ved indlæsning af begivenheder",
+    "allCountries": "Alle lande",
+    "allVenues": "Alle steder",
+    "allOrganizers": "Alle arrangører",
+    "country": "Land",
+    "venue": "Sted",
+    "organizer": "Arrangør"
   },
   "success": {
     "title": "Betaling lykkedes!",
@@ -411,45 +425,9 @@
     "error": "Fejl ved indlæsning af lokaler"
   },
   "about": {
-      "title": "Om denne begivenhed"
-    },
-    "additionalInfo": {
-      "title": "Yderligere information"
-    },
-    "venue": {
-      "title": "Stedsinformation",
-      "visitWebsite": "Besøg stedets hjemmeside",
-      "followVenue": "Følg stedet",
-      "transportation": "Transportinformation"
-    },
-    "organizer": {
-      "title": "Arrangør",
-      "visitWebsite": "Besøg hjemmeside"
-    },
-    "gallery": {
-      "title": "Galleri",
-      "more": "mere"
-    },
-    "tickets": {
-      "title": "Billetter",
-      "serviceFee": "Servicegebyr",
-      "vat": "Moms",
-      "total": "I alt",
-      "available": "Tilgængelig",
-      "soldOut": "Udsolgt",
-      "buyTicket": "Køb billet",
-      "selectTicket": "Vælg en billet"
-    },
-    "eventDetails": {
-      "title": "Begivenhedsdetaljer",
-      "dateTime": "Dato og tid",
-      "location": "Sted",
-      "capacity": "Kapacitet",
-      "attendees": "deltagere"
-    },
-    "social": {
-      "shareEvent": "Del denne begivenhed"
-    },
+    "title": "Om Os",
+    "subtitle": "Læs mere om vores mission og værdier"
+  },
   "checkout": {
     "title": "Fuldfør dit køb",
     "eventDetails": "Begivenhedsdetaljer",
