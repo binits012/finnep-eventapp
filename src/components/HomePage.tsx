@@ -94,6 +94,38 @@ export default function HomePage() {
     .filter((event: Event) => isEventInFuture(event.eventDate) && !ongoingEvents.some((e: Event) => e._id === event._id))
     .sort((a: Event, b: Event) => dayjs(a.eventDate).valueOf() - dayjs(b.eventDate).valueOf());
 
+  // Infinite scroll for upcoming events
+  const [visibleCount, setVisibleCount] = React.useState(6);
+  const loadMoreRef = React.useRef<HTMLDivElement>(null);
+
+  // Reset visible count when events change
+  React.useEffect(() => {
+    setVisibleCount(6);
+  }, [upcomingEvents.length]);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first?.isIntersecting && visibleCount < upcomingEvents.length) {
+          setVisibleCount((prev) => Math.min(prev + 6, upcomingEvents.length));
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [visibleCount, upcomingEvents.length]);
+
   // Hero carousel state
   const slides = featuredEvents.map((ev: Event) => ({
     id: ev._id,
@@ -302,9 +334,17 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {upcomingEvents.length > 0 ? (
-              upcomingEvents?.slice(0, 10)?.map((event: Event) => (
-                <UpcomingEventCard key={event._id} event={event} t={t} locale={locale} />
-              ))
+              <>
+                {upcomingEvents.slice(0, visibleCount).map((event: Event) => (
+                  <UpcomingEventCard key={event._id} event={event} t={t} locale={locale} />
+                ))}
+                {/* Sentinel element for infinite scroll */}
+                {visibleCount < upcomingEvents.length && (
+                  <div ref={loadMoreRef} className="col-span-full h-10 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="col-span-full text-center py-8 opacity-70" style={{ color: 'var(--foreground)' }}>
                 {t('home.upcoming.noEvents')}

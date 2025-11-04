@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -30,6 +30,10 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
   const [selectedVenue, setSelectedVenue] = useState(venueFromUrl || "");
   const [selectedMerchant, setSelectedMerchant] = useState(merchantFromUrl || "");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Infinite scroll for events
+  const [visibleCount, setVisibleCount] = useState(6);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Get unique countries, venues, and merchants for filter
   const countries = [...new Set(allEvents.map((event: Event) => event.country).filter(Boolean))];
@@ -65,7 +69,33 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
     }
 
     setEvents(filtered);
+    // Reset visible count when filters change
+    setVisibleCount(6);
   }, [searchTerm, selectedCountry, selectedVenue, selectedMerchant, allEvents]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first?.isIntersecting && visibleCount < events.length) {
+          setVisibleCount((prev) => Math.min(prev + 6, events.length));
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [visibleCount, events.length]);
 
   // build qs helper
   const buildHref = (page: number, limit = serverLimit) => {
@@ -246,11 +276,19 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
 
           {/* Events Grid */}
           {events.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {events.map((event: Event) => (
-                <EventCard key={event._id} event={event} locale={locale} t={t} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {events.slice(0, visibleCount).map((event: Event) => (
+                  <EventCard key={event._id} event={event} locale={locale} t={t} />
+                ))}
+              </div>
+              {/* Sentinel element for infinite scroll */}
+              {visibleCount < events.length && (
+                <div ref={loadMoreRef} className="mt-10 h-10 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-20">
               <p className="text-xl text-gray-600 dark:text-gray-400">{t('events.noEventsFound')}</p>
