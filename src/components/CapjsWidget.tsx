@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 // Type definitions for CapJS
 declare global {
@@ -12,7 +12,7 @@ declare global {
 
 interface CustomEventDetail {
   message?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface CapjsWidgetProps {
@@ -31,27 +31,8 @@ const CapjsWidget = ({
   const widgetRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
-  useEffect(() => {
-    // Set flag to prevent redefinition warning - must be set before script loads
-    
-    window.CAP_DONT_SKIP_REDEFINE = false;
-    if (!window.__capjsLoaded) {
-      const script = document.createElement('script');
-      script.src = `${serverUrl}/assets/cap.min.js`;
-      script.async = true;
-      script.onload = () => {
-        window.__capjsLoaded = true;
-        setTimeout(() => renderWidget(), 0); // Yield for DOM stability
-      };
-      script.onerror = () => setError('Failed to load CapJS widget');
-      document.head.appendChild(script);
-    } else {
-      setTimeout(() => renderWidget(), 0);
-    }
-  }, []);
 
-
-  const renderWidget = () => {
+  const renderWidget = useCallback(() => {
     if (!window.customElements.get('cap-widget')) {
       window.customElements.whenDefined('cap-widget').then(renderWidget);
       return;
@@ -85,7 +66,8 @@ const CapjsWidget = ({
 
       capWidget.addEventListener('error', (e: Event) => {
         const customEvent = e as CustomEvent<CustomEventDetail>;
-        const err = customEvent.detail?.message || (customEvent.detail as any) || 'Unknown error';
+        const err = customEvent.detail?.message ||
+                   (typeof customEvent.detail === 'string' ? customEvent.detail : 'Unknown error');
         setError(err);
         setIsVerified(false);
         onError(err);
@@ -102,7 +84,26 @@ const CapjsWidget = ({
         }
       }, 0);
     }
-  };
+  }, [serverUrl, theme, onVerify, onError]);
+
+  useEffect(() => {
+    // Set flag to prevent redefinition warning - must be set before script loads
+
+    window.CAP_DONT_SKIP_REDEFINE = false;
+    if (!window.__capjsLoaded) {
+      const script = document.createElement('script');
+      script.src = `${serverUrl}/assets/cap.min.js`;
+      script.async = true;
+      script.onload = () => {
+        window.__capjsLoaded = true;
+        setTimeout(() => renderWidget(), 0); // Yield for DOM stability
+      };
+      script.onerror = () => setError('Failed to load CapJS widget');
+      document.head.appendChild(script);
+    } else {
+      setTimeout(() => renderWidget(), 0);
+    }
+  }, [renderWidget, serverUrl]);
 
   const resetWidget = () => {
     setIsVerified(false);

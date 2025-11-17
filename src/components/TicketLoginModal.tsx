@@ -6,6 +6,7 @@ import { api } from '@/services/apiClient';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import CapjsWidget from './CapjsWidget';
+import { AxiosError } from 'axios';
 
 interface TicketLoginModalProps {
   isOpen: boolean;
@@ -73,8 +74,9 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
       setStep('code');
       setResendTimer(180); // 3  minutes cooldown
       setCaptchaVerified(false); // Reset CAPTCHA for next time
-    } catch (err: any) {
-      setError(err.response?.data?.message || t('ticketLogin.errors.checkEmailError'));
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || t('ticketLogin.errors.checkEmailError'));
     } finally {
       setLoading(false);
     }
@@ -98,8 +100,9 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
         onClose();
         router.push('/my-tickets');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || t('ticketLogin.errors.invalidCode'));
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || t('ticketLogin.errors.invalidCode'));
     } finally {
       setLoading(false);
     }
@@ -115,8 +118,9 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
       await api.post('/guest/send-code', { email });
       setResendTimer(180); // 3 minutes cooldown
       setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.message || t('ticketLogin.errors.sendCodeError'));
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || t('ticketLogin.errors.sendCodeError'));
     } finally {
       setLoading(false);
     }

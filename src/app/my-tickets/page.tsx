@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/services/apiClient';
 import TicketLoginModal from '@/components/TicketLoginModal';
 import { useTranslation } from '@/hooks/useTranslation';
+import { AxiosError } from 'axios';
 
 interface Ticket {
   _id: string;
@@ -14,11 +15,11 @@ interface Ticket {
     eventDate: string;
     eventLocationAddress: string;
     active: boolean;
-    otherInfo?: any;
+    otherInfo?: Record<string, unknown>;
   };
   type: string;
   otp: string;
-  ticketInfo: any;
+  ticketInfo: Record<string, unknown>;
   createdAt: string;
   active: boolean;
 }
@@ -68,7 +69,7 @@ export default function MyTicketsPage() {
           setShowLoginModal(true);
           setTokenExpiryWarning(false);
         }
-      } catch (err) {
+      } catch {
         // Invalid token
         localStorage.removeItem('guest_token');
         setShowLoginModal(true);
@@ -109,12 +110,13 @@ export default function MyTicketsPage() {
           setTickets(response.data || []);
           setError('');
         }
-      } catch (err: any) {
-        if (err.response?.status === 401) {
+      } catch (err) {
+        const axiosError = err as AxiosError<{ message?: string }>;
+        if (axiosError.response?.status === 401) {
           localStorage.removeItem('guest_token');
           setShowLoginModal(true);
         } else {
-          setError(err.response?.data?.message || t('myTickets.errorLoading'));
+          setError(axiosError.response?.data?.message || t('myTickets.errorLoading'));
         }
       } finally {
         setLoading(false);
@@ -124,7 +126,7 @@ export default function MyTicketsPage() {
     if (!showLoginModal) {
       fetchTickets();
     }
-  }, [selectedYear, showLoginModal]);
+  }, [selectedYear, showLoginModal, t]);
 
   const handleDownload = async (ticketId: string) => {
     setDownloadingTicketId(ticketId);
@@ -196,8 +198,9 @@ export default function MyTicketsPage() {
           URL.revokeObjectURL(icsUrl);
         }
       }
-    } catch (err: any) {
-      alert(err.response?.data?.message || t('myTickets.errorDownloading'));
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      alert(axiosError.response?.data?.message || t('myTickets.errorDownloading'));
     } finally {
       setDownloadingTicketId(null);
     }
