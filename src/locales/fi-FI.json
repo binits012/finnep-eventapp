@@ -23,6 +23,7 @@
     "contact": "Yhteystiedot",
     "careers": "Työpaikat",
     "merchant": "Kauppias",
+    "myTickets": "Omat liput",
     "themeToggle": "Vaihda teemaa",
     "menuToggle": "Avaa valikko"
   },
@@ -381,6 +382,7 @@
       "vat": "ALV",
       "total": "Yhteensä",
       "available": "Saatavilla",
+      "lowStock": "Vähissä varastossa",
       "soldOut": "Loppuunmyyty",
       "buyTicket": "Osta lippu",
       "selectTicket": "Valitse lippu"
@@ -394,6 +396,28 @@
     },
     "social": {
       "shareEvent": "Jaa tämä tapahtuma"
+    },
+    "freeEvent": {
+      "title": "Ilmainen tapahtuma",
+      "description": "Tämä tapahtuma on ilmainen. Maksua ei vaadita.",
+      "register": "Ilmoittaudu ilmaiseen tapahtumaan",
+      "registering": "Ilmoittaudutaan...",
+      "selectTicketType": "Valitse lipputyyppi",
+      "free": "Ilmainen",
+      "freeTicket": "Ilmainen lippu"
+    },
+    "freeEventRegistration": {
+      "title": "Ilmoittaudu ilmaiseen tapahtumaan",
+      "emailAddress": "Sähköpostiosoite",
+      "confirmEmail": "Vahvista sähköpostiosoite",
+      "emailsDoNotMatch": "Sähköpostiosoitteet eivät täsmää",
+      "marketingOptIn": "Hyväksyn markkinointiviestit",
+      "cancel": "Peruuta",
+      "registering": "Ilmoittaudutaan...",
+      "registrationSuccessful": "Ilmoittautuminen onnistui!",
+      "registrationSuccessMessage": "Olet ilmoittautunut tähän ilmaiseen tapahtumaan. Tarkista sähköpostisi vahvistusta varten.",
+      "registrationFailed": "Ilmoittautuminen epäonnistui. Yritä uudelleen.",
+      "emailPlaceholder": "sähköposti@esimerkki.com"
     }
   },
   "venues": {
@@ -489,5 +513,46 @@
     "proceed": "Jatka",
     "validEmail": "Syötä kelvollinen sähköpostiosoite",
     "emailsMatch": "Sähköpostit eivät täsmää"
+  },
+  "myTickets": {
+    "title": "Omat liput",
+    "tokenExpiryWarning": "Istuntosi vanhenee pian. Tallenna tärkeät tiedot.",
+    "year": "Vuosi:",
+    "noTickets": "Lippuja ei löytynyt vuodelle {{year}}",
+    "tryDifferentYear": "Kokeile valita eri vuosi",
+    "past": "Menneisyys",
+    "upcoming": "Tulossa",
+    "download": "Lataa",
+    "downloading": "Ladataan...",
+    "ticketCode": "Lipun koodi",
+    "type": "Tyyppi:",
+    "date": "Päivämäärä:",
+    "location": "Sijainti:",
+    "notAvailable": "Ei saatavilla",
+    "errorLoading": "Virhe lippujen lataamisessa",
+    "errorDownloading": "Virhe lipun lataamisessa",
+    "downloadInfo": "Lipputiedostosi ladataan erikseen: QR-koodikuva ja kalenteritapahtumatiedosto."
+  },
+  "ticketLogin": {
+    "title": "Pääsy lippuihisi",
+    "emailLabel": "Sähköpostiosoite",
+    "emailPlaceholder": "Syötä sähköpostiosoitteesi",
+    "checking": "Tarkistetaan...",
+    "continue": "Jatka",
+    "verificationCodeLabel": "Vahvistuskoodi",
+    "codeSentMessage": "Olemme lähettäneet 8-numeroisen koodin osoitteeseen",
+    "codePlaceholder": "00000000",
+    "back": "Takaisin",
+    "verifying": "Vahvistetaan...",
+    "verify": "Vahvista",
+    "resendCode": "Lähetä koodi uudelleen",
+    "resendCodeIn": "Lähetä koodi uudelleen {{seconds}}s kuluttua",
+    "errors": {
+      "emailNotFound": "Sähköpostiosoitetta ei löytynyt järjestelmästämme. Tarkista sähköpostiosoitteesi.",
+      "checkEmailError": "Sähköpostin tarkistaminen epäonnistui. Yritä uudelleen.",
+      "invalidCode": "Virheellinen vahvistuskoodi. Yritä uudelleen.",
+      "sendCodeError": "Koodin lähettäminen epäonnistui. Yritä uudelleen.",
+      "captchaRequired": "Ole hyvä ja suorita CAPTCHA-vahvistus jatkaaksesi."
+    }
   }
 }

@@ -37,6 +37,190 @@ const Popup = dynamic(
 
 import { Event, TicketInfo } from '@/types/event';
 
+// Free Event Registration Modal Component
+function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen: boolean; onClose: () => void; event: Event; ticket: TicketInfo | null }) {
+    const { t } = useTranslation();
+    const [email, setEmail] = useState("");
+    const [confirmEmail, setConfirmEmail] = useState("");
+    const [quantity, setQuantity] = useState<number>(1);
+    const [marketingOptIn, setMarketingOptIn] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState(false);
+
+    useEffect(() => {
+        const prevOverflow = document.body.style.overflow;
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        }
+        return () => {
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setEmail("");
+            setConfirmEmail("");
+            setQuantity(1);
+            setMarketingOptIn(false);
+            setError(null);
+            setSuccess(false);
+        }
+    }, [isOpen]);
+
+    const isEmailValid = useMemo(() => /.+@.+\..+/.test(email), [email]);
+    const emailsMatch = useMemo(() => email.trim() !== "" && email === confirmEmail, [email, confirmEmail]);
+    const canSubmit = isEmailValid && emailsMatch && Boolean(ticket?._id || !event.ticketInfo || event.ticketInfo.length === 0);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!canSubmit) return;
+
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            // Call free event registration API endpoint
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/front'}/free-event-register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    quantity,
+                    eventId: event._id,
+                    ticketId: ticket?._id || null,
+                    merchantId: event?.merchant?._id || event?.merchantId,
+                    externalMerchantId: event?.externalMerchantId,
+                    eventName: event.eventTitle,
+                    ticketName: ticket?.name || t('eventDetail.freeEvent.freeTicket'),
+                    marketingOptIn: marketingOptIn || false,
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Registration failed');
+            }
+
+            setSuccess(true);
+            // Close modal after 2 seconds
+            setTimeout(() => {
+                onClose();
+            }, 2000);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : t('eventDetail.freeEventRegistration.registrationFailed'));
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
+            <div
+                className="relative z-50 w-[92vw] max-w-md rounded-xl p-5 sm:p-6 shadow-xl"
+                style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Free event registration"
+            >
+                <h2 className="text-xl font-semibold mb-2">{t('eventDetail.freeEventRegistration.title')}</h2>
+                {ticket && (
+                    <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium"
+                        style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'color-mix(in srgb, var(--foreground) 8%, var(--surface))' }}
+                    >
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-600"></span>
+                        <span>{ticket.name}</span>
+                    </div>
+                )}
+
+                {success ? (
+                    <div className="text-center py-8">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+                            <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2">{t('eventDetail.freeEventRegistration.registrationSuccessful')}</h3>
+                        <p className="text-gray-600 dark:text-gray-400">{t('eventDetail.freeEventRegistration.registrationSuccessMessage')}</p>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label htmlFor="free-email" className="block text-sm font-medium mb-1">{t('eventDetail.freeEventRegistration.emailAddress')}</label>
+                            <input
+                                id="free-email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border"
+                                style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+                                placeholder={t('eventDetail.freeEventRegistration.emailPlaceholder')}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="free-confirm-email" className="block text-sm font-medium mb-1">{t('eventDetail.freeEventRegistration.confirmEmail')}</label>
+                            <input
+                                id="free-confirm-email"
+                                type="email"
+                                value={confirmEmail}
+                                onChange={(e) => setConfirmEmail(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border"
+                                style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+                                placeholder={t('eventDetail.freeEventRegistration.emailPlaceholder')}
+                                required
+                            />
+                            {email && !emailsMatch && (
+                                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{t('eventDetail.freeEventRegistration.emailsDoNotMatch')}</p>
+                            )}
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                id="free-marketing"
+                                type="checkbox"
+                                checked={marketingOptIn}
+                                onChange={(e) => setMarketingOptIn(e.target.checked)}
+                                className="mr-2"
+                            />
+                            <label htmlFor="free-marketing" className="text-sm">{t('eventDetail.freeEventRegistration.marketingOptIn')}</label>
+                        </div>
+
+                        {error && (
+                            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 py-2 px-4 rounded-lg border font-medium transition-colors"
+                                style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                            >
+                                {t('eventDetail.freeEventRegistration.cancel')}
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={!canSubmit || isSubmitting}
+                                className="flex-1 py-2 px-4 rounded-lg font-medium text-white transition-colors bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                                {isSubmitting ? t('eventDetail.freeEventRegistration.registering') : t('eventDetail.freeEventRegistration.title')}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // Debounce hook to stabilize rapidly changing values
 function useDebouncedValue<T>(value: T, delay = 250): T {
     const [debounced, setDebounced] = useState<T>(value);
@@ -57,8 +241,13 @@ export default function EventDetail({ event }: { event: Event }) {
     const [showAllImages, setShowAllImages] = useState(false);
     const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
     const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
+    const [isFreeRegistrationOpen, setIsFreeRegistrationOpen] = useState(false);
     const selectedTicketObj = useMemo(() => event.ticketInfo.find(t => t._id === selectedTicket) || null, [event.ticketInfo, selectedTicket]);
     const router = useRouter();
+
+    // Check if event is free
+    const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' ||
+        (event.ticketInfo && event.ticketInfo.length > 0 && event.ticketInfo.every(ticket => Number(ticket.price) === 0));
 
     const calculateTotalPrice = (ticket: TicketInfo): string => {
         try {
@@ -209,12 +398,55 @@ export default function EventDetail({ event }: { event: Event }) {
                                     <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
                                         <h3 className="text-xl font-semibold mb-3">{t('eventDetail.additionalInfo.title')}</h3>
                                         <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
-                                            {Object.entries(event.otherInfo).map(([key, value]) => (
-                                                <div key={key} className="flex flex-col">
-                                                    <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>{key}</dt>
-                                                    <dd className="mt-1" style={{ color: 'var(--foreground)' }}>{value}</dd>
-                                                </div>
-                                            ))}
+                                            {Object.entries(event.otherInfo).map(([key, value]) => {
+                                                // Skip eventExtraInfo as it's an object - we'll render it separately
+                                                if (key === 'eventExtraInfo' && typeof value === 'object' && value !== null) {
+                                                    return null;
+                                                }
+
+                                                // Skip categoryName and subCategoryName
+                                                if (key === 'categoryName' || key === 'subCategoryName') {
+                                                    return null;
+                                                }
+
+                                                // Handle null or undefined values
+                                                if (value === null || value === undefined) {
+                                                    return null;
+                                                }
+
+                                                // Handle objects (other than eventExtraInfo)
+                                                if (typeof value === 'object' && !Array.isArray(value)) {
+                                                    return null;
+                                                }
+
+                                                // Render primitive values
+                                                return (
+                                                    <div key={key} className="flex flex-col">
+                                                        <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>{key}</dt>
+                                                        <dd className="mt-1" style={{ color: 'var(--foreground)' }}>{String(value)}</dd>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {/* Render door sale info only for paid events with door sale enabled */}
+                                            {event.otherInfo?.eventExtraInfo &&
+                                             typeof event.otherInfo.eventExtraInfo === 'object' &&
+                                             event.otherInfo.eventExtraInfo !== null &&
+                                             event.otherInfo.eventExtraInfo.eventType === 'paid' &&
+                                             event.otherInfo.eventExtraInfo.doorSaleAllowed === true && (
+                                                <>
+                                                    <div key="doorSaleAllowed" className="flex flex-col">
+                                                        <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>Door Sale Allowed</dt>
+                                                        <dd className="mt-1" style={{ color: 'var(--foreground)' }}>Yes</dd>
+                                                    </div>
+                                                    {event.otherInfo.eventExtraInfo.doorSaleExtraAmount && event.otherInfo.eventExtraInfo.doorSaleExtraAmount !== null && (
+                                                        <div key="doorSaleExtraAmount" className="flex flex-col">
+                                                            <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>Door Sale Extra Amount</dt>
+                                                            <dd className="mt-1" style={{ color: 'var(--foreground)' }}>{String(event.otherInfo.eventExtraInfo.doorSaleExtraAmount)}</dd>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
                                         </dl>
                                     </div>
                                 )}
@@ -508,89 +740,197 @@ export default function EventDetail({ event }: { event: Event }) {
                             <div className="rounded-lg shadow p-6 sticky top-24" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
                                 <h2 className="text-2xl font-bold mb-6">{t('eventDetail.tickets.title')}</h2>
 
-                                {event?.ticketInfo?.map((ticket) => {
-                                    const isSelected = selectedTicket === ticket._id;
-                                    const isAvailable = ticket.status === 'available';
-                                    return (
-                                        <div
-                                            key={ticket._id}
-                                            role="button"
-                                            aria-pressed={isSelected}
-                                            aria-disabled={!isAvailable}
-                                            tabIndex={isAvailable ? 0 : -1}
-                                            className={`border-2 rounded-lg p-4 mb-4 transition-all outline-none ${
-                                                isSelected
-                                                    ? 'border-indigo-500 bg-indigo-100 dark:bg-indigo-900/50 shadow-lg'
-                                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-indigo-400 dark:hover:border-indigo-500'
-                                            } ${isAvailable ? 'cursor-pointer focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600' : 'opacity-60 cursor-not-allowed'}`}
-                                            onClick={() => { if (isAvailable) { setSelectedTicket(ticket._id); } }}
-                                            onKeyDown={(e) => {
-                                                if (!isAvailable) return;
-                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                    e.preventDefault();
-                                                    setSelectedTicket(ticket._id);
+                                {isFreeEvent ? (
+                                    /* Free Event UI */
+                                    <div className="text-center">
+                                        <div className="mb-6">
+                                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+                                                <FaTicketAlt className="text-4xl text-green-600 dark:text-green-400" />
+                                            </div>
+                                            <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
+                                                {t('eventDetail.freeEvent.title')}
+                                            </h3>
+                                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                                {t('eventDetail.freeEvent.description')}
+                                            </p>
+                                        </div>
+
+                                        {event?.ticketInfo && event.ticketInfo.length > 0 ? (
+                                            <div className="space-y-3 mb-6">
+                                                {event.ticketInfo.map((ticket) => {
+                                                    const isSelected = selectedTicket === ticket._id;
+                                                    const isAvailable = ticket.status === 'available' || ticket.status === 'low_stock';
+                                                    return (
+                                                        <div
+                                                            key={ticket._id}
+                                                            role="button"
+                                                            aria-pressed={isSelected}
+                                                            aria-disabled={!isAvailable}
+                                                            tabIndex={isAvailable ? 0 : -1}
+                                                            className={`border-2 rounded-lg p-4 transition-all outline-none ${
+                                                                isSelected
+                                                                    ? 'border-green-500 bg-green-50 dark:bg-green-900/30 shadow-lg'
+                                                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-green-400 dark:hover:border-green-500'
+                                                            } ${isAvailable ? 'cursor-pointer focus:ring-2 focus:ring-green-300 dark:focus:ring-green-600' : 'opacity-60 cursor-not-allowed'}`}
+                                                            onClick={() => { if (isAvailable) { setSelectedTicket(ticket._id); } }}
+                                                            onKeyDown={(e) => {
+                                                                if (!isAvailable) return;
+                                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                                    e.preventDefault();
+                                                                    setSelectedTicket(ticket._id);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <div className="flex justify-between items-center">
+                                                                <h3 className={`font-semibold text-lg ${
+                                                                    isSelected
+                                                                        ? 'text-green-900 dark:text-green-100'
+                                                                        : 'text-gray-900 dark:text-gray-100'
+                                                                }`}>{ticket.name}</h3>
+                                                                <span className={`text-lg font-bold ${
+                                                                    isSelected
+                                                                        ? 'text-green-700 dark:text-green-300'
+                                                                        : 'text-green-600 dark:text-green-400'
+                                                                }`}>{t('eventDetail.freeEvent.free')}</span>
+                                                            </div>
+                                                            {isAvailable ? (
+                                                                <div className={`mt-2 text-sm font-semibold ${
+                                                                    ticket.status === 'low_stock'
+                                                                        ? 'text-orange-600 dark:text-orange-400'
+                                                                        : 'text-green-600 dark:text-green-400'
+                                                                }`}>
+                                                                    {ticket.status === 'low_stock' ? (
+                                                                        <>⚠ {t('eventDetail.tickets.lowStock')}</>
+                                                                    ) : (
+                                                                        <>✓ {t('eventDetail.tickets.available')}</>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">
+                                                                    ✗ {t('eventDetail.tickets.soldOut')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : null}
+
+                                        <button
+                                            className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
+                                                (event?.ticketInfo && event.ticketInfo.length > 0 && selectedTicket) || (!event?.ticketInfo || event.ticketInfo.length === 0)
+                                                    ? 'bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600'
+                                                    : 'bg-gray-400 cursor-not-allowed'
+                                            }`}
+                                            disabled={event?.ticketInfo && event.ticketInfo.length > 0 && !selectedTicket}
+                                            onClick={() => {
+                                                if (selectedTicket || !event?.ticketInfo || event.ticketInfo.length === 0) {
+                                                    setIsFreeRegistrationOpen(true);
                                                 }
                                             }}
                                         >
-                                            <div className="flex justify-between items-center mb-2">
-                                                <h3 className={`font-semibold text-lg ${
-                                                    isSelected
-                                                        ? 'text-indigo-900 dark:text-indigo-100'
-                                                        : 'text-gray-900 dark:text-gray-100'
-                                                }`}>{ticket.name}</h3>
-                                                <span className={`text-lg font-bold ${
-                                                    isSelected
-                                                        ? 'text-indigo-900 dark:text-indigo-100'
-                                                        : 'text-gray-900 dark:text-gray-100'
-                                                }`}>{ticket.price.toFixed(2)} {getCurrencySymbol(event.country || 'Finland')}</span>
-                                            </div>
+                                            {event?.ticketInfo && event.ticketInfo.length > 0
+                                                ? (selectedTicket ? t('eventDetail.freeEvent.register') : t('eventDetail.freeEvent.selectTicketType'))
+                                                : t('eventDetail.freeEvent.register')
+                                            }
+                                        </button>
+                                    </div>
+                                ) : (
+                                    /* Paid Event UI */
+                                    <>
+                                        {event?.ticketInfo?.map((ticket) => {
+                                            const isSelected = selectedTicket === ticket._id;
+                                            const isAvailable = ticket.status === 'available' || ticket.status === 'low_stock';
+                                            return (
+                                                <div
+                                                    key={ticket._id}
+                                                    role="button"
+                                                    aria-pressed={isSelected}
+                                                    aria-disabled={!isAvailable}
+                                                    tabIndex={isAvailable ? 0 : -1}
+                                                    className={`border-2 rounded-lg p-4 mb-4 transition-all outline-none ${
+                                                        isSelected
+                                                            ? 'border-indigo-500 bg-indigo-100 dark:bg-indigo-900/50 shadow-lg'
+                                                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-indigo-400 dark:hover:border-indigo-500'
+                                                    } ${isAvailable ? 'cursor-pointer focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600' : 'opacity-60 cursor-not-allowed'}`}
+                                                    onClick={() => { if (isAvailable) { setSelectedTicket(ticket._id); } }}
+                                                    onKeyDown={(e) => {
+                                                        if (!isAvailable) return;
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            setSelectedTicket(ticket._id);
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <h3 className={`font-semibold text-lg ${
+                                                            isSelected
+                                                                ? 'text-indigo-900 dark:text-indigo-100'
+                                                                : 'text-gray-900 dark:text-gray-100'
+                                                        }`}>{ticket.name}</h3>
+                                                        <span className={`text-lg font-bold ${
+                                                            isSelected
+                                                                ? 'text-indigo-900 dark:text-indigo-100'
+                                                                : 'text-gray-900 dark:text-gray-100'
+                                                        }`}>{ticket.price.toFixed(2)} {getCurrencySymbol(event.country || 'Finland')}</span>
+                                                    </div>
 
-                                            {/* Service Fee and VAT info */}
-                                            <div className={`mt-2 text-sm font-medium ${
-                                                isSelected
-                                                    ? 'text-indigo-800 dark:text-indigo-200'
-                                                    : 'text-gray-600 dark:text-gray-400'
-                                            }`}>
-                                                {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {ticket.vat}%
-                                            </div>
+                                                    {/* Service Fee and VAT info */}
+                                                    <div className={`mt-2 text-sm font-medium ${
+                                                        isSelected
+                                                            ? 'text-indigo-800 dark:text-indigo-200'
+                                                            : 'text-gray-600 dark:text-gray-400'
+                                                    }`}>
+                                                        {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {ticket.vat}%
+                                                    </div>
 
-                                            {/* Total price calculation */}
-                                            <div className="mt-3 flex justify-between items-center mb-2">
-                                                <span className={`text-sm font-semibold ${
-                                                    isSelected
-                                                        ? 'text-indigo-800 dark:text-indigo-200'
-                                                        : 'text-gray-700 dark:text-gray-300'
-                                                }`}>{t('eventDetail.tickets.total')}:</span>
-                                                <span className={`text-xl font-bold ${
-                                                    isSelected
-                                                        ? 'text-indigo-800 dark:text-indigo-200'
-                                                        : 'text-indigo-600 dark:text-indigo-400'
-                                                }`}>
-                                                    {calculateTotalPrice(ticket)} {getCurrencySymbol(event.country || 'Finland')}
-                                                </span>
-                                            </div>
+                                                    {/* Total price calculation */}
+                                                    <div className="mt-3 flex justify-between items-center mb-2">
+                                                        <span className={`text-sm font-semibold ${
+                                                            isSelected
+                                                                ? 'text-indigo-800 dark:text-indigo-200'
+                                                                : 'text-gray-700 dark:text-gray-300'
+                                                        }`}>{t('eventDetail.tickets.total')}:</span>
+                                                        <span className={`text-xl font-bold ${
+                                                            isSelected
+                                                                ? 'text-indigo-800 dark:text-indigo-200'
+                                                                : 'text-indigo-600 dark:text-indigo-400'
+                                                        }`}>
+                                                            {calculateTotalPrice(ticket)} {getCurrencySymbol(event.country || 'Finland')}
+                                                        </span>
+                                                    </div>
 
-                                            {isAvailable ? (
-                                                <div className="mt-2 text-sm font-semibold text-green-600 dark:text-green-400">
-                                                    ✓ {t('eventDetail.tickets.available')}
+                                                    {isAvailable ? (
+                                                        <div className={`mt-2 text-sm font-semibold ${
+                                                            ticket.status === 'low_stock'
+                                                                ? 'text-orange-600 dark:text-orange-400'
+                                                                : 'text-green-600 dark:text-green-400'
+                                                        }`}>
+                                                            {ticket.status === 'low_stock' ? (
+                                                                <>⚠ {t('eventDetail.tickets.lowStock')}</>
+                                                            ) : (
+                                                                <>✓ {t('eventDetail.tickets.available')}</>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">
+                                                            ✗ {t('eventDetail.tickets.soldOut')}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            ) : (
-                                                <div className="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">
-                                                    ✗ {t('eventDetail.tickets.soldOut')}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                            );
+                                        })}
 
-                                <button
-                                    className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${selectedTicket ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'
-                                        }`}
-                                    disabled={!selectedTicket}
-                                    onClick={() => { if (selectedTicket) setIsPurchaseOpen(true); }}
-                                >
-                                    {selectedTicket ? t('eventDetail.tickets.buyTicket') : t('eventDetail.tickets.selectTicket')}
-                                </button>
+                                        <button
+                                            className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${selectedTicket ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'
+                                                }`}
+                                            disabled={!selectedTicket}
+                                            onClick={() => { if (selectedTicket) setIsPurchaseOpen(true); }}
+                                        >
+                                            {selectedTicket ? t('eventDetail.tickets.buyTicket') : t('eventDetail.tickets.selectTicket')}
+                                        </button>
+                                    </>
+                                )}
 
                                 {/* Event Details */}
                                 <div className="mt-8 border-t" style={{ borderColor: 'var(--border)' }}>
@@ -688,46 +1028,59 @@ export default function EventDetail({ event }: { event: Event }) {
                     </div>
                 </div>
             </section>
-            <TicketPurchaseModal
-                isOpen={isPurchaseOpen}
-                onClose={() => { setIsPurchaseOpen(false); setSelectedTicket(null); }}
-                onProceed={({ email, quantity, ticket, eventId, merchantId, externalMerchantId, marketingOptIn, total, perUnitSubtotal, perUnitVat }) => {
-                    // Create checkout data object with pre-calculated values
-                    const checkoutData = {
-                        email,
-                        quantity,
-                        eventId,
-                        externalMerchantId: externalMerchantId || '',
-                        merchantId: merchantId || '',
-                        ticketId: ticket._id,
-                        ticketName: ticket.name,
-                        price: ticket.price,
-                        serviceFee: ticket.serviceFee ?? 0,
-                        vat: ticket.vat ?? 0,
-                        eventName: event.eventTitle,
-                        country: event.country || 'Finland',
-                        marketingOptIn,
-                        // Pre-calculated values from TicketPurchaseModal
-                        perUnitSubtotal,
-                        perUnitVat,
-                        total
-                    };
+            {/* Free Event Registration Modal */}
+            {isFreeRegistrationOpen && (
+                <FreeEventRegistrationModal
+                    isOpen={isFreeRegistrationOpen}
+                    onClose={() => { setIsFreeRegistrationOpen(false); setSelectedTicket(null); }}
+                    event={event}
+                    ticket={selectedTicketObj}
+                />
+            )}
 
-                    // Encode to base64
-                    const encodedData = btoa(JSON.stringify(checkoutData));
+            {/* Paid Event Purchase Modal - only show for paid events */}
+            {!isFreeEvent && (
+                <TicketPurchaseModal
+                    isOpen={isPurchaseOpen}
+                    onClose={() => { setIsPurchaseOpen(false); setSelectedTicket(null); }}
+                    onProceed={({ email, quantity, ticket, eventId, merchantId, externalMerchantId, marketingOptIn, total, perUnitSubtotal, perUnitVat }) => {
+                        // Create checkout data object with pre-calculated values
+                        const checkoutData = {
+                            email,
+                            quantity,
+                            eventId,
+                            externalMerchantId: externalMerchantId || '',
+                            merchantId: merchantId || '',
+                            ticketId: ticket._id,
+                            ticketName: ticket.name,
+                            price: ticket.price,
+                            serviceFee: ticket.serviceFee ?? 0,
+                            vat: ticket.vat ?? 0,
+                            eventName: event.eventTitle,
+                            country: event.country || 'Finland',
+                            marketingOptIn,
+                            // Pre-calculated values from TicketPurchaseModal
+                            perUnitSubtotal,
+                            perUnitVat,
+                            total
+                        };
 
-                    // Redirect to checkout page with encoded data
-                    router.push(`/checkout?data=${encodedData}`);
+                        // Encode to base64
+                        const encodedData = btoa(JSON.stringify(checkoutData));
 
-                    // Close modal
-                    setIsPurchaseOpen(false);
-                    setSelectedTicket(null);
-                }}
-                ticket={selectedTicketObj!}
-                eventId={event._id}
-                merchantId={event?.merchant?._id || event?.merchantId}
-                externalMerchantId={event?.externalMerchantId}
-            />
+                        // Redirect to checkout page with encoded data
+                        router.push(`/checkout?data=${encodedData}`);
+
+                        // Close modal
+                        setIsPurchaseOpen(false);
+                        setSelectedTicket(null);
+                    }}
+                    ticket={selectedTicketObj!}
+                    eventId={event._id}
+                    merchantId={event?.merchant?._id || event?.merchantId}
+                    externalMerchantId={event?.externalMerchantId}
+                />
+            )}
         </>
     );
 }

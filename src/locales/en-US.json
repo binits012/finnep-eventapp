@@ -23,6 +23,7 @@
     "contact": "Contact",
     "careers": "Careers",
     "merchant": "Merchant",
+    "myTickets": "My Tickets",
     "themeToggle": "Toggle theme",
     "menuToggle": "Toggle menu"
   },
@@ -417,6 +418,7 @@
       "vat": "VAT",
       "total": "Total",
       "available": "Available",
+      "lowStock": "Low Stock",
       "soldOut": "Sold Out",
       "buyTicket": "Buy Ticket",
       "selectTicket": "Select a Ticket"
@@ -430,6 +432,28 @@
     },
     "social": {
       "shareEvent": "Share This Event"
+    },
+    "freeEvent": {
+      "title": "Free Event",
+      "description": "This event is free to attend. No payment required.",
+      "register": "Register for Free Event",
+      "registering": "Registering...",
+      "selectTicketType": "Select Ticket Type",
+      "free": "Free",
+      "freeTicket": "Free Ticket"
+    },
+    "freeEventRegistration": {
+      "title": "Register for Free Event",
+      "emailAddress": "Email Address",
+      "confirmEmail": "Confirm Email",
+      "emailsDoNotMatch": "Emails do not match",
+      "marketingOptIn": "I agree to receive marketing communications",
+      "cancel": "Cancel",
+      "registering": "Registering...",
+      "registrationSuccessful": "Registration Successful!",
+      "registrationSuccessMessage": "You have been registered for this free event. Check your email for confirmation.",
+      "registrationFailed": "Registration failed. Please try again.",
+      "emailPlaceholder": "your.email@example.com"
     }
   },
   "checkout": {
@@ -489,5 +513,46 @@
     "proceed": "Proceed",
     "validEmail": "Enter a valid email",
     "emailsMatch": "Emails do not match"
+  },
+  "myTickets": {
+    "title": "My Tickets",
+    "tokenExpiryWarning": "Your session will expire soon. Please save any important information.",
+    "year": "Year:",
+    "noTickets": "No tickets found for {{year}}",
+    "tryDifferentYear": "Try selecting a different year",
+    "past": "Past",
+    "upcoming": "Upcoming",
+    "download": "Download",
+    "downloading": "Downloading...",
+    "ticketCode": "Ticket Code",
+    "type": "Type:",
+    "date": "Date:",
+    "location": "Location:",
+    "notAvailable": "N/A",
+    "errorLoading": "Error loading tickets",
+    "errorDownloading": "Error downloading ticket",
+    "downloadInfo": "Your ticket files will download separately: QR code image and calendar event file."
+  },
+  "ticketLogin": {
+    "title": "Access Your Tickets",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "Enter your email",
+    "checking": "Checking...",
+    "continue": "Continue",
+    "verificationCodeLabel": "Verification Code",
+    "codeSentMessage": "We've sent an 8-digit code to",
+    "codePlaceholder": "00000000",
+    "back": "Back",
+    "verifying": "Verifying...",
+    "verify": "Verify",
+    "resendCode": "Resend code",
+    "resendCodeIn": "Resend code in {{seconds}}s",
+    "errors": {
+      "emailNotFound": "Email not found in our system. Please check your email address.",
+      "checkEmailError": "Error checking email. Please try again.",
+      "invalidCode": "Invalid verification code. Please try again.",
+      "sendCodeError": "Error sending code. Please try again.",
+      "captchaRequired": "Please complete the CAPTCHA verification to continue."
+    }
   }
 }

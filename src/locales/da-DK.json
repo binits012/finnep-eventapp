@@ -23,6 +23,7 @@
     "contact": "Kontakt",
     "careers": "Karriere",
     "merchant": "Forhandler",
+    "myTickets": "Mine billetter",
     "themeToggle": "Skift tema",
     "menuToggle": "Åbn menu"
   },
@@ -381,6 +382,7 @@
       "vat": "Moms",
       "total": "I alt",
       "available": "Tilgængelig",
+      "lowStock": "Få tilbage",
       "soldOut": "Udsolgt",
       "buyTicket": "Køb billet",
       "selectTicket": "Vælg billet"
@@ -394,6 +396,28 @@
     },
     "social": {
       "shareEvent": "Del denne begivenhed"
+    },
+    "freeEvent": {
+      "title": "Gratis begivenhed",
+      "description": "Denne begivenhed er gratis at deltage i. Ingen betaling påkrævet.",
+      "register": "Tilmeld dig gratis begivenhed",
+      "registering": "Tilmelder...",
+      "selectTicketType": "Vælg billettype",
+      "free": "Gratis",
+      "freeTicket": "Gratis billet"
+    },
+    "freeEventRegistration": {
+      "title": "Tilmeld dig gratis begivenhed",
+      "emailAddress": "E-mailadresse",
+      "confirmEmail": "Bekræft e-mailadresse",
+      "emailsDoNotMatch": "E-mailadresserne matcher ikke",
+      "marketingOptIn": "Jeg accepterer markedsføringskommunikation",
+      "cancel": "Annuller",
+      "registering": "Tilmelder...",
+      "registrationSuccessful": "Registrering lykkedes!",
+      "registrationSuccessMessage": "Du er blevet tilmeldt denne gratis begivenhed. Tjek din e-mail for bekræftelse.",
+      "registrationFailed": "Registrering mislykkedes. Prøv igen.",
+      "emailPlaceholder": "din.email@eksempel.com"
     }
   },
   "venues": {
@@ -489,5 +513,46 @@
     "proceed": "Fortsæt",
     "validEmail": "Indtast en gyldig e-mailadresse",
     "emailsMatch": "E-mailadresserne matcher ikke"
+  },
+  "myTickets": {
+    "title": "Mine billetter",
+    "tokenExpiryWarning": "Din session udløber snart. Gem vigtige oplysninger.",
+    "year": "År:",
+    "noTickets": "Ingen billetter fundet for {{year}}",
+    "tryDifferentYear": "Prøv at vælge et andet år",
+    "past": "Fortid",
+    "upcoming": "Kommende",
+    "download": "Download",
+    "downloading": "Downloader...",
+    "ticketCode": "Billetkode",
+    "type": "Type:",
+    "date": "Dato:",
+    "location": "Placering:",
+    "notAvailable": "Ikke tilgængelig",
+    "errorLoading": "Fejl ved indlæsning af billetter",
+    "errorDownloading": "Fejl ved download af billet",
+    "downloadInfo": "Dine billetfiler downloades separat: QR-kodebillede og kalenderbegivenhedsfil."
+  },
+  "ticketLogin": {
+    "title": "Få adgang til dine billetter",
+    "emailLabel": "E-mailadresse",
+    "emailPlaceholder": "Indtast din e-mailadresse",
+    "checking": "Tjekker...",
+    "continue": "Fortsæt",
+    "verificationCodeLabel": "Verifikationskode",
+    "codeSentMessage": "Vi har sendt en 8-cifret kode til",
+    "codePlaceholder": "00000000",
+    "back": "Tilbage",
+    "verifying": "Verificerer...",
+    "verify": "Verificer",
+    "resendCode": "Send kode igen",
+    "resendCodeIn": "Send kode igen om {{seconds}}s",
+    "errors": {
+      "emailNotFound": "E-mailadressen blev ikke fundet i vores system. Tjek din e-mailadresse.",
+      "checkEmailError": "Fejl ved tjek af e-mail. Prøv igen.",
+      "invalidCode": "Ugyldig verifikationskode. Prøv igen.",
+      "sendCodeError": "Fejl ved afsendelse af kode. Prøv igen.",
+      "captchaRequired": "Udfør venligst CAPTCHA-verifikationen for at fortsætte."
+    }
   }
 }

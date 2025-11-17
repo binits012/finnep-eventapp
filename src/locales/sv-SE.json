@@ -23,6 +23,7 @@
     "contact": "Kontakt",
     "careers": "Karriär",
     "merchant": "Handlare",
+    "myTickets": "Mina biljetter",
     "themeToggle": "Växla tema",
     "menuToggle": "Öppna meny"
   },
@@ -381,6 +382,7 @@
       "vat": "Moms",
       "total": "Totalt",
       "available": "Tillgänglig",
+      "lowStock": "Få kvar",
       "soldOut": "Utsåld",
       "buyTicket": "Köp biljett",
       "selectTicket": "Välj biljett"
@@ -394,6 +396,28 @@
     },
     "social": {
       "shareEvent": "Dela detta evenemang"
+    },
+    "freeEvent": {
+      "title": "Gratis evenemang",
+      "description": "Detta evenemang är gratis att delta i. Ingen betalning krävs.",
+      "register": "Registrera dig för gratis evenemang",
+      "registering": "Registrerar...",
+      "selectTicketType": "Välj biljettyp",
+      "free": "Gratis",
+      "freeTicket": "Gratis biljett"
+    },
+    "freeEventRegistration": {
+      "title": "Registrera dig för gratis evenemang",
+      "emailAddress": "E-postadress",
+      "confirmEmail": "Bekräfta e-postadress",
+      "emailsDoNotMatch": "E-postadresserna matchar inte",
+      "marketingOptIn": "Jag godkänner marknadsföringskommunikation",
+      "cancel": "Avbryt",
+      "registering": "Registrerar...",
+      "registrationSuccessful": "Registrering lyckades!",
+      "registrationSuccessMessage": "Du har registrerat dig för detta gratis evenemang. Kontrollera din e-post för bekräftelse.",
+      "registrationFailed": "Registrering misslyckades. Försök igen.",
+      "emailPlaceholder": "din.epost@exempel.com"
     }
   },
   "venues": {
@@ -489,5 +513,46 @@
     "proceed": "Fortsätt",
     "validEmail": "Ange en giltig e-postadress",
     "emailsMatch": "E-postadresserna matchar inte"
+  },
+  "myTickets": {
+    "title": "Mina biljetter",
+    "tokenExpiryWarning": "Din session kommer att gå ut snart. Spara viktig information.",
+    "year": "År:",
+    "noTickets": "Inga biljetter hittades för {{year}}",
+    "tryDifferentYear": "Försök välja ett annat år",
+    "past": "Förflutna",
+    "upcoming": "Kommande",
+    "download": "Ladda ner",
+    "downloading": "Laddar ner...",
+    "ticketCode": "Biljettkod",
+    "type": "Typ:",
+    "date": "Datum:",
+    "location": "Plats:",
+    "notAvailable": "Ej tillgänglig",
+    "errorLoading": "Fel vid laddning av biljetter",
+    "errorDownloading": "Fel vid nedladdning av biljett",
+    "downloadInfo": "Dina biljettfiler laddas ner separat: QR-kodbild och kalenderhändelsefil."
+  },
+  "ticketLogin": {
+    "title": "Få tillgång till dina biljetter",
+    "emailLabel": "E-postadress",
+    "emailPlaceholder": "Ange din e-postadress",
+    "checking": "Kontrollerar...",
+    "continue": "Fortsätt",
+    "verificationCodeLabel": "Verifieringskod",
+    "codeSentMessage": "Vi har skickat en 8-siffrig kod till",
+    "codePlaceholder": "00000000",
+    "back": "Tillbaka",
+    "verifying": "Verifierar...",
+    "verify": "Verifiera",
+    "resendCode": "Skicka kod igen",
+    "resendCodeIn": "Skicka kod igen om {{seconds}}s",
+    "errors": {
+      "emailNotFound": "E-postadressen hittades inte i vårt system. Kontrollera din e-postadress.",
+      "checkEmailError": "Fel vid kontroll av e-post. Försök igen.",
+      "invalidCode": "Ogiltig verifieringskod. Försök igen.",
+      "sendCodeError": "Fel vid sändning av kod. Försök igen.",
+      "captchaRequired": "Vänligen slutför CAPTCHA-verifieringen för att fortsätta."
+    }
   }
 }

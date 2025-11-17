@@ -33,7 +33,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Security headers */}
-        <meta httpEquiv="Content-Security-Policy" content={`default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:${process.env.NEXT_PUBLIC_CSP_MODE === 'development' ? ' http://localhost:* ws://localhost:* wss://localhost:*' : ''}; frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com https://vimeo.com https://embed.ted.com https://ted.com https://js.stripe.com;`} />
+        <meta httpEquiv="Content-Security-Policy" content={`default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://js.stripe.com https://captcha.finnep.fi https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:${process.env.NEXT_PUBLIC_CSP_MODE === 'development' ? ' http://localhost:* ws://localhost:* wss://localhost:*' : ''}; frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com https://vimeo.com https://embed.ted.com https://ted.com https://js.stripe.com; worker-src 'self' blob: https://cdn.jsdelivr.net;`} />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
 
         {/* Viewport - single instance */}

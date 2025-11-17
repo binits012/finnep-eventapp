@@ -50,7 +50,20 @@ export interface Event {
     eventTimezone?: string;
     videoUrl?: string;
     eventPhoto?: string[];
-    otherInfo?:object;
+    otherInfo?: {
+      [key: string]: string | number | boolean | null | undefined | {
+        eventType?: string;
+        doorSaleAllowed?: boolean;
+        doorSaleExtraAmount?: string | number | null;
+      };
+      categoryName?: string;
+      subCategoryName?: string;
+      eventExtraInfo?: {
+        eventType?: string;
+        doorSaleAllowed?: boolean;
+        doorSaleExtraAmount?: string | number | null;
+      };
+    };
     featured?: {
       isFeatured?: boolean;
       featuredType?: string;

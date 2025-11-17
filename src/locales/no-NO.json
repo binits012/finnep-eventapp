@@ -23,6 +23,7 @@
     "contact": "Kontakt",
     "careers": "Karriere",
     "merchant": "Forhandler",
+    "myTickets": "Mine billetter",
     "themeToggle": "Bytt tema",
     "menuToggle": "Åpne meny"
   },
@@ -381,6 +382,7 @@
       "vat": "MVA",
       "total": "Totalt",
       "available": "Tilgjengelig",
+      "lowStock": "Få igjen",
       "soldOut": "Utsolgt",
       "buyTicket": "Kjøp billett",
       "selectTicket": "Velg billett"
@@ -394,6 +396,28 @@
     },
     "social": {
       "shareEvent": "Del dette arrangementet"
+    },
+    "freeEvent": {
+      "title": "Gratis arrangement",
+      "description": "Dette arrangementet er gratis å delta på. Ingen betaling påkrevd.",
+      "register": "Registrer deg for gratis arrangement",
+      "registering": "Registrerer...",
+      "selectTicketType": "Velg billetttype",
+      "free": "Gratis",
+      "freeTicket": "Gratis billett"
+    },
+    "freeEventRegistration": {
+      "title": "Registrer deg for gratis arrangement",
+      "emailAddress": "E-postadresse",
+      "confirmEmail": "Bekreft e-postadresse",
+      "emailsDoNotMatch": "E-postadressene stemmer ikke",
+      "marketingOptIn": "Jeg godtar markedsføringskommunikasjon",
+      "cancel": "Avbryt",
+      "registering": "Registrerer...",
+      "registrationSuccessful": "Registrering vellykket!",
+      "registrationSuccessMessage": "Du har blitt registrert for dette gratis arrangementet. Sjekk e-posten din for bekreftelse.",
+      "registrationFailed": "Registrering mislyktes. Prøv igjen.",
+      "emailPlaceholder": "din.epost@eksempel.com"
     }
   },
   "venues": {
@@ -489,5 +513,46 @@
     "proceed": "Fortsett",
     "validEmail": "Oppgi en gyldig e-postadresse",
     "emailsMatch": "E-postadressene matcher ikke"
+  },
+  "myTickets": {
+    "title": "Mine billetter",
+    "tokenExpiryWarning": "Økten din utløper snart. Lagre viktig informasjon.",
+    "year": "År:",
+    "noTickets": "Ingen billetter funnet for {{year}}",
+    "tryDifferentYear": "Prøv å velge et annet år",
+    "past": "Fortid",
+    "upcoming": "Kommende",
+    "download": "Last ned",
+    "downloading": "Laster ned...",
+    "ticketCode": "Billetkode",
+    "type": "Type:",
+    "date": "Dato:",
+    "location": "Plassering:",
+    "notAvailable": "Ikke tilgjengelig",
+    "errorLoading": "Feil ved lasting av billetter",
+    "errorDownloading": "Feil ved nedlasting av billett",
+    "downloadInfo": "Billettfilene dine lastes ned separat: QR-kodebilde og kalenderhendelsesfil."
+  },
+  "ticketLogin": {
+    "title": "Få tilgang til billettene dine",
+    "emailLabel": "E-postadresse",
+    "emailPlaceholder": "Skriv inn din e-postadresse",
+    "checking": "Sjekker...",
+    "continue": "Fortsett",
+    "verificationCodeLabel": "Verifiseringskode",
+    "codeSentMessage": "Vi har sendt en 8-sifret kode til",
+    "codePlaceholder": "00000000",
+    "back": "Tilbake",
+    "verifying": "Verifiserer...",
+    "verify": "Verifiser",
+    "resendCode": "Send kode på nytt",
+    "resendCodeIn": "Send kode på nytt om {{seconds}}s",
+    "errors": {
+      "emailNotFound": "E-postadressen ble ikke funnet i systemet vårt. Kontroller e-postadressen din.",
+      "checkEmailError": "Feil ved sjekk av e-post. Prøv igjen.",
+      "invalidCode": "Ugyldig verifiseringskode. Prøv igjen.",
+      "sendCodeError": "Feil ved sending av kode. Prøv igjen.",
+      "captchaRequired": "Vennligst fullfør CAPTCHA-verifiseringen for å fortsette."
+    }
   }
 }

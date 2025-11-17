@@ -26,9 +26,21 @@ apiClient.interceptors.request.use(
   (config) => {
     // Get the token from localStorage if we're in the browser
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+      // Check if this is a guest endpoint
+      const isGuestEndpoint = config.url?.startsWith('/guest/');
+
+      if (isGuestEndpoint) {
+        // Use guest token for guest endpoints
+        const guestToken = localStorage.getItem('guest_token');
+        if (guestToken && config.headers) {
+          config.headers.Authorization = `Bearer ${guestToken}`;
+        }
+      } else {
+        // Use regular auth token for other endpoints
+        const token = localStorage.getItem('auth_token');
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
     }
     return config;
@@ -48,20 +60,30 @@ apiClient.interceptors.response.use(
 
     // Handle authentication errors
     if (response?.status === 401) {
-      // Clear token and redirect to login if needed
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        // Optionally redirect to login
-        // window.location.href = '/login';
+        // Check if this was a guest endpoint
+        const isGuestEndpoint = error.config?.url?.includes('/guest/');
+
+        if (isGuestEndpoint) {
+          // Clear guest token
+          localStorage.removeItem('guest_token');
+          // Only redirect if we're on the tickets page
+          if (window.location.pathname === '/my-tickets') {
+            window.location.href = '/my-tickets';
+          }
+        } else {
+          // Clear regular auth token
+          localStorage.removeItem('auth_token');
+        }
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
 
-// Generic API request function with types
-export async function apiRequest<T = unknown, D = unknown>(
+// Generic API request function
+async function apiRequest<T = unknown, D = unknown>(
   config: AxiosRequestConfig<D>
 ): Promise<T> {
   try {
@@ -81,8 +103,8 @@ export const api = {
    * @param config - Additional Axios config
    */
   get: async <T = unknown>(
-    url: string, 
-    params?: Record<string, unknown>, 
+    url: string,
+    params?: Record<string, unknown>,
     config?: AxiosRequestConfig
   ): Promise<T> => {
     return apiRequest<T>({ method: 'GET', url, params, ...config });
@@ -95,8 +117,8 @@ export const api = {
    * @param config - Additional Axios config
    */
   post: async <T = unknown, D = unknown>(
-    url: string, 
-    data?: D, 
+    url: string,
+    data?: D,
     config?: AxiosRequestConfig
   ): Promise<T> => {
     return apiRequest<T, D>({ method: 'POST', url, data, ...config });
@@ -109,8 +131,8 @@ export const api = {
    * @param config - Additional Axios config
    */
   put: async <T = unknown, D = unknown>(
-    url: string, 
-    data?: D, 
+    url: string,
+    data?: D,
     config?: AxiosRequestConfig
   ): Promise<T> => {
     return apiRequest<T, D>({ method: 'PUT', url, data, ...config });
@@ -123,8 +145,8 @@ export const api = {
    * @param config - Additional Axios config
    */
   patch: async <T = unknown, D = unknown>(
-    url: string, 
-    data?: D, 
+    url: string,
+    data?: D,
     config?: AxiosRequestConfig
   ): Promise<T> => {
     return apiRequest<T, D>({ method: 'PATCH', url, data, ...config });
@@ -136,7 +158,7 @@ export const api = {
    * @param config - Additional Axios config
    */
   delete: async <T = unknown>(
-    url: string, 
+    url: string,
     config?: AxiosRequestConfig
   ): Promise<T> => {
     return apiRequest<T>({ method: 'DELETE', url, ...config });

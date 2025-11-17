@@ -23,22 +23,25 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
   const searchParams = useSearchParams();
   const venueFromUrl = searchParams.get('venue');
   const merchantFromUrl = searchParams.get('merchant');
+  const categoryFromUrl = searchParams.get('category');
 
   const [events, setEvents] = useState<Event[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedVenue, setSelectedVenue] = useState(venueFromUrl || "");
   const [selectedMerchant, setSelectedMerchant] = useState(merchantFromUrl || "");
+  const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl || "");
   const [showFilters, setShowFilters] = useState(false);
 
   // Infinite scroll for events
   const [visibleCount, setVisibleCount] = useState(6);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Get unique countries, venues, and merchants for filter
+  // Get unique countries, venues, merchants, and categories for filter
   const countries = [...new Set(allEvents.map((event: Event) => event.country).filter(Boolean))];
   const venues = [...new Set(allEvents.map((event: Event) => event.venueInfo?.name).filter(Boolean))];
   const merchants = [...new Set(allEvents.map((event: Event) => event.merchant?.name).filter(Boolean))];
+  const categories = [...new Set(allEvents.map((event: Event) => event.otherInfo?.categoryName).filter(Boolean))];
 
   // Filter events based on search and filters (client-side refinement on server slice)
   useEffect(() => {
@@ -68,10 +71,14 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
       );
     }
 
+    if (selectedCategory) {
+      filtered = filtered.filter((event: Event) => event.otherInfo?.categoryName === selectedCategory);
+    }
+
     setEvents(filtered);
     // Reset visible count when filters change
     setVisibleCount(6);
-  }, [searchTerm, selectedCountry, selectedVenue, selectedMerchant, allEvents]);
+  }, [searchTerm, selectedCountry, selectedVenue, selectedMerchant, selectedCategory, allEvents]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -105,6 +112,7 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
     if (selectedCountry) params.set('country', selectedCountry);
     if (selectedVenue) params.set('venue', selectedVenue);
     if (selectedMerchant) params.set('merchant', selectedMerchant);
+    if (selectedCategory) params.set('category', selectedCategory);
     if (searchTerm) params.set('q', searchTerm);
     return `?${params.toString()}`;
   };
@@ -167,6 +175,17 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                   </button>
                 </div>
               )}
+              {selectedCategory && !selectedVenue && !selectedMerchant && (
+                <div className="flex items-center gap-2">
+                  <p className="text-sm opacity-70">{t('events.eventsFound', { count: events.length })}</p>
+                  <button
+                    onClick={() => setSelectedCategory("")}
+                    className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Clear Category Filter
+                  </button>
+                </div>
+              )}
               {totalPages > 1 && (
                 <p className="text-sm opacity-70">Page {serverPage} of {totalPages}</p>
               )}
@@ -221,6 +240,18 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                   <option key={merchant} value={merchant}>{merchant}</option>
                 ))}
               </select>
+
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+              >
+                <option value="">All Categories</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -268,6 +299,21 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                   <option value="">{t('events.allOrganizers')}</option>
                   {merchants.map((merchant) => (
                     <option key={merchant} value={merchant}>{merchant}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium">Category</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full rounded-lg py-2 px-4"
+                  style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
               </div>
@@ -327,6 +373,9 @@ function EventCard({ event, locale, t }: { event: Event; locale: string; t: (key
   const minPrice = Array.isArray(event.ticketInfo) && event.ticketInfo.length
     ? Math.min(...event.ticketInfo.map((ticket) => Number(ticket.price) || 0))
     : 0;
+
+  // Check if event is free
+  const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' || minPrice === 0;
 
   return (
     <motion.div
@@ -392,9 +441,15 @@ function EventCard({ event, locale, t }: { event: Event; locale: string; t: (key
 
           {/* Price & Status Tag */}
           <div className="mt-4 flex justify-between items-center">
-            <span className="text-indigo-600 dark:text-indigo-400 font-medium">
-              {minPrice} {' '} {getCurrencySymbol(event.country || '')}
-            </span>
+            {isFreeEvent ? (
+              <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-sm px-3 py-1 rounded-full">
+                {t('eventDetail.freeEvent.free')}
+              </span>
+            ) : (
+              <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+                {minPrice} {' '} {getCurrencySymbol(event.country || '')}
+              </span>
+            )}
             {(event.active ?? true) && (
               <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                 {t('home.upcoming.badge')}

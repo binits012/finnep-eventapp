@@ -113,6 +113,7 @@ export default function Header() {
             {[
               { href: "/events", label: t('header.events') },
               { href: "/merchant", label: t('header.merchant') },
+              { href: "/my-tickets", label: t('header.myTickets') },
             ].map((link) => (
               <Link
                 key={link.href}
@@ -202,11 +203,12 @@ export default function Header() {
             : 'opacity-0 max-h-0 pointer-events-none'
         }`}
       >
-        <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
+          <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
           <nav className="flex flex-col space-y-4">
             {[
               { href: "/events", label: t('header.events') },
-              { href: "/merchant", label: t('header.merchant') }
+              { href: "/merchant", label: t('header.merchant') },
+              { href: "/my-tickets", label: t('header.myTickets') }
             ].map((link) => (
               <Link
                 key={link.href}

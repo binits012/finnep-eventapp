@@ -389,6 +389,9 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
     }
   };
 
+  // Check if event is free
+  const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' || getMinPrice() === 0;
+
   return (
     <div
       className="rounded-xl overflow-hidden shadow-sm transition-all duration-300"
@@ -427,6 +430,16 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
             </div>
           </Link>
         )}
+        {/* Category badge - clickable */}
+        {event.otherInfo?.categoryName && (
+          <div className="mb-2">
+            <Link href={`/events?category=${encodeURIComponent(event.otherInfo.categoryName)}`}>
+              <span className="inline-block text-xs px-2 py-1 rounded-full border cursor-pointer transition-all duration-200 hover:opacity-80" style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}>
+                {event.otherInfo.categoryName}
+              </span>
+            </Link>
+          </div>
+        )}
         <Link href={`/events/${event._id}`} className="block">
           <h3 className="text-lg sm:text-xl font-semibold mb-2 line-clamp-1">{event.eventTitle}</h3>
         </Link>
@@ -439,12 +452,18 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
           <span className="line-clamp-1">{event.venueInfo?.name || event.city}</span>
         </div>
         <div className="mt-1 flex items-center justify-between">
-          <div className="flex items-center text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
-            <FaTicketAlt className="mr-2 flex-shrink-0" />
-            <span>
-              {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+          {isFreeEvent ? (
+            <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-sm px-3 py-1 rounded-full">
+              {t('eventDetail.freeEvent.free')}
             </span>
-          </div>
+          ) : (
+            <div className="flex items-center text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
+              <FaTicketAlt className="mr-2 flex-shrink-0" />
+              <span>
+                {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+              </span>
+            </div>
+          )}
           <span
             className="text-[11px] sm:text-xs px-2 py-1 rounded border"
             style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
@@ -493,6 +512,9 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
     }
   };
 
+  // Check if event is free
+  const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' || getMinPrice() === 0;
+
   const promoImg = event.eventPromotionPhoto || event.venueInfo?.media?.photo?.[0] || "https://via.placeholder.com/400x240";
 
   return (
@@ -536,6 +558,16 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
               </div>
             </Link>
           )}
+          {/* Category badge - clickable */}
+          {event.otherInfo?.categoryName && (
+            <div className="mb-1">
+              <Link href={`/events?category=${encodeURIComponent(event.otherInfo.categoryName)}`}>
+                <span className="inline-block text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full border cursor-pointer transition-all duration-200 hover:opacity-80" style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}>
+                  {event.otherInfo.categoryName}
+                </span>
+              </Link>
+            </div>
+          )}
           <Link href={`/events/${event._id}`} className="block">
             <h3 className="font-semibold text-sm sm:text-base line-clamp-1" style={{ color: 'var(--foreground)' }}>
               {event.eventTitle}
@@ -547,9 +579,15 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
           </div>
 
           <div className="mt-3 flex items-center justify-between">
-            <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
-            </span>
+            {isFreeEvent ? (
+              <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-xs sm:text-sm px-2 py-1 rounded-full">
+                {t('eventDetail.freeEvent.free')}
+              </span>
+            ) : (
+              <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+              </span>
+            )}
             <span
               className="text-[11px] sm:text-xs px-2 py-1 rounded border"
               style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
@@ -593,6 +631,9 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
       return 0;
     }
   };
+
+  // Check if event is free
+  const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' || getMinPrice() === 0;
 
   const promoImg = event.eventPromotionPhoto || event.venueInfo?.media?.photo?.[0] || "https://via.placeholder.com/400x240";
 
@@ -672,6 +713,16 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
             </div>
           </Link>
         )}
+        {/* Category badge - clickable */}
+        {event.otherInfo?.categoryName && (
+          <div className="mb-1">
+            <Link href={`/events?category=${encodeURIComponent(event.otherInfo.categoryName)}`}>
+              <span className="inline-block text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full border cursor-pointer transition-all duration-200 hover:opacity-80" style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}>
+                {event.otherInfo.categoryName}
+              </span>
+            </Link>
+          </div>
+        )}
         <Link href={`/events/${event._id}`} className="block">
           <h3 className="font-semibold text-sm sm:text-base line-clamp-1" style={{ color: 'var(--foreground)' }}>
             {event.eventTitle}
@@ -683,9 +734,15 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
         </div>
 
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-            {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
-          </span>
+          {isFreeEvent ? (
+            <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-xs sm:text-sm px-2 py-1 rounded-full">
+              {t('eventDetail.freeEvent.free')}
+            </span>
+          ) : (
+            <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+            </span>
+          )}
           <span
             className="text-[11px] sm:text-xs px-2 py-1 rounded border"
             style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
