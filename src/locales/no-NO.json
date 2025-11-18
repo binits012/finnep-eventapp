@@ -24,8 +24,20 @@
     "careers": "Karriere",
     "merchant": "Forhandler",
     "myTickets": "Mine billetter",
+    "help": "Hjelp",
     "themeToggle": "Bytt tema",
     "menuToggle": "Åpne meny"
+  },
+  "help": {
+    "title": "Brukerhåndbok",
+    "subtitle": "Komplett guide for å bruke Finnep Event App",
+    "downloadPdf": "Last ned PDF-versjon",
+    "pdfNotAvailable": "PDF-versjon vil snart være tilgjengelig. Bruk nettleserens utskriftsfunksjon for å lagre som PDF.",
+    "backToTop": "Tilbake til toppen",
+    "error": {
+      "title": "Feil ved lasting av håndbok",
+      "message": "Vennligst prøv å oppdatere siden eller kontakt støtte."
+    }
   },
   "footer": {
     "tagline": "Oppdag spennende arrangementer som skjer rundt deg. Koble til med mennesker som deler dine interesser.",

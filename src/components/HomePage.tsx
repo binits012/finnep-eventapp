@@ -449,7 +449,22 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
         </div>
         <div className="flex items-center mb-4 text-sm sm:text-base opacity-80" style={{ color: 'var(--foreground)' }}>
           <FaMapMarkerAlt className="mr-2 flex-shrink-0" />
-          <span className="line-clamp-1">{event.venueInfo?.name || event.city}</span>
+          <span className="line-clamp-1">
+            {event.venueInfo?.name || event.city}
+            {event.city ? `, ${event.city}` : ''}
+            {event.country && (
+              <>
+                {', '}
+                <Link
+                  href={`/events?country=${encodeURIComponent(event.country)}`}
+                  className="underline hover:opacity-80 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {countries.getName(event.country, 'en') || event.country}
+                </Link>
+              </>
+            )}
+          </span>
         </div>
         <div className="mt-1 flex items-center justify-between">
           {isFreeEvent ? (
@@ -464,6 +479,7 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
               </span>
             </div>
           )}
+          {/*
           <span
             className="text-[11px] sm:text-xs px-2 py-1 rounded border"
             style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
@@ -471,6 +487,7 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
           >
             {t('home.audience', { capacity: event.occupancy || 0 })}
           </span>
+          */}
         </div>
         <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
           <Link href={`/events/${event._id}`}>
@@ -575,7 +592,22 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
           </Link>
           <div className="mt-1 flex items-center text-xs sm:text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
             <FaMapMarkerAlt className="mr-1 flex-shrink-0" size={12} />
-            <span className="truncate">{event.venueInfo?.name || event.city}{event.city ? `, ${event.city}` : ''}</span>
+            <span className="truncate">
+              {event.venueInfo?.name || event.city}
+              {event.city ? `, ${event.city}` : ''}
+              {event.country && (
+                <>
+                  {', '}
+                  <Link
+                    href={`/events?country=${encodeURIComponent(event.country)}`}
+                    className="underline hover:opacity-80 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {countries.getName(event.country, 'en') || event.country}
+                  </Link>
+                </>
+              )}
+            </span>
           </div>
 
           <div className="mt-3 flex items-center justify-between">
@@ -588,6 +620,7 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
                 {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
               </span>
             )}
+            {/*
             <span
               className="text-[11px] sm:text-xs px-2 py-1 rounded border"
               style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
@@ -595,6 +628,7 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
             >
               {t('home.audience', { capacity: event.occupancy || 0 })}
             </span>
+            */}
           </div>
 
           {(event.transportLink || event.videoUrl) && (
@@ -730,7 +764,22 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
         </Link>
         <div className="mt-1 flex items-center text-xs sm:text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
           <FaMapMarkerAlt className="mr-1 flex-shrink-0" size={12} />
-          <span className="truncate">{event.venueInfo?.name || event.city}{event.city ? `, ${event.city}` : ''}</span>
+          <span className="truncate">
+            {event.venueInfo?.name || event.city}
+            {event.city ? `, ${event.city}` : ''}
+            {event.country && (
+              <>
+                {', '}
+                <Link
+                  href={`/events?country=${encodeURIComponent(event.country)}`}
+                  className="underline hover:opacity-80 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {countries.getName(event.country, 'en') || event.country}
+                </Link>
+              </>
+            )}
+          </span>
         </div>
 
         <div className="mt-3 flex items-center justify-between">
@@ -743,6 +792,7 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
               {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
             </span>
           )}
+          {/*
           <span
             className="text-[11px] sm:text-xs px-2 py-1 rounded border"
             style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
@@ -750,6 +800,7 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
           >
             {t('home.audience', { capacity: event.occupancy || 0 })}
           </span>
+          */}
         </div>
 
         {(event.transportLink || event.videoUrl) && (

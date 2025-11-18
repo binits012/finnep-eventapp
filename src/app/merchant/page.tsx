@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { FaBuilding, FaGlobe, FaUser, FaStripe, FaInfoCircle, FaChevronDown, FaSearch, FaMapMarkerAlt, FaEnvelope, FaPhone, FaExternalLinkAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 import crypto from 'crypto-js';
@@ -367,6 +367,7 @@ export default function MerchantRegistrationPage() {
   const [lastOauthAttempt, setLastOauthAttempt] = useState<number | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showVerifyPassword, setShowVerifyPassword] = useState(false);
+  const oauthProcessedRef = useRef(false); // Track if OAuth callback has been processed
 
   // Auto-dismiss messages after 5 seconds
   useEffect(() => {
@@ -477,11 +478,24 @@ export default function MerchantRegistrationPage() {
   // Check for OAuth completion (called when page loads)
   useEffect(() => {
     const checkOAuthStatus = async () => {
+      // Prevent multiple calls - if already processed, skip
+      if (oauthProcessedRef.current) {
+        return;
+      }
+
       // Check if we have OAuth parameters in URL
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
       const error = urlParams.get('error');
+
+      // If no OAuth params, nothing to do
+      if (!code && !state && !error) {
+        return;
+      }
+
+      // Mark as processed immediately to prevent duplicate calls
+      oauthProcessedRef.current = true;
 
       if (code && state) {
         // Verify state parameter to prevent CSRF attacks
@@ -494,6 +508,9 @@ export default function MerchantRegistrationPage() {
             type: 'error',
             message: 'Security error: Invalid OAuth state. Please try again.'
           });
+          // Reset ref and clean up URL to allow retry
+          oauthProcessedRef.current = false;
+          window.history.replaceState({}, document.title, window.location.pathname);
           return;
         }
 
@@ -509,6 +526,9 @@ export default function MerchantRegistrationPage() {
               type: 'error',
               message: 'Security error: OAuth request expired. Please try again.'
             });
+            // Reset ref and clean up URL to allow retry
+            oauthProcessedRef.current = false;
+            window.history.replaceState({}, document.title, window.location.pathname);
             return;
           }
         }
@@ -529,10 +549,6 @@ export default function MerchantRegistrationPage() {
               timestamp: Date.now()
             })
           });
-          console.log('response', response);
-          console.log('response.ok:', response.ok);
-          console.log('response.status:', response.status);
-          console.log('response.statusText:', response.statusText);
 
           if (response.ok && response.status === 200) {
             const data = await response.json();
@@ -552,17 +568,18 @@ export default function MerchantRegistrationPage() {
                 }
               }
 
+              // Clean up URL and session storage FIRST (before setFormData to prevent re-trigger)
+              window.history.replaceState({}, document.title, window.location.pathname);
+              sessionStorage.removeItem('stripe_oauth_state');
+              sessionStorage.removeItem('stripe_oauth_timestamp');
+              sessionStorage.removeItem('merchant_form_data'); // Clean up saved form data
+
+              // Update form data AFTER cleaning up URL
               setFormData({
                 ...updatedFormData,
                 stripeConnected: true,
                 stripeAccount: data.accountId
               });
-
-              // Clean up URL and session storage
-              window.history.replaceState({}, document.title, window.location.pathname);
-              sessionStorage.removeItem('stripe_oauth_state');
-              sessionStorage.removeItem('stripe_oauth_timestamp');
-              sessionStorage.removeItem('merchant_form_data'); // Clean up saved form data
 
               setSubmitMessage({
                 type: 'success',
@@ -600,6 +617,10 @@ export default function MerchantRegistrationPage() {
           });
           sessionStorage.removeItem('stripe_oauth_state');
           sessionStorage.removeItem('stripe_oauth_timestamp');
+          // Reset ref to allow retry
+          oauthProcessedRef.current = false;
+          // Clean up URL params on error
+          window.history.replaceState({}, document.title, window.location.pathname);
           // Don't remove merchant_form_data on error - let user retry with their data intact
         }
       } else if (error) {
@@ -610,12 +631,17 @@ export default function MerchantRegistrationPage() {
         });
         sessionStorage.removeItem('stripe_oauth_state');
         sessionStorage.removeItem('stripe_oauth_timestamp');
+        // Reset ref to allow retry
+        oauthProcessedRef.current = false;
+        // Clean up URL params on error
+        window.history.replaceState({}, document.title, window.location.pathname);
         // Don't remove merchant_form_data on cancellation - let user retry with their data intact
       }
     };
 
     checkOAuthStatus();
-  }, [formData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount. formData is intentionally excluded to prevent re-runs.
 
   const mandatoryFields = useMemo(() => [
     'orgName', 'companyEmail', 'companyPhoneNumber',

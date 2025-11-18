@@ -24,8 +24,20 @@
     "careers": "Careers",
     "merchant": "Merchant",
     "myTickets": "My Tickets",
+    "help": "Help",
     "themeToggle": "Toggle theme",
     "menuToggle": "Toggle menu"
+  },
+  "help": {
+    "title": "User Manual",
+    "subtitle": "Complete guide to using Finnep Event App",
+    "downloadPdf": "Download PDF Version",
+    "pdfNotAvailable": "PDF version will be available soon. Use the print function in your browser to save as PDF.",
+    "backToTop": "Back to Top",
+    "error": {
+      "title": "Error Loading Manual",
+      "message": "Please try refreshing the page or contact support."
+    }
   },
   "footer": {
     "tagline": "Discover exciting events happening around you. Connect with people who share your interests.",

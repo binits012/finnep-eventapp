@@ -960,7 +960,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                             </div>
                                         </div>
 
-                                        {event.occupancy && (
+                                        {/*event.occupancy && (
                                             <div className="flex">
                                                 <FaTicketAlt className="text-gray-500 dark:text-gray-400 mt-1 mr-3" />
                                                 <div>
@@ -970,7 +970,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                                     </div>
                                                 </div>
                                             </div>
-                                        )}
+                                        )*/}
                                     </div>
                                 </div>
 

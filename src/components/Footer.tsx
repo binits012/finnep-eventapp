@@ -107,13 +107,6 @@ export default function Footer() {
                 {t('footer.company')}
               </h3>
               <ul className="mt-4 flex flex-wrap justify-center sm:justify-start">
-                {/*
-                <li className="w-1/2 text-center sm:text-left py-2">
-                  <Link href="/about" className="text-base transition p-2 opacity-80 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
-                    About Us
-                  </Link>
-                </li>
-                 */}
                 <li className="w-1/2 text-center sm:text-left py-2">
                   <Link href="/contact" className="text-base transition p-2 opacity-80 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
                     {t('footer.contact')}
@@ -124,43 +117,13 @@ export default function Footer() {
                     {t('footer.careers')}
                   </Link>
                 </li>
-                {/*
                 <li className="w-1/2 text-center sm:text-left py-2">
-                  <Link href="/blog" className="text-base transition p-2 opacity-80 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
-                    {t('footer.blog')}
+                  <Link href="/help" className="text-base transition p-2 opacity-80 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
+                    {t('header.help')}
                   </Link>
                 </li>
-                */}
               </ul>
             </div>
-
-            {/* Newsletter - Mobile */}
-            {/*
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-center sm:text-left" style={{ color: 'var(--foreground)' }}>
-                {t('footer.stayUpdated')}
-              </h3>
-              <p className="mt-4 text-base text-center sm:text-left opacity-80" style={{ color: 'var(--foreground)' }}>
-                {t('footer.subscribeText')}
-              </p>
-              <form className="mt-4">
-                <div className="flex flex-col gap-3">
-                  <input
-                    type="email"
-                    placeholder={t('footer.emailPlaceholder')}
-                    className="w-full px-4 py-3 text-base rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
-                  />
-                  <button
-                    type="submit"
-                    className="w-full py-3 px-4 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                  >
-                    {t('footer.subscribe')}
-                  </button>
-                </div>
-              </form>
-            </div>
-            */}
           </div>
         </div>
 
@@ -256,6 +219,11 @@ export default function Footer() {
               <li>
                 <Link href="/careers" className="text-sm transition duration-150 opacity-80 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
                   {t('footer.careers')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/help" className="text-sm transition duration-150 opacity-80 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
+                  {t('header.help')}
                 </Link>
               </li>
               {/*

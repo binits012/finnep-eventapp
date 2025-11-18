@@ -11,7 +11,8 @@
     "upload-translations:all": "node scripts/upload-translations.mjs all",
     "test-translations": "node scripts/test-s3-translations.mjs",
     "test-translations:all": "node scripts/test-s3-translations.mjs all",
-    "test-smart-translations": "node scripts/test-smart-translations.mjs"
+    "test-smart-translations": "node scripts/test-smart-translations.mjs",
+    "generate-pdf": "node scripts/generate-pdf.js"
   },
   "dependencies": {
     "@fortawesome/free-brands-svg-icons": "^7.0.1",
@@ -30,7 +31,10 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-icons": "^5.5.0",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "react-markdown": "^10.1.0",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

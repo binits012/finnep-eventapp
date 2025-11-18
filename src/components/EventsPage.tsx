@@ -24,10 +24,11 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
   const venueFromUrl = searchParams.get('venue');
   const merchantFromUrl = searchParams.get('merchant');
   const categoryFromUrl = searchParams.get('category');
+  const countryFromUrl = searchParams.get('country');
 
   const [events, setEvents] = useState<Event[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(countryFromUrl || "");
   const [selectedVenue, setSelectedVenue] = useState(venueFromUrl || "");
   const [selectedMerchant, setSelectedMerchant] = useState(merchantFromUrl || "");
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl || "");

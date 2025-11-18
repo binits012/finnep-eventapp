@@ -24,8 +24,20 @@
     "careers": "Työpaikat",
     "merchant": "Kauppias",
     "myTickets": "Omat liput",
+    "help": "Ohje",
     "themeToggle": "Vaihda teemaa",
     "menuToggle": "Avaa valikko"
+  },
+  "help": {
+    "title": "Käyttöohje",
+    "subtitle": "Täydellinen opas Finnep Event Appin käyttöön",
+    "downloadPdf": "Lataa PDF-versio",
+    "pdfNotAvailable": "PDF-versio tulee pian saataville. Käytä selaimen tulostustoimintoa tallentaaksesi PDF-muotoon.",
+    "backToTop": "Takaisin ylös",
+    "error": {
+      "title": "Virhe ohjeen lataamisessa",
+      "message": "Yritä päivittää sivu tai ota yhteyttä tukeen."
+    }
   },
   "footer": {
     "tagline": "Löydä jännittäviä tapahtumia läheltäsi. Tutustu ihmisiin, joilla on samat kiinnostuksen kohteet.",

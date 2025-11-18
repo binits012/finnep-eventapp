@@ -8,6 +8,8 @@ export interface LocaleInfo {
   currencySymbol: string;
   dateFormat: string;
   timeFormat: string;
+  pdf?: string;
+  md?: string;
 }
 
 // Fallback locales if API data is not available
@@ -21,7 +23,9 @@ export const fallbackLocales: LocaleInfo[] = [
     currency: 'USD',
     currencySymbol: '$',
     dateFormat: 'MM/DD/YYYY',
-    timeFormat: '12h'
+    timeFormat: '12h',
+    pdf: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_en-US.pdf',
+    md: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_en-US.md'
   },
   {
     code: 'fi-FI',
@@ -32,7 +36,9 @@ export const fallbackLocales: LocaleInfo[] = [
     currency: 'EUR',
     currencySymbol: '€',
     dateFormat: 'DD.MM.YYYY',
-    timeFormat: '24h'
+    timeFormat: '24h',
+    pdf: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_fi-FI.pdf',
+    md: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_fi-FI.md'
   },
   {
     code: 'sv-SE',
@@ -43,7 +49,9 @@ export const fallbackLocales: LocaleInfo[] = [
     currency: 'SEK',
     currencySymbol: 'kr',
     dateFormat: 'YYYY-MM-DD',
-    timeFormat: '24h'
+    timeFormat: '24h',
+    pdf: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_sv-SE.pdf',
+    md: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_sv-SE.md'
   },
   {
     code: 'da-DK',
@@ -54,7 +62,9 @@ export const fallbackLocales: LocaleInfo[] = [
     currency: 'DKK',
     currencySymbol: 'kr',
     dateFormat: 'DD.MM.YYYY',
-    timeFormat: '24h'
+    timeFormat: '24h',
+    pdf: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_da-DK.pdf',
+    md: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_da-DK.md'
   },
   {
     code: 'no-NO',
@@ -65,7 +75,9 @@ export const fallbackLocales: LocaleInfo[] = [
     currency: 'NOK',
     currencySymbol: 'kr',
     dateFormat: 'DD.MM.YYYY',
-    timeFormat: '24h'
+    timeFormat: '24h',
+    pdf: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_no-NO.pdf',
+    md: 'https://d3ibhfrhdk2dm6.cloudfront.net/manual/USER_MANUAL_no-NO.md'
   }
 ];
 

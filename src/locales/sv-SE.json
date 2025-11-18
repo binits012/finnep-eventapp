@@ -24,8 +24,20 @@
     "careers": "Karriär",
     "merchant": "Handlare",
     "myTickets": "Mina biljetter",
+    "help": "Hjälp",
     "themeToggle": "Växla tema",
     "menuToggle": "Öppna meny"
+  },
+  "help": {
+    "title": "Användarhandbok",
+    "subtitle": "Komplett guide för att använda Finnep Event App",
+    "downloadPdf": "Ladda ner PDF-version",
+    "pdfNotAvailable": "PDF-version kommer snart att vara tillgänglig. Använd webbläsarens utskriftsfunktion för att spara som PDF.",
+    "backToTop": "Tillbaka till toppen",
+    "error": {
+      "title": "Fel vid laddning av handbok",
+      "message": "Vänligen försök uppdatera sidan eller kontakta support."
+    }
   },
   "footer": {
     "tagline": "Upptäck spännande evenemang som händer runt dig. Anslut med människor som delar dina intressen.",
