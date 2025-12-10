@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
+import SeatSelectionModal from './SeatSelectionModal';
 
 interface TicketInfoLite {
   _id: string;
@@ -14,19 +15,23 @@ interface TicketInfoLite {
 interface TicketPurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onProceed: (payload: { email: string; quantity: number; ticket: TicketInfoLite; eventId: string; merchantId?: string; externalMerchantId?: string; marketingOptIn: boolean; total: number; perUnitSubtotal: number; perUnitVat: number }) => void;
+  onProceed: (payload: { email: string; quantity: number; ticket: TicketInfoLite; eventId: string; merchantId?: string; externalMerchantId?: string; marketingOptIn: boolean; total: number; perUnitSubtotal: number; perUnitVat: number; placeIds?: string[] }) => void;
   ticket: TicketInfoLite;
   eventId: string;
   merchantId?: string;
   externalMerchantId?: string;
+  hasSeatSelection?: boolean;
+  currency?: string;
 }
 
-export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket, eventId, merchantId, externalMerchantId }: TicketPurchaseModalProps) {
+export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket, eventId, merchantId, externalMerchantId, hasSeatSelection = false, currency = 'EUR' }: TicketPurchaseModalProps) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [showSeatSelection, setShowSeatSelection] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
 
   useEffect(() => {
     // Disable body scroll while modal is open
@@ -45,6 +50,8 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
       setConfirmEmail("");
       setQuantity(1);
       setMarketingOptIn(false);
+      setShowSeatSelection(false);
+      setSelectedSeats([]);
     }
   }, [isOpen]);
 
@@ -64,7 +71,9 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
   const perUnitTotal = useMemo(() => perUnitSubtotal + perUnitVat, [perUnitSubtotal, perUnitVat]);
   const total = useMemo(() => Math.max(0, Math.round(perUnitTotal * quantity * 100) / 100), [perUnitTotal, quantity]);
 
-  const canProceed = isEmailValid && emailsMatch && isQuantityValid && Boolean(ticket?._id) && Boolean(eventId);
+  // For seat-based events, require seat selection
+  const seatsSelected = !hasSeatSelection || selectedSeats.length === quantity;
+  const canProceed = isEmailValid && emailsMatch && isQuantityValid && Boolean(ticket?._id) && Boolean(eventId) && seatsSelected;
 
   if (!isOpen) return null;
 
@@ -117,27 +126,101 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
 
           <div>
             <label className="block text-sm font-medium mb-1">{t('ticketModal.quantity')}</label>
-            <input
-              type="text"
-              value={quantity}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '') {
-                  setQuantity(0);
-                } else {
-                  const num = parseInt(value, 10);
-                  if (!isNaN(num)) {
-                    setQuantity(Math.min(num, 10)); // Enforce max 10
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const newQuantity = Math.max(1, quantity - 1);
+                  setQuantity(newQuantity);
+                  // If seat selection is enabled and quantity changed, clear seats
+                  if (hasSeatSelection && newQuantity !== quantity) {
+                    setSelectedSeats([]);
                   }
-                }
-              }}
-              onFocus={(e) => e.target.select()} // Select all text when focused
-              className="w-full rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
-              placeholder={t('ticketModal.quantityPlaceholder')}
-            />
+                }}
+                disabled={quantity <= 1}
+                className="flex items-center justify-center w-10 h-10 rounded-md border font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:bg-opacity-10"
+                style={{
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                  background: quantity <= 1 ? 'transparent' : 'color-mix(in srgb, var(--foreground) 8%, var(--surface))'
+                }}
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+              <input
+                type="text"
+                value={quantity}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    setQuantity(0);
+                  } else {
+                    const num = parseInt(value, 10);
+                    if (!isNaN(num)) {
+                      const newQuantity = Math.min(Math.max(1, num), 10); // Enforce min 1 and max 10
+                      setQuantity(newQuantity);
+                      // If seat selection is enabled and quantity changed, clear seats
+                      if (hasSeatSelection && newQuantity !== quantity) {
+                        setSelectedSeats([]);
+                      }
+                    }
+                  }
+                }}
+                onFocus={(e) => e.target.select()} // Select all text when focused
+                className="flex-1 rounded-md px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                placeholder={t('ticketModal.quantityPlaceholder')}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const newQuantity = Math.min(10, quantity + 1);
+                  setQuantity(newQuantity);
+                  // If seat selection is enabled and quantity changed, clear seats
+                  if (hasSeatSelection && newQuantity !== quantity) {
+                    setSelectedSeats([]);
+                  }
+                }}
+                disabled={quantity >= 10}
+                className="flex items-center justify-center w-10 h-10 rounded-md border font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:bg-opacity-10"
+                style={{
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                  background: quantity >= 10 ? 'transparent' : 'color-mix(in srgb, var(--foreground) 8%, var(--surface))'
+                }}
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
+            </div>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('ticketModal.quantityHint')}</p>
           </div>
+
+          {/* Seat Selection Button */}
+          {hasSeatSelection && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowSeatSelection(true)}
+                className="w-full px-4 py-2 rounded-md border-2 border-dashed hover:border-solid transition-colors"
+                style={{
+                  borderColor: selectedSeats.length === quantity ? 'var(--border)' : 'var(--border)',
+                  color: 'var(--foreground)',
+                  background: selectedSeats.length === quantity ? 'color-mix(in srgb, var(--foreground) 8%, var(--surface))' : 'transparent'
+                }}
+              >
+                {selectedSeats.length === 0
+                  ? `Select ${quantity} Seat${quantity !== 1 ? 's' : ''}`
+                  : `${selectedSeats.length} Seat${selectedSeats.length !== 1 ? 's' : ''} Selected`}
+              </button>
+              {selectedSeats.length > 0 && selectedSeats.length !== quantity && (
+                <p className="mt-1 text-xs text-yellow-600">
+                  Please select exactly {quantity} seat{quantity !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
             <div className="flex justify-between text-sm mb-1">
@@ -173,13 +256,40 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
           </button>
           <button
             disabled={!canProceed}
-            onClick={() => onProceed({ email, quantity, ticket, eventId, merchantId, externalMerchantId, marketingOptIn, total, perUnitSubtotal, perUnitVat })}
+            onClick={() => onProceed({
+              email,
+              quantity,
+              ticket,
+              eventId,
+              merchantId,
+              externalMerchantId,
+              marketingOptIn,
+              total,
+              perUnitSubtotal,
+              perUnitVat,
+              placeIds: hasSeatSelection ? selectedSeats : undefined
+            })}
             className={`px-4 py-2 rounded-md text-white ${canProceed ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'}`}
           >
-{t('ticketModal.proceed')}
+            {t('ticketModal.proceed')}
           </button>
         </div>
       </div>
+
+      {/* Seat Selection Modal */}
+      {hasSeatSelection && (
+        <SeatSelectionModal
+          isOpen={showSeatSelection}
+          onClose={() => setShowSeatSelection(false)}
+          onConfirm={(placeIds) => {
+            setSelectedSeats(placeIds);
+            setShowSeatSelection(false);
+          }}
+          eventId={eventId}
+          quantity={quantity}
+          currency={currency}
+        />
+      )}
     </div>
   );
 }

@@ -18,11 +18,14 @@ interface CheckoutData {
   eventId: string;
   merchantId: string;
   externalMerchantId: string;
-  ticketId: string;
+  ticketId: string | null;
   ticketName: string;
   price: number;
   serviceFee: number;
   vat: number;
+  entertainmentTax?: number;
+  serviceTax?: number;
+  orderFee?: number;
   eventName: string;
   marketingOptIn: boolean;
   country: string;
@@ -30,6 +33,11 @@ interface CheckoutData {
   perUnitSubtotal?: number;
   perUnitVat?: number;
   total?: number;
+  // Seat selection
+  placeIds?: string[];
+  seatTickets?: Array<{ placeId: string; ticketId: string | null; ticketName: string }>;
+  sessionId?: string;
+  fullName?: string;
 }
 
 // Add this function to detect theme
@@ -93,6 +101,8 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
       totalAmount: total.toString(),
       country: checkoutData.country || 'Finland',
       marketingOptIn: checkoutData.marketingOptIn || false,
+      // Seat selection
+      placeIds: checkoutData.placeIds ? JSON.stringify(checkoutData.placeIds) : undefined,
     }
   });
 
@@ -144,6 +154,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
           ticketName: checkoutData.ticketName,
           externalMerchantId: checkoutData.externalMerchantId,
           marketingOptIn: checkoutData.marketingOptIn || false,
+          placeIds: checkoutData.placeIds || [],
         }
       })
     });

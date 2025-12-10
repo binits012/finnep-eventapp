@@ -31,6 +31,7 @@ const CapjsWidget = ({
   const widgetRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const renderWidget = useCallback(() => {
     if (!window.customElements.get('cap-widget')) {
@@ -38,7 +39,9 @@ const CapjsWidget = ({
       return;
     }
 
-    if (widgetRef.current) {
+    if (widgetRef.current && !isInitialized) {
+      setIsInitialized(true);
+
       // Replace any previous widget cleanly
       widgetRef.current.innerHTML = '';
       window.CAP_CUSTOM_FETCH = function (url: string, options: RequestInit = {}) {
@@ -84,11 +87,18 @@ const CapjsWidget = ({
         }
       }, 0);
     }
-  }, [serverUrl, theme, onVerify, onError]);
+  }, [serverUrl, theme, onVerify, onError, isInitialized]);
 
   useEffect(() => {
-    // Set flag to prevent redefinition warning - must be set before script loads
+    // Validate server URL
+    if (!serverUrl) {
+      setError('CAPTCHA service is not configured. Please contact support or try again later.');
+      // In development, we could potentially bypass CAPTCHA here
+      // For production, we should require proper configuration
+      return;
+    }
 
+    // Set flag to prevent redefinition warning - must be set before script loads
     window.CAP_DONT_SKIP_REDEFINE = false;
     if (!window.__capjsLoaded) {
       const script = document.createElement('script');
@@ -98,7 +108,10 @@ const CapjsWidget = ({
         window.__capjsLoaded = true;
         setTimeout(() => renderWidget(), 0); // Yield for DOM stability
       };
-      script.onerror = () => setError('Failed to load CapJS widget');
+      script.onerror = () => {
+        console.error('CAPTCHA script failed to load from:', `${serverUrl}/assets/cap.min.js`);
+        setError('Failed to load CAPTCHA service. Please try again later.');
+      };
       document.head.appendChild(script);
     } else {
       setTimeout(() => renderWidget(), 0);

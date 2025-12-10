@@ -165,4 +165,123 @@ export const api = {
   }
 };
 
+// Seat selection API methods
+// Note: These use /front/ endpoints for public access (no authentication required)
+// Session-based validation is handled via sessionId (UUID)
+export const seatAPI = {
+  /**
+   * Get seat map with availability for an event
+   * @param eventId - Event ID
+   */
+  getEventSeats: async (eventId: string) => {
+    return api.get<{
+      data: {
+        // EventManifest fields (Ticketmaster format)
+        eventId: string;
+        updateHash: string;
+        updateTime: number;
+        placeIds: string[];
+        partitions: number[];
+        sold: string[];
+        reserved: string[];
+        pricingZones: Array<{
+          start: number;
+          end: number;
+          price: number;
+          currency: string;
+          section: string;
+        }>;
+        // Pricing configuration (when pricing is encoded in placeIds)
+        pricingConfig?: {
+          currency: string;
+          orderFee: number;
+          orderTax: number;
+          tiers: Array<{
+            id: string;
+            basePrice: number;
+            tax: number;
+            serviceFee: number;
+            serviceTax: number;
+          }>;
+        };
+        // Venue Manifest fields
+        backgroundSvg: string | null;
+        sections: Array<{
+          id: string;
+          name: string;
+          color: string;
+          bounds: any;
+          polygon: Array<{ x: number; y: number }> | null;
+        }>;
+        places: Array<{
+          placeId: string;
+          x: number | null;
+          y: number | null;
+          row: string | null;
+          seat: string | null;
+          section: string | null;
+          [key: string]: any;
+        }>;
+      };
+    }>(`/event/${eventId}/seats`);
+  },
+
+  /**
+   * Reserve seats for an event
+   * @param eventId - Event ID
+   * @param placeIds - Array of place IDs to reserve
+   * @param sessionId - Session ID (UUID)
+   * @param email - Email address (verified via OTP)
+   */
+  reserveSeats: async (eventId: string, placeIds: string[], sessionId: string, email?: string) => {
+    return api.post<{
+      message: string;
+      data: {
+        reserved: string[];
+        failed: string[];
+      };
+    }>(`/event/${eventId}/seats/reserve`, {
+      placeIds,
+      sessionId,
+      ...(email && { email })
+    });
+  },
+
+  /**
+   * Confirm seats (mark as sold)
+   * @param eventId - Event ID
+   * @param placeIds - Array of place IDs to confirm
+   * @param sessionId - Session ID (UUID)
+   */
+  confirmSeats: async (eventId: string, placeIds: string[], sessionId: string) => {
+    return api.post<{
+      message: string;
+      data: {
+        placeIds: string[];
+      };
+    }>(`/front/event/${eventId}/seats/confirm`, {
+      placeIds,
+      sessionId
+    });
+  },
+
+  /**
+   * Release seat reservations
+   * @param eventId - Event ID
+   * @param placeIds - Array of place IDs to release
+   * @param sessionId - Session ID (UUID)
+   */
+  releaseSeats: async (eventId: string, placeIds: string[], sessionId: string) => {
+    return api.post<{
+      message: string;
+      data: {
+        released: number;
+      };
+    }>(`/front/event/${eventId}/seats/release`, {
+      placeIds,
+      sessionId
+    });
+  }
+};
+
 export default api;

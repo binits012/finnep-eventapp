@@ -53,6 +53,9 @@ export default function EventPage() {
   // Update page metadata when event data loads
   useEffect(() => {
     if (event) {
+      // Get the current hostname dynamically
+      const hostname = typeof window !== 'undefined' ? window.location.origin : '';
+
       // Update document title
       document.title = `${event.eventTitle || 'Event'} | Finnep Events`;
 
@@ -75,12 +78,12 @@ export default function EventPage() {
 
       const ogUrl = document.querySelector('meta[property="og:url"]');
       if (ogUrl) {
-        ogUrl.setAttribute('content', `https://eventapp.finnep.fi/events/${eventId}`);
+        ogUrl.setAttribute('content', `${hostname}/events/${eventId}`);
       }
 
       const ogImage = document.querySelector('meta[property="og:image"]');
       if (ogImage) {
-        ogImage.setAttribute('content', event.eventPromotionPhoto || 'https://eventapp.finnep.fi/logo.png');
+        ogImage.setAttribute('content', event.eventPromotionPhoto || `${hostname}/logo.png`);
       }
 
       const ogType = document.querySelector('meta[property="og:type"]');
@@ -114,13 +117,13 @@ export default function EventPage() {
 
       const twitterImage = document.querySelector('meta[name="twitter:image"]');
       if (twitterImage) {
-        twitterImage.setAttribute('content', event.eventPromotionPhoto || 'https://eventapp.finnep.fi/logo.png');
+        twitterImage.setAttribute('content', event.eventPromotionPhoto || `${hostname}/logo.png`);
       }
 
       // Update canonical URL
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) {
-        canonical.setAttribute('href', `https://eventapp.finnep.fi/events/${eventId}`);
+        canonical.setAttribute('href', `${hostname}/events/${eventId}`);
       }
 
       // Add event-specific meta tags

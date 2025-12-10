@@ -441,7 +441,7 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
           </div>
         )}
         <Link href={`/events/${event._id}`} className="block">
-          <h3 className="text-lg sm:text-xl font-semibold mb-2 line-clamp-1">{event.eventTitle}</h3>
+          <h3 className="text-lg sm:text-xl font-semibold mb-2 line-clamp-1" title={event.eventTitle}>{event.eventTitle}</h3>
         </Link>
         <div className="flex items-center mb-2 text-sm sm:text-base opacity-80" style={{ color: 'var(--foreground)' }}>
           <FaCalendarAlt className="mr-2 flex-shrink-0" />
@@ -586,7 +586,7 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
             </div>
           )}
           <Link href={`/events/${event._id}`} className="block">
-            <h3 className="font-semibold text-sm sm:text-base line-clamp-1" style={{ color: 'var(--foreground)' }}>
+            <h3 className="font-semibold text-sm sm:text-base line-clamp-1" style={{ color: 'var(--foreground)' }} title={event.eventTitle}>
               {event.eventTitle}
             </h3>
           </Link>
@@ -758,7 +758,7 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
           </div>
         )}
         <Link href={`/events/${event._id}`} className="block">
-          <h3 className="font-semibold text-sm sm:text-base line-clamp-1" style={{ color: 'var(--foreground)' }}>
+          <h3 className="font-semibold text-sm sm:text-base line-clamp-1" style={{ color: 'var(--foreground)' }} title={event.eventTitle}>
             {event.eventTitle}
           </h3>
         </Link>

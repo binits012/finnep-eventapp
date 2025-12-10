@@ -22,6 +22,12 @@ export interface Event {
     venue?: {
       name?: string;
       address?: string;
+      hasSeatSelection?: boolean;
+      venueId?: string;
+      externalVenueId?: string;
+      lockedManifestId?: string;
+      manifestS3Key?: string;
+      pricing?: Record<string, number>;
     };
     city?: string;
     country?: string;
@@ -77,11 +83,14 @@ export interface Event {
   export interface TicketInfo {
     _id: string;
     name: string;
-    price: number;
+    price: number; // basePrice
     quantity: number;
     available?: number;
     serviceFee?: number;
-    vat?: number;
+    entertainmentTax?: number; // percentage on basePrice (e.g., 14% in Finland)
+    serviceTax?: number; // percentage on serviceFee (e.g., 25.5% VAT in Finland)
+    orderFee?: number; // fixed amount per transaction
+    vat?: number; // legacy field, kept for backward compatibility
     status?: string;
     createdAt?: string;
   }

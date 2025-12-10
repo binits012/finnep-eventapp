@@ -38,11 +38,27 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
   const [visibleCount, setVisibleCount] = useState(6);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Get unique countries, venues, merchants, and categories for filter
-  const countries = [...new Set(allEvents.map((event: Event) => event.country).filter(Boolean))];
-  const venues = [...new Set(allEvents.map((event: Event) => event.venueInfo?.name).filter(Boolean))];
-  const merchants = [...new Set(allEvents.map((event: Event) => event.merchant?.name).filter(Boolean))];
-  const categories = [...new Set(allEvents.map((event: Event) => event.otherInfo?.categoryName).filter(Boolean))];
+  // Get unique countries, venues, merchants, and categories for filter (sorted alphabetically)
+  const countries = [...new Set(allEvents.map((event: Event) => event.country).filter(Boolean))].sort();
+  const venues = [...new Set(allEvents.map((event: Event) => event.venueInfo?.name).filter(Boolean))].sort();
+  const merchants = [...new Set(allEvents.map((event: Event) => event.merchant?.name).filter(Boolean))].sort();
+  const categories = [...new Set(allEvents.map((event: Event) => event.otherInfo?.categoryName).filter(Boolean))].sort();
+
+  // Sync URL params with state when URL changes
+  useEffect(() => {
+    if (countryFromUrl !== null) {
+      setSelectedCountry(countryFromUrl || "");
+    }
+    if (venueFromUrl !== null) {
+      setSelectedVenue(venueFromUrl || "");
+    }
+    if (merchantFromUrl !== null) {
+      setSelectedMerchant(merchantFromUrl || "");
+    }
+    if (categoryFromUrl !== null) {
+      setSelectedCategory(categoryFromUrl || "");
+    }
+  }, [countryFromUrl, venueFromUrl, merchantFromUrl, categoryFromUrl]);
 
   // Filter events based on search and filters (client-side refinement on server slice)
   useEffect(() => {
@@ -67,9 +83,13 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
     }
 
     if (selectedMerchant) {
-      filtered = filtered.filter((event: Event) =>
-        (event.merchant?.name || '').toLowerCase().includes(selectedMerchant.toLowerCase())
-      );
+      const decodedMerchant = decodeURIComponent(selectedMerchant);
+      filtered = filtered.filter((event: Event) => {
+        const merchantName = (event.merchant?.name || '').toLowerCase();
+        const searchName = decodedMerchant.toLowerCase();
+        // Try exact match first, then includes
+        return merchantName === searchName || merchantName.includes(searchName) || searchName.includes(merchantName);
+      });
     }
 
     if (selectedCategory) {
@@ -183,12 +203,12 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                     onClick={() => setSelectedCategory("")}
                     className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Clear Category Filter
+                    {t('events.clearCategoryFilter')}
                   </button>
                 </div>
               )}
               {totalPages > 1 && (
-                <p className="text-sm opacity-70">Page {serverPage} of {totalPages}</p>
+                <p className="text-sm opacity-70">{t('events.pageOf', { current: serverPage, total: totalPages })}</p>
               )}
             </div>
 
@@ -248,7 +268,7 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                 className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
               >
-                <option value="">All Categories</option>
+                <option value="">{t('events.allCategories')}</option>
                 {categories.map((category) => (
                   <option key={category} value={category}>{category}</option>
                 ))}
@@ -305,14 +325,14 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
               </div>
 
               <div className="mb-4">
-                <label className="block mb-2 text-sm font-medium">Category</label>
+                <label className="block mb-2 text-sm font-medium">{t('events.category')}</label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full rounded-lg py-2 px-4"
                   style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
                 >
-                  <option value="">All Categories</option>
+                  <option value="">{t('events.allCategories')}</option>
                   {categories.map((category) => (
                     <option key={category} value={category}>{category}</option>
                   ))}
@@ -350,17 +370,17 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                 className={`px-4 py-2 rounded-md border ${serverPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
                 style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
               >
-                Previous
+                {t('common.previous')}
               </Link>
               <span className="text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
-                Page {serverPage} / {totalPages}
+                {t('events.pageInfo', { current: serverPage, total: totalPages })}
               </span>
               <Link
                 href={buildHref(Math.min(serverPage + 1, totalPages))}
                 className={`px-4 py-2 rounded-md border ${serverPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
                 style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
               >
-                Next
+                {t('common.next')}
               </Link>
             </div>
           )}

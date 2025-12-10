@@ -11,7 +11,7 @@ import {
 import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import {  getCurrencySymbol } from '@/utils/currency';
+import { getCurrencySymbol, getCurrencyCode } from '@/utils/currency';
 import TicketPurchaseModal from '@/components/TicketPurchaseModal';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -245,6 +245,9 @@ export default function EventDetail({ event }: { event: Event }) {
     const selectedTicketObj = useMemo(() => event.ticketInfo.find(t => t._id === selectedTicket) || null, [event.ticketInfo, selectedTicket]);
     const router = useRouter();
 
+    // Check if seat selection is enabled (venue.venueId takes priority over everything)
+    const hasSeatSelection = Boolean(event?.venue?.venueId);
+
     // Check if event is free
     const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' ||
         (event.ticketInfo && event.ticketInfo.length > 0 && event.ticketInfo.every(ticket => Number(ticket.price) === 0));
@@ -299,10 +302,12 @@ export default function EventDetail({ event }: { event: Event }) {
             import('leaflet')
         ]).then(([L]) => {
             delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+            // Use absolute URLs to ensure paths work in both dev and production
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
             L.Icon.Default.mergeOptions({
-                iconRetinaUrl: '/marker-icon-2x.png',
-                iconUrl: '/marker-icon.png',
-                shadowUrl: '/marker-shadow.png',
+                iconRetinaUrl: `${baseUrl}/marker-icon-2x.png`,
+                iconUrl: `${baseUrl}/marker-icon.png`,
+                shadowUrl: `${baseUrl}/marker-shadow.png`,
             });
             setIsLeafletReady(true);
         });
@@ -740,8 +745,26 @@ export default function EventDetail({ event }: { event: Event }) {
                             <div className="rounded-lg shadow p-6 sticky top-24" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
                                 <h2 className="text-2xl font-bold mb-6">{t('eventDetail.tickets.title')}</h2>
 
-                                {isFreeEvent ? (
-                                    /* Free Event UI */
+                                {hasSeatSelection ? (
+                                    /* Seat Selection UI - Takes priority over everything when venue.venueId exists */
+                                    <div className="text-center py-8">
+                                        <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                            {t('eventDetail.seatSelection.available') || 'Select your seats for this event'}
+                                            {event.occupancy && (
+                                                <span className="block mt-2 text-sm font-medium">
+                                                    {event.occupancy.toLocaleString()} {t('eventDetail.eventDetails.attendees') || 'seats available'}
+                                                </span>
+                                            )}
+                                        </p>
+                                        <button
+                                            className="w-full py-3 px-4 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                                            onClick={() => router.push(`/events/${event._id}/seats`)}
+                                        >
+                                            {t('eventDetail.seatSelection.selectSeats') || 'Select Seats'}
+                                        </button>
+                                    </div>
+                                ) : isFreeEvent ? (
+                                    /* Free Event UI - Only show when seat selection is NOT enabled */
                                     <div className="text-center">
                                         <div className="mb-6">
                                             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
@@ -769,9 +792,10 @@ export default function EventDetail({ event }: { event: Event }) {
                                                             tabIndex={isAvailable ? 0 : -1}
                                                             className={`border-2 rounded-lg p-4 transition-all outline-none ${
                                                                 isSelected
-                                                                    ? 'border-green-500 bg-green-50 dark:bg-green-900/30 shadow-lg'
-                                                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-green-400 dark:hover:border-green-500'
+                                                                    ? 'border-blue-500 shadow-lg'
+                                                                    : 'border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-500'
                                                             } ${isAvailable ? 'cursor-pointer focus:ring-2 focus:ring-green-300 dark:focus:ring-green-600' : 'opacity-60 cursor-not-allowed'}`}
+                                                            style={{ background: 'var(--surface)' }}
                                                             onClick={() => { if (isAvailable) { setSelectedTicket(ticket._id); } }}
                                                             onKeyDown={(e) => {
                                                                 if (!isAvailable) return;
@@ -782,16 +806,8 @@ export default function EventDetail({ event }: { event: Event }) {
                                                             }}
                                                         >
                                                             <div className="flex justify-between items-center">
-                                                                <h3 className={`font-semibold text-lg ${
-                                                                    isSelected
-                                                                        ? 'text-green-900 dark:text-green-100'
-                                                                        : 'text-gray-900 dark:text-gray-100'
-                                                                }`}>{ticket.name}</h3>
-                                                                <span className={`text-lg font-bold ${
-                                                                    isSelected
-                                                                        ? 'text-green-700 dark:text-green-300'
-                                                                        : 'text-green-600 dark:text-green-400'
-                                                                }`}>{t('eventDetail.freeEvent.free')}</span>
+                                                                <h3 className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>{ticket.name}</h3>
+                                                                <span className="text-lg font-bold text-green-600 dark:text-green-400">{t('eventDetail.freeEvent.free')}</span>
                                                             </div>
                                                             {isAvailable ? (
                                                                 <div className={`mt-2 text-sm font-semibold ${
@@ -836,7 +852,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                         </button>
                                     </div>
                                 ) : (
-                                    /* Paid Event UI */
+                                    /* Paid Event UI - Only show when seat selection is NOT enabled */
                                     <>
                                         {event?.ticketInfo?.map((ticket) => {
                                             const isSelected = selectedTicket === ticket._id;
@@ -850,9 +866,10 @@ export default function EventDetail({ event }: { event: Event }) {
                                                     tabIndex={isAvailable ? 0 : -1}
                                                     className={`border-2 rounded-lg p-4 mb-4 transition-all outline-none ${
                                                         isSelected
-                                                            ? 'border-indigo-500 bg-indigo-100 dark:bg-indigo-900/50 shadow-lg'
-                                                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-indigo-400 dark:hover:border-indigo-500'
+                                                            ? 'border-blue-500 shadow-lg'
+                                                            : 'border-gray-200 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-500'
                                                     } ${isAvailable ? 'cursor-pointer focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600' : 'opacity-60 cursor-not-allowed'}`}
+                                                    style={{ background: 'var(--surface)' }}
                                                     onClick={() => { if (isAvailable) { setSelectedTicket(ticket._id); } }}
                                                     onKeyDown={(e) => {
                                                         if (!isAvailable) return;
@@ -863,39 +880,19 @@ export default function EventDetail({ event }: { event: Event }) {
                                                     }}
                                                 >
                                                     <div className="flex justify-between items-center mb-2">
-                                                        <h3 className={`font-semibold text-lg ${
-                                                            isSelected
-                                                                ? 'text-indigo-900 dark:text-indigo-100'
-                                                                : 'text-gray-900 dark:text-gray-100'
-                                                        }`}>{ticket.name}</h3>
-                                                        <span className={`text-lg font-bold ${
-                                                            isSelected
-                                                                ? 'text-indigo-900 dark:text-indigo-100'
-                                                                : 'text-gray-900 dark:text-gray-100'
-                                                        }`}>{ticket.price.toFixed(2)} {getCurrencySymbol(event.country || 'Finland')}</span>
+                                                        <h3 className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>{ticket.name}</h3>
+                                                        <span className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{ticket.price.toFixed(2)} {getCurrencySymbol(event.country || 'Finland')}</span>
                                                     </div>
 
                                                     {/* Service Fee and VAT info */}
-                                                    <div className={`mt-2 text-sm font-medium ${
-                                                        isSelected
-                                                            ? 'text-indigo-800 dark:text-indigo-200'
-                                                            : 'text-gray-600 dark:text-gray-400'
-                                                    }`}>
+                                                    <div className="mt-2 text-sm font-medium" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
                                                         {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {ticket.vat}%
                                                     </div>
 
                                                     {/* Total price calculation */}
                                                     <div className="mt-3 flex justify-between items-center mb-2">
-                                                        <span className={`text-sm font-semibold ${
-                                                            isSelected
-                                                                ? 'text-indigo-800 dark:text-indigo-200'
-                                                                : 'text-gray-700 dark:text-gray-300'
-                                                        }`}>{t('eventDetail.tickets.total')}:</span>
-                                                        <span className={`text-xl font-bold ${
-                                                            isSelected
-                                                                ? 'text-indigo-800 dark:text-indigo-200'
-                                                                : 'text-indigo-600 dark:text-indigo-400'
-                                                        }`}>
+                                                        <span className="text-sm font-semibold" style={{ color: 'var(--foreground)', opacity: 0.8 }}>{t('eventDetail.tickets.total')}:</span>
+                                                        <span className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>
                                                             {calculateTotalPrice(ticket)} {getCurrencySymbol(event.country || 'Finland')}
                                                         </span>
                                                     </div>
@@ -1038,12 +1035,13 @@ export default function EventDetail({ event }: { event: Event }) {
                 />
             )}
 
-            {/* Paid Event Purchase Modal - only show for paid events */}
-            {!isFreeEvent && (
+
+            {/* Paid Event Purchase Modal - only show for paid events without seat selection */}
+            {!isFreeEvent && !hasSeatSelection && (
                 <TicketPurchaseModal
                     isOpen={isPurchaseOpen}
                     onClose={() => { setIsPurchaseOpen(false); setSelectedTicket(null); }}
-                    onProceed={({ email, quantity, ticket, eventId, merchantId, externalMerchantId, marketingOptIn, total, perUnitSubtotal, perUnitVat }) => {
+                    onProceed={({ email, quantity, ticket, eventId, merchantId, externalMerchantId, marketingOptIn, total, perUnitSubtotal, perUnitVat, placeIds }) => {
                         // Create checkout data object with pre-calculated values
                         const checkoutData = {
                             email,
@@ -1062,7 +1060,9 @@ export default function EventDetail({ event }: { event: Event }) {
                             // Pre-calculated values from TicketPurchaseModal
                             perUnitSubtotal,
                             perUnitVat,
-                            total
+                            total,
+                            // Seat selection
+                            placeIds: placeIds || undefined
                         };
 
                         // Encode to base64
@@ -1079,6 +1079,8 @@ export default function EventDetail({ event }: { event: Event }) {
                     eventId={event._id}
                     merchantId={event?.merchant?._id || event?.merchantId}
                     externalMerchantId={event?.externalMerchantId}
+                    hasSeatSelection={event?.venue?.hasSeatSelection || false}
+                    currency={getCurrencyCode(event?.country || 'Finland')}
                 />
             )}
         </>
