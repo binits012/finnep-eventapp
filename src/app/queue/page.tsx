@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface QueueData {
@@ -46,7 +46,7 @@ export default function QueuePage() {
     }
   }, [tokenFromUrl, returnUrl]);
 
-  const checkPosition = async () => {
+  const checkPosition = useCallback(async () => {
     if (!queueToken) return;
 
     try {
@@ -87,7 +87,7 @@ export default function QueuePage() {
       console.error('Position check error:', err);
       setError('Unable to check queue position');
     }
-  };
+  }, [queueToken, returnUrl]);
 
   useEffect(() => {
     if (queueToken) {
@@ -96,7 +96,7 @@ export default function QueuePage() {
       const interval = setInterval(checkPosition, 15000);
       return () => clearInterval(interval);
     }
-  }, [queueToken]);
+  }, [queueToken, checkPosition]);
 
   if (isLoading) {
     return (
@@ -147,7 +147,7 @@ export default function QueuePage() {
             High traffic detected
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            You're being held in queue to ensure fair access
+            You&apos;re being held in queue to ensure fair access
           </p>
         </div>
 
@@ -161,7 +161,7 @@ export default function QueuePage() {
               <span className="font-semibold text-green-800">Priority Access Granted!</span>
             </div>
             <p className="text-green-700 text-sm">
-              Due to your wait time, you've been moved to position #{queueData.priorityBoost.newPosition}
+              Due to your wait time, you&apos;ve been moved to position #{queueData.priorityBoost.newPosition}
             </p>
           </div>
         )}
@@ -176,7 +176,7 @@ export default function QueuePage() {
               <span className="font-semibold text-yellow-800">Wait Time Expired</span>
             </div>
             <p className="text-yellow-700 text-sm mb-3">
-              Your estimated wait time has passed, but we're still processing users.
+              Your estimated wait time has passed, but we&apos;re still processing users.
             </p>
             <div className="flex gap-2 justify-center">
               <button
@@ -205,7 +205,7 @@ export default function QueuePage() {
               <span className="font-semibold text-blue-800">Extended Wait Period</span>
             </div>
             <p className="text-blue-700 text-sm">
-              You're in a grace period. You'll be processed shortly.
+              You&apos;re in a grace period. You&apos;ll be processed shortly.
             </p>
           </div>
         )}
@@ -272,7 +272,7 @@ export default function QueuePage() {
         <div className="mt-8 text-xs text-gray-500">
           <p>
             Queue position updates every 15 seconds.
-            You'll be automatically redirected when it's your turn.
+            You&apos;ll be automatically redirected when it&apos;s your turn.
           </p>
         </div>
       </div>
