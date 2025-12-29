@@ -16,14 +16,25 @@ interface Seat {
   seat: string | null;
   section: string | null;
   price: number | null;
-  status: 'available' | 'sold';
+  status: 'available' | 'sold' | 'reserved';
+}
+
+interface SectionBounds {
+  minX?: number;
+  minY?: number;
+  maxX?: number;
+  maxY?: number;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
 }
 
 interface Section {
   id: string;
   name: string;
   color: string;
-  bounds: any;
+  bounds: SectionBounds | null;
   polygon: Array<{ x: number; y: number }> | null;
 }
 
@@ -51,7 +62,7 @@ export default function SeatSelectionView({
   currency = 'EUR',
   onComplete
 }: SeatSelectionViewProps) {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [step, setStep] = useState<Step>('seats');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +75,7 @@ export default function SeatSelectionView({
     placeIds: string[];
     sold: string[];
     reserved: string[];
-    pricingZones: any[];
+    pricingZones: Array<{ start: number; end: number; price: number; currency: string; section: string }>;
   } | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
@@ -78,7 +89,7 @@ export default function SeatSelectionView({
 
   // OTP state
   const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [_otpSent, setOtpSent] = useState(false);
   const [otpResendCooldown, setOtpResendCooldown] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -108,9 +119,9 @@ export default function SeatSelectionView({
 
       // Build seats array with status
       const soldSet = new Set(sold);
-      const reservedSet = new Set(reserved);
+      const _reservedSet = new Set(reserved);
 
-      const seats: Seat[] = matchedPlaces.map((place, index) => {
+      const seats: Seat[] = matchedPlaces.map((place, idx) => {
         const placeId = place.placeId;
         let status: 'available' | 'sold' = 'available';
         if (soldSet.has(placeId)) {
@@ -121,7 +132,7 @@ export default function SeatSelectionView({
         // Get price from pricingZones
         let price: number | null = null;
         for (const zone of pricingZones) {
-          if (index >= zone.start && index <= zone.end) {
+          if (idx >= zone.start && idx <= zone.end) {
             price = zone.price / 100; // Convert from cents
             break;
           }
@@ -161,14 +172,15 @@ export default function SeatSelectionView({
       });
 
       if (showLoading) setLoading(false);
-    } catch (err: any) {
-      console.error('Error loading seat data:', err);
+    } catch (err: unknown) {
+      const error = err as Error & { response?: { data?: { message?: string }; status?: number } };
+      console.error('Error loading seat data:', error);
       console.error('Error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
       });
-      setError(err.response?.data?.message || 'Failed to load seat map');
+      setError(error.response?.data?.message || 'Failed to load seat map');
       setLoading(false);
     }
   }, [eventId]);
@@ -193,9 +205,9 @@ export default function SeatSelectionView({
   }, [isOpen, seatData, loadSeatData]);
 
   // Handle section click - zoom to section and show seats
-  const handleSectionClick = useCallback((sectionId: string) => {
+  const handleSectionClick = useCallback((sectionId: string | null) => {
     setSelectedSection(sectionId);
-    setShowSeats(true);
+    setShowSeats(sectionId !== null);
     // Zoom will be handled by SeatMap component
   }, []);
 
@@ -269,8 +281,9 @@ export default function SeatSelectionView({
           return prev - 1;
         });
       }, 1000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP');
+    } catch (err: unknown) {
+      const error = err as Error & { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to send OTP');
     }
   };
 
@@ -307,8 +320,9 @@ export default function SeatSelectionView({
       }
 
       setStep('payment');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid OTP');
+    } catch (err: unknown) {
+      const error = err as Error & { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Invalid OTP');
     }
   };
 

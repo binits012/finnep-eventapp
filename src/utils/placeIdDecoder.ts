@@ -1,7 +1,7 @@
 /**
  * PlaceId Decoder Utility
- * Decodes Ticketmaster-style encoded placeIds back to position data
- * Format: VENUE_PREFIX(4) + SECTION_CHAR(1) + TIER_CODE(1) + POSITION_CODE(6-8)
+ * Decodes encoded placeIds back to position data
+ * Format: VENUE_PREFIX(4) + SECTION_B64(variable) + "|" + TIER_CODE(1) + "|" + POSITION_CODE(6-8) + "|" + AVAILABLE_FLAG(1) + "|" + TAGS_CODE(variable)
  */
 
 interface DecodedPlaceId {
@@ -11,51 +11,99 @@ interface DecodedPlaceId {
   seat: number;
   x: number;
   y: number;
+  available?: boolean; // Available flag (new format)
+  tags?: string[]; // Tags array (new format)
 }
 
 /**
- * Decode a Ticketmaster-style placeId back to position data
- * @param placeId - Encoded place ID (e.g., "J4WUYTF8xMHwxMHwwMDAwMDA")
+ * Decode placeId back to position data
+ * @param placeId - Encoded place ID
  * @returns Decoded data or null if invalid
  */
 export function decodePlaceId(placeId: string): DecodedPlaceId | null {
   try {
-    if (!placeId || typeof placeId !== 'string' || placeId.length < 12) {
+    if (!placeId || typeof placeId !== 'string') {
       return null;
     }
 
     // Check if new format (with | separators) or old format
     if (placeId.includes('|')) {
-      // New format: VENUE_PREFIX + SECTION_B64 + "|" + TIER_CODE + "|" + POSITION_CODE
       const parts = placeId.split('|');
-      if (parts.length !== 3) {
+
+      // New format with available and tags: VENUE_PREFIX + SECTION_B64 + "|" + TIER_CODE + "|" + POSITION_CODE + "|" + AVAILABLE_FLAG + "|" + TAGS_CODE
+      if (parts.length === 5) {
+        const venuePrefix = parts[0].substring(0, 4);
+        const sectionB64 = parts[0].substring(4);
+        const tierCode = parts[1];
+        const positionCode = parts[2];
+        const availableFlag = parts[3];
+        const tagsCode = parts[4];
+
+        // Decode section from base64url
+        const section = base64UrlDecode(sectionB64);
+
+        // Decode position code
+        const position = decodePosition(positionCode);
+        if (!position) {
+          return null;
+        }
+
+        // Decode tags if present
+        let tags: string[] = [];
+        if (tagsCode) {
+          try {
+            const decodedTags = base64UrlDecode(tagsCode);
+            tags = decodedTags ? decodedTags.split(',').filter(Boolean) : [];
+          } catch (err) {
+            console.warn('Error decoding tags:', err);
+          }
+        }
+
+        return {
+          section: section,
+          tierCode: tierCode,
+          row: position.row,
+          seat: position.seat,
+          x: position.x,
+          y: position.y,
+          available: availableFlag === '1',
+          tags: tags
+        };
+      }
+      // Legacy format: VENUE_PREFIX + SECTION_B64 + "|" + TIER_CODE + "|" + POSITION_CODE
+      else if (parts.length === 3) {
+        const venuePrefix = parts[0].substring(0, 4);
+        const sectionB64 = parts[0].substring(4);
+        const tierCode = parts[1];
+        const positionCode = parts[2];
+
+        // Decode section from base64url
+        const section = base64UrlDecode(sectionB64);
+
+        // Decode position code
+        const position = decodePosition(positionCode);
+        if (!position) {
+          return null;
+        }
+
+        return {
+          section: section,
+          tierCode: tierCode,
+          row: position.row,
+          seat: position.seat,
+          x: position.x,
+          y: position.y,
+          available: true,
+          tags: []
+        };
+      } else {
         return null;
       }
-
-      const venuePrefix = parts[0].substring(0, 4);
-      const sectionB64 = parts[0].substring(4);
-      const tierCode = parts[1];
-      const positionCode = parts[2];
-
-      // Decode section from base64url
-      const section = base64UrlDecode(sectionB64);
-
-      // Decode position code
-      const position = decodePosition(positionCode);
-      if (!position) {
-        return null;
-      }
-
-      return {
-        section: section,
-        tierCode: tierCode,
-        row: position.row,
-        seat: position.seat,
-        x: position.x,
-        y: position.y
-      };
     } else {
       // Old format: VENUE_PREFIX + SECTION_CHAR + TIER_CODE + POSITION_CODE
+      if (placeId.length < 12) {
+        return null;
+      }
       const venuePrefix = placeId.substring(0, 4);
       const sectionChar = placeId.substring(4, 5);
       const tierCode = placeId.substring(5, 6);
@@ -73,7 +121,9 @@ export function decodePlaceId(placeId: string): DecodedPlaceId | null {
         row: position.row,
         seat: position.seat,
         x: position.x,
-        y: position.y
+        y: position.y,
+        available: true,
+        tags: []
       };
     }
   } catch (err) {
@@ -206,13 +256,19 @@ export function matchPlaceIdsWithPlaces(
         x: decoded?.x || null,
         y: decoded?.y || null,
         status: 'available',
-        available: true
+        available: decoded?.available !== undefined ? decoded.available : true,
+        tags: decoded?.tags || [],
+        wheelchairAccessible: decoded?.tags?.includes('wheelchair') || false
       };
     } else {
-      // Use matched place but update placeId to encoded version
+      // Use matched place but update placeId to encoded version and merge decoded available/tags
       matchedPlace = {
         ...matchedPlace,
-        placeId: encodedPlaceId // Use encoded placeId for consistency
+        placeId: encodedPlaceId, // Use encoded placeId for consistency
+        // Override with decoded values if available (decoded values are authoritative)
+        available: decoded?.available !== undefined ? decoded.available : (matchedPlace.available !== undefined ? matchedPlace.available : true),
+        tags: decoded?.tags || matchedPlace.tags || [],
+        wheelchairAccessible: decoded?.tags?.includes('wheelchair') || matchedPlace.wheelchairAccessible || false
       };
     }
 

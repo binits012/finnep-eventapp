@@ -18,12 +18,12 @@ import SuccessPage from '@/app/success/page';
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-// Helper to format currency without rounding up (truncate to 2 decimals)
+// Helper to format currency (round to 3 decimals to handle floating-point errors)
 const formatCurrency = (value: number): string => {
-  // Truncate to 2 decimal places (don't round up)
-  const truncated = Math.floor(value * 100) / 100;
-  // Format to 2 decimal places
-  return truncated.toFixed(2);
+  // Round to 3 decimal places (use round, not floor, to handle floating-point representation errors)
+  const rounded = Math.round(value * 1000) / 1000;
+  // Format to 3 decimal places
+  return rounded.toFixed(3);
 };
 
 // Helper to obfuscate email for privacy
@@ -52,7 +52,10 @@ interface Seat {
   seat: string | null;
   section: string | null;
   price: number | null;
-  status: 'available' | 'sold';
+  status: 'available' | 'sold' | 'reserved';
+  available?: boolean;
+  wheelchairAccessible?: boolean;
+  tags?: string[];
   // Pricing fields from enriched manifest (when pricingModel === 'pricing_configuration')
   basePrice?: number;
   tax?: number;
@@ -73,15 +76,58 @@ interface TicketInfo {
   vat?: number;
 }
 
+interface SectionBounds {
+  minX?: number;
+  minY?: number;
+  maxX?: number;
+  maxY?: number;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
+}
+
 interface Section {
   id: string;
   name: string;
   color: string;
-  bounds: any;
+  bounds: SectionBounds | null;
   polygon: Array<{ x: number; y: number }> | null;
+  spacingConfig?: {
+    seatSpacingVisual?: number;
+    rowSpacingVisual?: number;
+    seatRadius?: number;
+    topMargin?: number;
+    rotationAngle?: number;
+  };
 }
 
 type Step = 'seats' | 'info' | 'otp' | 'payment';
+
+interface CheckoutData {
+  email: string;
+  quantity: number;
+  eventId: string;
+  externalMerchantId: string;
+  merchantId: string;
+  ticketId: string | null;
+  ticketName: string;
+  price: number;
+  serviceFee: number;
+  vat: number;
+  entertainmentTax: number;
+  serviceTax: number;
+  orderFee: number;
+  eventName: string;
+  country?: string;
+  placeIds?: string[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  seatTickets?: Array<Record<string, any>>;
+  sessionId?: string | null;
+  fullName?: string;
+  totalBasePrice?: number;
+  totalServiceFee?: number;
+}
 
 // Helper function to extract numeric part from seat identifier
 const extractNumericSeat = (seat: string | null): number | null => {
@@ -117,7 +163,7 @@ const areAdjacentStrings = (seat1: string, seat2: string): boolean => {
 };
 
 export default function SeatSelectionPage() {
-  const params = useParams(); 
+  const params = useParams();
   const { t } = useTranslation();
   const eventId = params?.id as string;
 
@@ -126,6 +172,7 @@ export default function SeatSelectionPage() {
   const [error, setError] = useState<string | null>(null);
   const [eventTitle, setEventTitle] = useState<string>('');
   const [currency, setCurrency] = useState<string>('EUR');
+  const [eventCountry, setEventCountry] = useState<string>('Finland'); // Store event country, default to Finland
   const [merchantId, setMerchantId] = useState<string>('');
   const [externalMerchantId, setExternalMerchantId] = useState<string>('');
 
@@ -152,7 +199,7 @@ export default function SeatSelectionPage() {
     placeIds: string[];
     sold: string[];
     reserved: string[];
-    pricingZones: any[];
+    pricingZones: Array<{ id: string; name: string; price: number }>;
   } | null>(null);
 
   const [pricingConfig, setPricingConfig] = useState<{
@@ -189,9 +236,7 @@ export default function SeatSelectionPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   // Payment state
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [successTicketData, setSuccessTicketData] = useState<any>(null);
+  const [successTicketData, setSuccessTicketData] = useState<Record<string, unknown> | null>(null);
 
   // Generate UUID for session
   const generateUUID = (): string => {
@@ -210,6 +255,7 @@ export default function SeatSelectionPage() {
     if (eventId) {
       loadEventAndSeatData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   const loadEventAndSeatData = async () => {
@@ -234,6 +280,7 @@ export default function SeatSelectionPage() {
       } };
       const event = eventResponse.event;
       setEventTitle(event.eventTitle || 'Select Seats');
+      setEventCountry(event.country || 'Finland'); // Store event country
       setCurrency(event.country ? getCurrencyCode(event.country) : 'EUR');
 
       // Store merchant IDs
@@ -253,7 +300,8 @@ export default function SeatSelectionPage() {
       const response = await seatAPI.getEventSeats(eventId);
 
       // Get pricingModel from response if not already set from event
-      const responseData = response.data as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const responseData = response.data as Record<string, any>;
       if (responseData?.venue?.pricingModel) {
         setPricingModel(responseData.venue.pricingModel);
       }
@@ -261,25 +309,30 @@ export default function SeatSelectionPage() {
       // Store pricingConfig if available
       if (responseData?.pricingConfig) {
         setPricingConfig(responseData.pricingConfig);
-        console.log('PricingConfig loaded:', responseData.pricingConfig);
       }
 
       // Get encoded placeIds and places array from response
-      const { placeIds = [], sold = [], reserved = [], pricingZones = [], places = [], pricingConfig: responsePricingConfig } = responseData;
+      const { placeIds = [], sold = [], reserved = [], pricingZones = [], places = [] } = responseData;
 
       // Decode and match encoded placeIds with places array
       const matchedPlaces = matchPlaceIdsWithPlaces(placeIds, places);
 
       // Build seats array with status
       const soldSet = new Set(sold);
+      const reservedSet = new Set(reserved);
 
       const seats: Seat[] = matchedPlaces.map((place, index) => {
         const placeId = place.placeId;
-        let status: 'available' | 'sold' = 'available';
-        if (soldSet.has(placeId)) {
+        let status: 'available' | 'sold' | 'reserved' = 'available';
+
+        // Check if seat is unavailable (available === false) - mark as sold
+        if (place.available === false) {
           status = 'sold';
+        } else if (soldSet.has(placeId)) {
+          status = 'sold';
+        } else if (reservedSet.has(placeId)) {
+          status = 'reserved'; // Reserved seats are occupied and not available for selection
         }
-        // Note: Reserved seats are treated as available for selection
 
         // Get price from pricingZones (fallback)
         let price: number | null = null;
@@ -299,12 +352,22 @@ export default function SeatSelectionPage() {
           seat: place.seat || null,
           section: place.section || null,
           price,
-          status
+          status,
+          available: typeof place.available === 'boolean' ? place.available : true,
+          wheelchairAccessible: Boolean(place.wheelchairAccessible) || (Array.isArray(place.tags) && place.tags.includes('wheelchair')) || false,
+          tags: Array.isArray(place.tags) ? place.tags : []
         };
 
         // Extract pricing fields from enriched manifest (when pricingModel === 'pricing_configuration')
         if (pricingModel === 'pricing_configuration') {
-          let pricing = place.pricing;
+          let pricing = place.pricing as {
+            basePrice?: number;
+            tax?: number;
+            serviceFee?: number;
+            serviceTax?: number;
+            orderFee?: number;
+            currency?: string;
+          } | undefined;
 
           // If pricing is not directly available on place, decode from placeId using pricingConfig
           if (!pricing && pricingConfig && placeId) {
@@ -348,9 +411,44 @@ export default function SeatSelectionPage() {
       });
 
 
+      // Merge sections from response with venue.sections to get spacingConfig and polygon data
+      const responseSections = response.data.sections || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const venueSections = (responseData?.venue?.sections || []) as Array<Record<string, unknown>>;
+
+      // Enrich response sections with spacingConfig and polygon from venue sections
+      const enrichedSections: Section[] = responseSections.map(section => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const venueSection = venueSections.find((vs: Record<string, any>) =>
+          vs.name === section.name ||
+          vs.id === section.id ||
+          (vs._id && vs._id === section.id) ||
+          (section.name && vs.name && String(vs.name).toLowerCase() === section.name.toLowerCase())
+        );
+
+        if (venueSection) {
+          // Merge spacingConfig and polygon from venue section
+          return {
+            ...section,
+            // Use polygon from venue section if response section doesn't have it
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            polygon: section.polygon || (venueSection as any).polygon || null,
+            // Merge spacingConfig from venue section
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            spacingConfig: (venueSection as any).spacingConfig || (section as any).spacingConfig || {}
+          };
+        }
+
+        return {
+          ...section,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          spacingConfig: (section as Record<string, unknown>).spacingConfig as Section['spacingConfig'] || {}
+        };
+      });
+
       setSeatData({
         backgroundSvg: response.data.backgroundSvg,
-        sections: response.data.sections || [],
+        sections: enrichedSections,
         seats,
         placeIds,
         sold,
@@ -358,22 +456,23 @@ export default function SeatSelectionPage() {
         pricingZones
       });
       setLoading(false);
-    } catch (err: any) {
-      console.error('Error loading seat data:', err);
+    } catch (err: unknown) {
+      const error = err as Error & { response?: { data?: { message?: string }; status?: number } };
+      console.error('Error loading seat data:', error);
       console.error('Error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
       });
-      setError(err.response?.data?.message || 'Failed to load seat map');
+      setError(error.response?.data?.message || 'Failed to load seat map');
       setLoading(false);
     }
   };
 
   // Handle section click - zoom to section and show seats
-  const handleSectionClick = useCallback((sectionId: string) => {
+  const handleSectionClick = useCallback((sectionId: string | null) => {
     setSelectedSection(sectionId);
-    setShowSeats(true);
+    setShowSeats(sectionId !== null);
   }, []);
 
   // Check if two seats are physically adjacent to each other (ignoring status)
@@ -427,7 +526,7 @@ export default function SeatSelectionPage() {
     }
 
     return false;
-  }, [seatData]);
+  }, []);
 
   // Check if two seats are adjacent considering sold seats as barriers
   const areSeatsAdjacentWithStatus = useCallback((seat1: Seat, seat2: Seat): boolean => {
@@ -469,10 +568,10 @@ export default function SeatSelectionPage() {
         const start = Math.min(seat1Index, seat2Index);
         const end = Math.max(seat1Index, seat2Index);
 
-        // Check if any seats between them (exclusive) are sold
+        // Check if any seats between them (exclusive) are sold or reserved
         for (let i = start + 1; i < end; i++) {
-          if (rowSeats[i].status === 'sold') {
-            return false; // Sold seat blocks the connection
+          if (rowSeats[i].status === 'sold' || rowSeats[i].status === 'reserved') {
+            return false; // Sold or reserved seat blocks the connection
           }
         }
       }
@@ -569,11 +668,7 @@ export default function SeatSelectionPage() {
 
       // Validate that remaining seats are still connected (no stranded seats after deselection)
       if (newSelectedSeats.length > 1 && !areSeatsConnected(newSelectedSeats)) {
-        console.log('❌ Seat deselection blocked:', {
-          deselectedSeat: placeId,
-          remainingSeats: newSelectedSeats.length,
-          reason: 'would create disconnected groups'
-        });
+
         setError(t('seatSelection.cannotDeselectStranded') || 'Cannot deselect this seat as it would leave other seats isolated. Please deselect seats in a way that keeps your selection connected.');
         setTimeout(() => setError(null), 3000);
         return;
@@ -597,12 +692,6 @@ export default function SeatSelectionPage() {
     // Allow first seat selection, but prevent isolated seats after that
     // This check applies to ALL pricing models, including pricing_configuration
     if (selectedSeats.length > 0 && !isSeatAdjacent(seat, selectedSeats)) {
-      console.log('❌ Seat selection blocked:', {
-        seat: `${seat.section}-${seat.row}-${seat.seat}`,
-        placeId: seat.placeId,
-        selectedSeats: selectedSeats.length,
-        reason: 'not adjacent to any selected seat'
-      });
       setError(t('seatSelection.seatsMustBeAdjacent') || 'Please select seats that are adjacent to your current selection');
       setTimeout(() => setError(null), 3000);
       return;
@@ -657,15 +746,17 @@ export default function SeatSelectionPage() {
         if (orderFee === 0 && seat.orderFee) {
           orderFee = seat.orderFee;
           const serviceTaxPercent = (seat.serviceTax || 0) / 100;
-          orderFeeTax = orderFee * serviceTaxPercent; // Service tax on order fee
+          // Truncate order fee tax to 3 decimals
+          orderFeeTax = Math.round((orderFee * serviceTaxPercent) * 1000) / 1000; // Service tax on order fee
         }
       });
 
-      // Add order fee + tax on order fee (once per transaction)
-      total += orderFee + orderFeeTax;
+      // Add order fee + tax on order fee (once per transaction) - truncate to 3 decimals
+      const orderFeeTotal = Math.round((orderFee + orderFeeTax) * 1000) / 1000;
+      total += orderFeeTotal;
 
-      const finalTotal = Math.floor(total * 100) / 100; // Truncate to 2 decimals
-
+      // Round to 3 decimal places (use round, not floor, to handle floating-point representation errors)
+      const finalTotal = Math.round(total * 1000) / 1000;
 
       return finalTotal;
     }
@@ -691,20 +782,27 @@ export default function SeatSelectionPage() {
       const serviceTax = (ticket.serviceTax || 0) / 100;
 
       // Per ticket: basePrice + (basePrice * entertainmentTax) + serviceFee + (serviceFee * serviceTax)
-      const ticketPrice = basePrice + (basePrice * entertainmentTax) + serviceFee + (serviceFee * serviceTax);
+      // Truncate each calculation to 3 decimals
+      const entertainmentTaxAmount = Math.round((basePrice * entertainmentTax) * 1000) / 1000;
+      const serviceTaxAmount = Math.round((serviceFee * serviceTax) * 1000) / 1000;
+      const ticketPrice = Math.round((basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
       total += ticketPrice;
 
       // Order fee (only add once, use first ticket's orderFee)
       if (orderFee === 0) {
         orderFee = ticket.orderFee || 0;
-        orderFeeTax = (ticket.serviceTax || 0) / 100; // Service tax on order fee
+        const serviceTaxPercent = (ticket.serviceTax || 0) / 100;
+        // Truncate order fee tax to 3 decimals
+        orderFeeTax = Math.round((orderFee * serviceTaxPercent) * 1000) / 1000; // Service tax on order fee
       }
     });
 
-    // Add order fee + tax on order fee (once per transaction)
-    total += orderFee + (orderFee * orderFeeTax);
+    // Add order fee + tax on order fee (once per transaction) - truncate to 3 decimals
+    const orderFeeTotal = Math.round((orderFee + orderFeeTax) * 1000) / 1000;
+    total += orderFeeTotal;
 
-    return Math.round(total * 100) / 100; // Round to 2 decimals
+    // Round to 3 decimals (use round, not floor, to handle floating-point representation errors)
+    return Math.round(total * 1000) / 1000;
   }, [selectedSeats, seatTicketMap, ticketTypes, seatData, pricingModel]);
 
   // Step 1: Proceed to user info
@@ -747,8 +845,9 @@ export default function SeatSelectionPage() {
           return prev - 1;
         });
       }, 1000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP');
+    } catch (err: unknown) {
+      const error = err as Error & { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to send OTP');
     }
   };
 
@@ -774,9 +873,18 @@ export default function SeatSelectionPage() {
       }
 
       setStep('payment');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid OTP');
+    } catch (err: unknown) {
+      const error = err as Error & { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Invalid OTP');
     }
+  };
+
+  // Helper to extract numeric part from row/seat string
+  const extractNumericPart = (value: string | number | null | undefined): string => {
+    if (value === null || value === undefined) return '';
+    const str = String(value);
+    const numericPart = str.replace(/\D/g, '');
+    return numericPart || '';
   };
 
   // Build checkout data for payment
@@ -786,10 +894,22 @@ export default function SeatSelectionPage() {
       // Build seat-ticket mapping with individual pricing for each seat
       const seatTickets = selectedSeats.map(placeId => {
         const seat = seatData.seats.find(s => s.placeId === placeId);
+        // Build ticketName with section, row, and seat information (with colons)
+        const section = seat?.section || '';
+        const row = seat?.row ? extractNumericPart(seat.row) : '';
+        const seatNum = seat?.seat ? extractNumericPart(seat.seat) : '';
+        const ticketNameParts = [];
+        if (section) ticketNameParts.push(`Section: ${section}`);
+        if (row) ticketNameParts.push(`Row: ${row}`);
+        if (seatNum) ticketNameParts.push(`Seat: ${seatNum}`);
+        const ticketName = ticketNameParts.length > 0
+          ? ticketNameParts.join(', ')
+          : `Seat ${placeId}`;
+
         return {
           placeId,
           ticketId: null, // No ticket ID for pricing_configuration
-          ticketName: `Seat ${seat?.section || ''}${seat?.row || ''}${seat?.seat || ''}`.trim(),
+          ticketName: ticketName,
           pricing: seat ? {
             basePrice: seat.basePrice || 0,
             tax: seat.tax || 0,
@@ -804,6 +924,17 @@ export default function SeatSelectionPage() {
       // Get pricing from first seat (for legacy fields)
       const firstSeat = seatData.seats.find(s => selectedSeats.includes(s.placeId));
 
+      // Calculate totals directly from selected seats
+      const totalBasePrice = selectedSeats.reduce((sum: number, placeId: string) => {
+        const seat = seatData.seats.find(s => s.placeId === placeId);
+        return sum + (seat?.basePrice || 0);
+      }, 0);
+
+      const totalServiceFee = selectedSeats.reduce((sum: number, placeId: string) => {
+        const seat = seatData.seats.find(s => s.placeId === placeId);
+        return sum + (seat?.serviceFee || 0);
+      }, 0);
+
       return {
         email,
         quantity: selectedSeats.length,
@@ -812,14 +943,16 @@ export default function SeatSelectionPage() {
         merchantId: merchantId,
         ticketId: null, // No ticket ID for pricing_configuration
         ticketName: `${selectedSeats.length} Seat(s)`,
-        price: firstSeat?.basePrice || 0,
-        serviceFee: firstSeat?.serviceFee || 0,
+        price: firstSeat?.basePrice || 0, // Per-unit for legacy
+        serviceFee: firstSeat?.serviceFee || 0, // Per-unit for legacy
+        totalBasePrice: totalBasePrice, // Total for all seats
+        totalServiceFee: totalServiceFee, // Total for all seats
         vat: firstSeat?.tax || 0,
         entertainmentTax: firstSeat?.tax || 0, // tax is entertainment tax
         serviceTax: firstSeat?.serviceTax || 0,
         orderFee: firstSeat?.orderFee || 0,
         eventName: eventTitle,
-        country: 'Finland',
+        country: eventCountry, // Use event country instead of hardcoded 'Finland'
         marketingOptIn: false,
         perUnitSubtotal: 0,
         perUnitVat: 0,
@@ -836,10 +969,37 @@ export default function SeatSelectionPage() {
     const seatTickets = selectedSeats.map(placeId => {
       const ticketId = seatTicketMap[placeId];
       const ticket = ticketTypes.find(t => t._id === ticketId);
+      const seat = seatData?.seats.find(s => s.placeId === placeId);
+
+      // Build ticketName with section, row, and seat information if available
+      const section = seat?.section || '';
+      const row = seat?.row ? extractNumericPart(seat.row) : '';
+      const seatNum = seat?.seat ? extractNumericPart(seat.seat) : '';
+      const ticketNameParts = [];
+
+      // Add ticket name first
+      if (ticket?.name) {
+        ticketNameParts.push(ticket.name);
+      }
+
+      // Add seat location information (with colons)
+      const seatLocationParts = [];
+      if (section) seatLocationParts.push(`Section: ${section}`);
+      if (row) seatLocationParts.push(`Row: ${row}`);
+      if (seatNum) seatLocationParts.push(`Seat: ${seatNum}`);
+
+      if (seatLocationParts.length > 0) {
+        ticketNameParts.push(`(${seatLocationParts.join(', ')})`);
+      }
+
+      const ticketName = ticketNameParts.length > 0
+        ? ticketNameParts.join(' ')
+        : 'Standard';
+
       return {
         placeId,
         ticketId: ticketId || null,
-        ticketName: ticket?.name || 'Standard'
+        ticketName: ticketName
       };
     });
 
@@ -862,7 +1022,7 @@ export default function SeatSelectionPage() {
       serviceTax: firstTicket?.serviceTax || 0,
       orderFee: firstTicket?.orderFee || 0,
       eventName: eventTitle,
-      country: 'Finland',
+      country: eventCountry,
       marketingOptIn: false,
       perUnitSubtotal: 0,
       perUnitVat: 0,
@@ -872,11 +1032,12 @@ export default function SeatSelectionPage() {
       sessionId: sessionId,
       fullName: fullName
     };
-  }, [selectedSeats, seatTicketMap, ticketTypes, email, eventId, eventTitle, totalPrice, sessionId, fullName, merchantId, externalMerchantId, pricingModel, seatData]);
+  }, [selectedSeats, seatTicketMap, ticketTypes, email, eventId, eventTitle, totalPrice, sessionId, fullName, merchantId, externalMerchantId, pricingModel, seatData, eventCountry]);
 
   // Show success page if payment succeeded
   if (successTicketData) {
-    return <SuccessPage ticketData={successTicketData} />;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return <SuccessPage ticketData={successTicketData as any} />;
   }
 
   return (
@@ -1006,7 +1167,7 @@ export default function SeatSelectionPage() {
                       <SeatMap
                         backgroundSvg={seatData.backgroundSvg}
                         sections={seatData.sections}
-                        seats={seatData.seats.filter(s => !selectedSection || s.section === selectedSection)}
+                        seats={seatData.seats}
                         selectedSeats={selectedSeats}
                         onSeatClick={handleSeatClick}
                         showSeats={true}
@@ -1029,7 +1190,7 @@ export default function SeatSelectionPage() {
                           {t('seatSelection.yourSelection') || 'Your Selection'}
                         </h3>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                          {t('seatSelection.serviceFeeDisclaimer') || 'Prices include service fees. Per order payment fees may apply depending on digital payment method used.'}
+                          {t('seatSelection.serviceFeeDisclaimer') || 'Per order payment fees may apply depending on digital payment method used.'}
                         </p>
                       </div>
 
@@ -1059,16 +1220,14 @@ export default function SeatSelectionPage() {
                                   if ((!basePrice && !serviceFee) && pricingConfig && placeId) {
                                     try {
                                       const decoded = decodePlaceId(placeId);
-                                      console.log(`Decoding placeId ${placeId} for seat ${seat.section}-${seat.row}-${seat.seat}:`, decoded);
+
                                       if (decoded && decoded.tierCode && pricingConfig.tiers) {
                                         const tier = pricingConfig.tiers.find(t => t.id === decoded.tierCode);
-                                        console.log(`Found tier ${decoded.tierCode}:`, tier);
                                         if (tier) {
                                           basePrice = tier.basePrice;
                                           taxPercent = (tier.tax || 0) / 100;
                                           serviceFee = tier.serviceFee;
                                           serviceTaxPercent = (tier.serviceTax || 0) / 100;
-                                          console.log(`Applied pricing: base=${basePrice}, tax=${tier.tax}%, serviceFee=${serviceFee}, serviceTax=${tier.serviceTax}%`);
 
                                           // Update seat object for future reference
                                           seat.basePrice = basePrice;
@@ -1083,10 +1242,11 @@ export default function SeatSelectionPage() {
                                     }
                                   }
 
-                                  const entertainmentTaxAmount = basePrice * taxPercent;
-                                  const serviceTaxAmount = serviceFee * serviceTaxPercent;
+                                  // Truncate each calculation to 3 decimal places (preserve exact values, no rounding)
+                                  const entertainmentTaxAmount = Math.round((basePrice * taxPercent) * 1000) / 1000;
+                                  const serviceTaxAmount = Math.round((serviceFee * serviceTaxPercent) * 1000) / 1000;
 
-                                  seatPrice = basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount;
+                                  seatPrice = Math.round((basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
 
                                   if (basePrice > 0 || serviceFee > 0) {
                                     pricingBreakdown = {
@@ -1107,13 +1267,17 @@ export default function SeatSelectionPage() {
                                     const entertainmentTax = (ticket.entertainmentTax || 0) / 100;
                                     const serviceFee = ticket.serviceFee || 0;
                                     const serviceTax = (ticket.serviceTax || 0) / 100;
-                                    seatPrice = basePrice + (basePrice * entertainmentTax) + serviceFee + (serviceFee * serviceTax);
+
+                                    // Truncate each calculation to 3 decimal places (preserve exact values, no rounding)
+                                    const entertainmentTaxAmount = Math.round((basePrice * entertainmentTax) * 1000) / 1000;
+                                    const serviceTaxAmount = Math.round((serviceFee * serviceTax) * 1000) / 1000;
+                                    seatPrice = Math.round((basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
 
                                     pricingBreakdown = {
                                       basePrice,
-                                      entertainmentTaxAmount: basePrice * entertainmentTax,
+                                      entertainmentTaxAmount,
                                       serviceFee,
-                                      serviceTaxAmount: serviceFee * serviceTax,
+                                      serviceTaxAmount,
                                       total: seatPrice
                                     };
                                   }
@@ -1160,35 +1324,35 @@ export default function SeatSelectionPage() {
                                           <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-0.5">
                                             <div className="flex justify-between">
                                               <span>{t('seatSelection.basePrice') || 'Base Price'}:</span>
-                                              <span>{pricingBreakdown.basePrice.toFixed(2)} {currency}</span>
+                                              <span>{formatCurrency(pricingBreakdown.basePrice)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                                             </div>
                                             {pricingBreakdown.entertainmentTaxAmount > 0 && (
                                               <div className="flex justify-between">
                                                 <span>{t('seatSelection.entertainmentTax') || 'Entertainment Tax'}:</span>
-                                                <span>{pricingBreakdown.entertainmentTaxAmount.toFixed(2)} {currency}</span>
+                                                <span>{formatCurrency(pricingBreakdown.entertainmentTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                                               </div>
                                             )}
                                             {pricingBreakdown.serviceFee > 0 && (
                                               <div className="flex justify-between">
                                                 <span>{t('seatSelection.serviceFee') || 'Service Fee'}:</span>
-                                                <span>{pricingBreakdown.serviceFee.toFixed(2)} {currency}</span>
+                                                <span>{formatCurrency(pricingBreakdown.serviceFee)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                                               </div>
                                             )}
                                             {pricingBreakdown.serviceFee > 0 && (
                                               <div className="flex justify-between">
                                                 <span>{t('seatSelection.serviceTax') || 'Service Tax'}:</span>
-                                                <span>{pricingBreakdown.serviceTaxAmount.toFixed(2)} {currency}</span>
+                                                <span>{formatCurrency(pricingBreakdown.serviceTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                                               </div>
                                             )}
                                             <div className="flex justify-between font-medium border-t pt-0.5 mt-1" style={{ borderColor: 'var(--border)' }}>
                                               <span>{t('seatSelection.total') || 'Total'}:</span>
-                                              <span>{seatPrice.toFixed(2)} {currency}</span>
+                                              <span>{formatCurrency(seatPrice)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                                             </div>
                                           </div>
                                         )}
                                         {!pricingBreakdown && seatPrice > 0 && (
                                           <p className="text-sm font-semibold mt-1" style={{ color: 'var(--foreground)' }}>
-                                            {formatCurrency(seatPrice)} {currency}
+                                            {formatCurrency(seatPrice)} {getCurrencySymbol(eventCountry || 'Finland')}
                                           </p>
                                         )}
                                       </div>
@@ -1364,14 +1528,14 @@ export default function SeatSelectionPage() {
         {step === 'otp' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="lg:col-span-1 lg:col-start-1 max-w-xl">
-            <h3 className="text-lg font-semibold mb-3">{t('seatSelection.verifyEmail') || 'Verify Your Email'}</h3>
-            <div className="p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 mb-3">
-              <p className="font-semibold text-sm text-yellow-800 dark:text-yellow-200">
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--foreground)' }}>{t('seatSelection.verifyEmail') || 'Verify Your Email'}</h3>
+            <div className="p-3 rounded mb-3" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1, borderStyle: 'solid' }}>
+              <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>
                 {t('seatSelection.ticketsHeld') || 'Your tickets are now held for the next 10 minutes'}
               </p>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              {t('seatSelection.otpSent') || "We've sent an 8-digit code to"} <strong>{obfuscateEmail(email)}</strong>
+            <p className="text-sm mb-3" style={{ color: 'var(--foreground)', opacity: 0.8 }}>
+              {t('seatSelection.otpSent') || "We've sent an 8-digit code to"} <strong style={{ color: 'var(--foreground)' }}>{obfuscateEmail(email)}</strong>
             </p>
             <div className="mb-3">
               <input
@@ -1387,27 +1551,30 @@ export default function SeatSelectionPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setStep('info')}
-                className="flex-1 px-3 py-1.5 rounded-lg border font-medium text-sm"
-                style={{ borderColor: 'var(--border)' }}
+                className="flex-1 px-3 py-1.5 rounded-lg border font-medium text-sm transition-colors"
+                style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--surface)' }}
               >
                 {t('common.back') || 'Back'}
               </button>
               <button
                 onClick={handleVerifyOTP}
                 disabled={otp.length !== 8}
-                className="flex-1 px-3 py-1.5 rounded-lg font-medium text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 px-3 py-1.5 rounded-lg font-medium text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 {t('seatSelection.verify') || 'Verify'}
               </button>
             </div>
             {otpResendCooldown > 0 ? (
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs mt-2" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
                 {t('seatSelection.resendIn') || 'Resend code in'} {otpResendCooldown}s
               </p>
             ) : (
               <button
                 onClick={handleSendOTP}
-                className="text-xs text-indigo-600 hover:text-indigo-700 mt-2"
+                className="text-xs mt-2 transition-colors"
+                style={{ color: 'var(--foreground)', opacity: 0.8 }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
               >
                 {t('seatSelection.resendCode') || 'Resend code'}
               </button>
@@ -1418,20 +1585,28 @@ export default function SeatSelectionPage() {
             {/* OTP Information Panel - Right Side */}
             <div className="lg:col-span-2 lg:col-start-2">
               <div className="rounded-lg border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <h4 className="text-lg font-semibold mb-4 text-blue-800 dark:text-blue-200">{t('seatSelection.otpVerification') || 'OTP Verification'}</h4>
+                <h4 className="text-lg font-semibold mb-4" style={{ color: 'var(--foreground)' }}>{t('seatSelection.otpVerification') || 'OTP Verification'}</h4>
 
                 <div className="space-y-4">
                   {/* What is OTP */}
-                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                    <h5 className="font-medium text-sm mb-2 text-blue-800 dark:text-blue-200">{t('seatSelection.whatIsOtp') || 'What is OTP?'}</h5>
+                  <div className="p-3 rounded-lg border" style={{
+                    background: 'var(--surface)',
+                    borderColor: 'var(--border)',
+                    opacity: 0.95
+                  }}>
+                    <h5 className="font-medium text-sm mb-2" style={{ color: 'var(--foreground)' }}>{t('seatSelection.whatIsOtp') || 'What is OTP?'}</h5>
                     <p className="text-sm" style={{ color: 'var(--foreground)', opacity: 0.8 }}>
                       {t('seatSelection.otpExplanation') || 'OTP (One-Time Password) is a secure 8-digit code sent to your email to verify your identity and complete the seat reservation process.'}
                     </p>
                   </div>
 
                   {/* Seat Reservation Status */}
-                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                    <h5 className="font-medium text-sm mb-2 text-green-800 dark:text-green-200">{t('seatSelection.seatReservation') || 'Seat Reservation Status'}</h5>
+                  <div className="p-3 rounded-lg border" style={{
+                    background: 'var(--surface)',
+                    borderColor: 'var(--border)',
+                    opacity: 0.95
+                  }}>
+                    <h5 className="font-medium text-sm mb-2" style={{ color: 'var(--foreground)' }}>{t('seatSelection.seatReservation') || 'Seat Reservation Status'}</h5>
                     <div className="text-sm space-y-1" style={{ color: 'var(--foreground)', opacity: 0.8 }}>
                       <p>{t('seatSelection.reservationActive') || '✅ Your selected seats are temporarily reserved for 10 minutes'}</p>
                       <p>{t('seatSelection.reservationNote') || '⏰ Complete verification within this time to secure your booking'}</p>
@@ -1440,8 +1615,12 @@ export default function SeatSelectionPage() {
                   </div>
 
                   {/* Security Benefits */}
-                  <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
-                    <h5 className="font-medium text-sm mb-2 text-purple-800 dark:text-purple-200">{t('seatSelection.securityBenefits') || 'Security & Benefits'}</h5>
+                  <div className="p-3 rounded-lg border" style={{
+                    background: 'var(--surface)',
+                    borderColor: 'var(--border)',
+                    opacity: 0.95
+                  }}>
+                    <h5 className="font-medium text-sm mb-2" style={{ color: 'var(--foreground)' }}>{t('seatSelection.securityBenefits') || 'Security & Benefits'}</h5>
                     <div className="text-sm space-y-1" style={{ color: 'var(--foreground)', opacity: 0.8 }}>
                       <p>{t('seatSelection.securityPoint1') || '🔒 Prevents unauthorized seat bookings'}</p>
                       <p>{t('seatSelection.securityPoint2') || '📧 Verifies your email address for ticket delivery'}</p>
@@ -1466,9 +1645,10 @@ export default function SeatSelectionPage() {
                 seatTicketMap={seatTicketMap}
                 selectedSeats={selectedSeats}
                 seatData={seatData}
+                pricingModel={pricingModel}
                 onBack={() => setStep('otp')}
                 onSuccess={(ticketData) => setSuccessTicketData(ticketData)}
-                onError={(error) => setPaymentError(error)}
+                onError={(err) => setError(err)}
               />
             </div>
 
@@ -1498,7 +1678,7 @@ export default function SeatSelectionPage() {
                 const serviceFee = ticket.serviceFee || 0;
                 const serviceTaxPercent = ticket.serviceTax || 0;
                 const serviceTax = serviceTaxPercent / 100;
-                const orderFee = ticket.orderFee || 0;
+                const _orderFee = ticket.orderFee || 0;
 
                 // Calculate price breakdown
                 const entertainmentTaxAmount = basePrice * entertainmentTax;
@@ -1518,31 +1698,31 @@ export default function SeatSelectionPage() {
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium text-base">{ticket.name}</span>
                       <span className="font-semibold text-lg">
-                        {formatCurrency(ticketPrice)} {currency}
+                        {formatCurrency(ticketPrice)} {getCurrencySymbol(eventCountry || 'Finland')}
                       </span>
                     </div>
                     {/* Pricing Breakdown */}
                     <div className="text-xs space-y-1" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
                       <div className="flex justify-between">
                         <span>{t('seatSelection.basePrice') || 'Base Price'}:</span>
-                        <span>{formatCurrency(basePrice)} {currency}</span>
+                        <span>{formatCurrency(basePrice)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                       </div>
                       {entertainmentTaxPercent > 0 && (
                         <div className="flex justify-between">
                           <span>{t('seatSelection.entertainmentTax') || 'Entertainment Tax'} ({entertainmentTaxPercent}%):</span>
-                          <span>+{formatCurrency(entertainmentTaxAmount)} {currency}</span>
+                          <span>+{formatCurrency(entertainmentTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                         </div>
                       )}
                       {serviceFee > 0 && (
                         <div className="flex justify-between">
                           <span>{t('seatSelection.serviceFee') || 'Service Fee'}:</span>
-                          <span>+{formatCurrency(serviceFee)} {currency}</span>
+                          <span>+{formatCurrency(serviceFee)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                         </div>
                       )}
                       {serviceTaxPercent > 0 && serviceFee > 0 && (
                         <div className="flex justify-between">
                           <span>{t('seatSelection.serviceTax') || 'Service Tax'} ({serviceTaxPercent}%):</span>
-                          <span>+{formatCurrency(serviceTaxAmount)} {currency}</span>
+                          <span>+{formatCurrency(serviceTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                         </div>
                       )}
                     </div>
@@ -1575,7 +1755,7 @@ export default function SeatSelectionPage() {
 
 // Payment Form Component
 interface PaymentFormProps {
-  checkoutData: any;
+  checkoutData: CheckoutData;
   totalPrice: number;
   currency: string;
   ticketTypes: TicketInfo[];
@@ -1584,12 +1764,13 @@ interface PaymentFormProps {
   seatData: {
     seats: Seat[];
   } | null;
+  pricingModel?: 'ticket_info' | 'pricing_configuration' | null;
   onBack: () => void;
-  onSuccess: (ticketData: any) => void;
+  onSuccess: (ticketData: Record<string, unknown>) => void;
   onError: (error: string) => void;
 }
 
-function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTicketMap, selectedSeats, seatData, onBack, onSuccess, onError }: PaymentFormProps) {
+function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, selectedSeats, seatData, pricingModel, onBack, onSuccess, onError }: PaymentFormProps) {
   const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
@@ -1597,6 +1778,21 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
   const [error, setError] = useState<string | null>(null);
   const [cardComplete, setCardComplete] = useState(false);
   const [themeColors, setThemeColors] = useState({ textColor: '#000', placeholderColor: '#999', iconColor: '#666' });
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  // Generate nonce once when component mounts to prevent duplicate submissions
+  const [nonce] = useState(() => {
+    // Generate a cryptographically secure random nonce
+    const array = new Uint8Array(32);
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(array);
+    } else {
+      // Fallback for environments without crypto API
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+    }
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  });
 
   // Helper to extract numeric part from row/seat string
   const extractNumericPart = (value: string | number | null | undefined): string => {
@@ -1637,7 +1833,55 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
 
   // Calculate pricing breakdown for each seat
   const seatPricingBreakdown = useMemo(() => {
-    if (!ticketTypes.length || !seatData) return [];
+    if (!seatData) return [];
+
+    // Handle pricing_configuration model
+    if (pricingModel === 'pricing_configuration') {
+      return selectedSeats.map((placeId) => {
+        const seat = seatData.seats.find(s => s.placeId === placeId);
+        if (!seat) return null;
+
+        const basePrice = seat.basePrice || 0;
+        const taxPercent = seat.tax || 0;
+        const tax = taxPercent / 100;
+        const serviceFee = seat.serviceFee || 0;
+        const serviceTaxPercent = seat.serviceTax || 0;
+        const serviceTax = serviceTaxPercent / 100;
+
+        const taxAmount = basePrice * tax;
+        const serviceTaxAmount = serviceFee * serviceTax;
+        const ticketPrice = basePrice + taxAmount + serviceFee + serviceTaxAmount;
+
+        // Build ticketName with section, row, and seat information (with colons)
+        const section = seat.section || '';
+        const row = seat.row ? extractNumericPart(seat.row) : '';
+        const seatNum = seat.seat ? extractNumericPart(seat.seat) : '';
+        const ticketNameParts = [];
+        if (section) ticketNameParts.push(`Section: ${section}`);
+        if (row) ticketNameParts.push(`Row: ${row}`);
+        if (seatNum) ticketNameParts.push(`Seat: ${seatNum}`);
+        const ticketName = ticketNameParts.length > 0
+          ? ticketNameParts.join(', ')
+          : 'Seat';
+
+        return {
+          placeId,
+          seat,
+          ticket: null,
+          ticketName: ticketName,
+          basePrice,
+          entertainmentTaxPercent: taxPercent,
+          entertainmentTaxAmount: taxAmount,
+          serviceFee,
+          serviceTaxPercent,
+          serviceTaxAmount,
+          ticketPrice
+        };
+      }).filter(Boolean);
+    }
+
+    // Handle ticket_info model
+    if (!ticketTypes.length) return [];
 
     return selectedSeats.map((placeId) => {
       const ticketId = seatTicketMap[placeId];
@@ -1671,10 +1915,24 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
         ticketPrice
       };
     }).filter(Boolean);
-  }, [selectedSeats, seatTicketMap, ticketTypes, seatData]);
+  }, [selectedSeats, seatTicketMap, ticketTypes, seatData, pricingModel]);
 
   // Calculate order fee (once per transaction)
   const orderFeeInfo = useMemo(() => {
+    // Handle pricing_configuration model
+    if (pricingModel === 'pricing_configuration' && seatData && selectedSeats.length > 0) {
+      const firstSeat = seatData.seats.find(s => selectedSeats.includes(s.placeId));
+      if (firstSeat) {
+        const orderFee = firstSeat.orderFee || 0;
+        const serviceTaxPercent = firstSeat.serviceTax || 0;
+        // Round order fee tax calculation to 3 decimals
+        const orderFeeTax = Math.round((orderFee * (serviceTaxPercent / 100)) * 1000) / 1000;
+        const orderFeeTotal = Math.round((orderFee + orderFeeTax) * 1000) / 1000;
+        return { orderFee, orderFeeTax, orderFeeTotal, serviceTaxPercent };
+      }
+    }
+
+    // Handle ticket_info model
     if (!ticketTypes.length) return { orderFee: 0, orderFeeTax: 0, orderFeeTotal: 0 };
 
     // Get order fee from first ticket (order fee is per transaction, not per ticket)
@@ -1685,45 +1943,197 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
 
     const orderFee = firstTicket.orderFee || 0;
     const serviceTaxPercent = firstTicket.serviceTax || 0;
-    // Calculate with full precision - use exact calculation, format to 2 decimals
-    const orderFeeTax = orderFee * (serviceTaxPercent / 100);
-    const orderFeeTotal = orderFee + orderFeeTax;
+    // Round order fee tax calculation to 3 decimals
+    const orderFeeTax = Math.round((orderFee * (serviceTaxPercent / 100)) * 1000) / 1000;
+    const orderFeeTotal = Math.round((orderFee + orderFeeTax) * 1000) / 1000;
 
     return { orderFee, orderFeeTax, orderFeeTotal, serviceTaxPercent };
-  }, [ticketTypes, checkoutData.seatTickets]);
+  }, [ticketTypes, checkoutData.seatTickets, pricingModel, seatData, selectedSeats]);
 
-  // Calculate subtotal (sum of all ticket prices)
+  // Calculate subtotal (sum of all ticket/seat prices, excluding order fee)
   const subtotal = useMemo(() => {
-    return seatPricingBreakdown.reduce((sum, item) => sum + (item?.ticketPrice || 0), 0);
-  }, [seatPricingBreakdown]);
+    // If using pricing_configuration, calculate from seat data directly
+    if (seatData && selectedSeats.length > 0) {
+      let calculated = 0;
+      selectedSeats.forEach((placeId) => {
+        const seat = seatData.seats.find(s => s.placeId === placeId);
+        if (seat && seat.price) {
+          calculated += seat.price;
+        }
+      });
+      // If we got a value from seat prices, use it
+      if (calculated > 0) {
+        return calculated;
+      }
+    }
+
+    // Otherwise, use ticket-based pricing breakdown
+    const calculated = seatPricingBreakdown.reduce((sum, item) => sum + (item?.ticketPrice || 0), 0);
+
+    // If subtotal is still 0 but we have seats selected and a total, calculate from total minus order fee
+    if (calculated === 0 && selectedSeats.length > 0 && totalPrice > 0) {
+      const orderFeeTotal = orderFeeInfo.orderFeeTotal || 0;
+      return Math.max(0, totalPrice - orderFeeTotal);
+    }
+
+    return calculated;
+  }, [seatPricingBreakdown, selectedSeats, seatData, totalPrice, orderFeeInfo.orderFeeTotal]);
+
+  // Calculate summary totals from seat pricing breakdown (for both ticket_info and pricing_configuration models)
+  const summaryTotals = useMemo(() => {
+    if (seatPricingBreakdown.length > 0) {
+      // For pricing_configuration model
+      if (pricingModel === 'pricing_configuration') {
+        // Sum base prices and service fees (exact sum, no truncation yet)
+        // Ensure we're working with numbers (handle both string and number types)
+        const totalBasePriceExact = seatPricingBreakdown.reduce((sum, item) => {
+          const bp = typeof item?.basePrice === 'number' ? item.basePrice : (parseFloat(String(item?.basePrice || 0)) || 0);
+          return sum + bp;
+        }, 0);
+        const totalServiceFeeExact = seatPricingBreakdown.reduce((sum, item) => {
+          const sf = typeof item?.serviceFee === 'number' ? item.serviceFee : (parseFloat(String(item?.serviceFee || 0)) || 0);
+          return sum + sf;
+        }, 0);
+
+        // For pricing_configuration, VAT is the same as entertainmentTax (tax on base price)
+        // Calculate percentage on EXACT total (not truncated), then truncate result to 3 decimals
+        const firstSeat = seatPricingBreakdown[0]?.seat;
+        const taxRate = firstSeat?.tax || checkoutData.entertainmentTax || checkoutData.vat || 0;
+        const serviceTaxRate = firstSeat?.serviceTax || checkoutData.serviceTax || 0;
+
+        // Calculate percentages on exact totals, then round to 3 decimals (use round to handle floating-point errors)
+        const totalEntertainmentTaxAmount = Math.round((totalBasePriceExact * taxRate / 100) * 1000) / 1000;
+        const totalServiceTaxAmount = Math.round((totalServiceFeeExact * serviceTaxRate / 100) * 1000) / 1000;
+
+        // Round the base totals for display/storage
+        const totalBasePrice = Math.round(totalBasePriceExact * 1000) / 1000;
+        const totalServiceFee = Math.round(totalServiceFeeExact * 1000) / 1000;
+
+        // Unify VAT and Entertainment Tax - they're the same, use whichever is available
+        const unifiedVatAmount = totalEntertainmentTaxAmount || 0;
+        const unifiedVatRate = taxRate || 0;
+
+        return {
+          totalBasePrice,
+          totalServiceFee,
+          totalEntertainmentTaxAmount,
+          totalServiceTaxAmount,
+          totalVatAmount: unifiedVatAmount, // Use unified value
+          entertainmentTaxRate: unifiedVatRate,
+          vatRate: unifiedVatRate // Use unified rate
+        };
+      }
+
+      // For ticket_info model
+      if (pricingModel === 'ticket_info') {
+      // Sum individual seat ticket prices (exact sum, no truncation yet)
+      // Ensure we're working with numbers (handle both string and number types)
+      const totalBasePriceExact = seatPricingBreakdown.reduce((sum, item) => {
+        const bp = typeof item?.basePrice === 'number' ? item.basePrice : (parseFloat(String(item?.basePrice || 0)) || 0);
+        return sum + bp;
+      }, 0);
+      const totalServiceFeeExact = seatPricingBreakdown.reduce((sum, item) => {
+        const sf = typeof item?.serviceFee === 'number' ? item.serviceFee : (parseFloat(String(item?.serviceFee || 0)) || 0);
+        return sum + sf;
+      }, 0);
+      // Use round (not floor) to handle floating-point errors when summing
+      const totalEntertainmentTaxAmount = Math.round(seatPricingBreakdown.reduce((sum, item) => sum + (item?.entertainmentTaxAmount || 0), 0) * 1000) / 1000;
+      const totalServiceTaxAmount = Math.round(seatPricingBreakdown.reduce((sum, item) => sum + (item?.serviceTaxAmount || 0), 0) * 1000) / 1000;
+
+      // Calculate VAT from base prices (VAT is on base price only)
+      // Calculate percentage on EXACT total basePrice, not truncated (percentage should be on 100, not thousands)
+      // Get vatRate from first ticket or checkoutData
+      const firstTicketId = checkoutData.seatTickets?.[0]?.ticketId;
+      const firstTicket = ticketTypes.find(t => t._id === firstTicketId);
+      const vatRate = firstTicket?.vat || checkoutData.vat || 0;
+      // Calculate VAT on exact total basePrice, then round to 3 decimals
+      const totalVatAmount = Math.round((totalBasePriceExact * vatRate / 100) * 1000) / 1000;
+
+      // Round the base totals for display/storage
+      const totalBasePrice = Math.round(totalBasePriceExact * 1000) / 1000;
+      const totalServiceFee = Math.round(totalServiceFeeExact * 1000) / 1000;
+
+      // Get entertainment tax rate from first ticket
+      const entertainmentTaxRate = firstTicket?.entertainmentTax || checkoutData.entertainmentTax || 0;
+
+      // Unify VAT and Entertainment Tax - they're the same, use whichever is available (if one is 0/null, use the other)
+      const unifiedVatAmount = (totalVatAmount && totalVatAmount > 0) ? totalVatAmount : (totalEntertainmentTaxAmount || 0);
+      const unifiedVatRate = (vatRate && vatRate > 0) ? vatRate : (entertainmentTaxRate || 0);
+
+      return {
+        totalBasePrice,
+        totalServiceFee,
+        totalEntertainmentTaxAmount,
+        totalServiceTaxAmount,
+        totalVatAmount: unifiedVatAmount, // Use unified value
+        entertainmentTaxRate,
+        vatRate: unifiedVatRate // Use unified rate
+      };
+      }
+    }
+
+    // Fallback to legacy calculation (multiply by quantity) - round each calculation
+    const entertainmentTaxAmount = Math.round(((checkoutData.price * (checkoutData.entertainmentTax || 0) / 100) * checkoutData.quantity) * 1000) / 1000;
+    const vatAmount = Math.round(((checkoutData.price * (checkoutData.vat || 0) / 100) * checkoutData.quantity) * 1000) / 1000;
+
+    // Unify VAT and Entertainment Tax - they're the same, use whichever is available (if one is 0/null, use the other)
+    const unifiedVatAmount = (vatAmount && vatAmount > 0) ? vatAmount : (entertainmentTaxAmount || 0);
+    const unifiedVatRate = (checkoutData.vat && checkoutData.vat > 0) ? checkoutData.vat : (checkoutData.entertainmentTax || 0);
+
+    return {
+      totalBasePrice: Math.round((checkoutData.price * checkoutData.quantity) * 1000) / 1000,
+      totalServiceFee: Math.round((checkoutData.serviceFee * checkoutData.quantity) * 1000) / 1000,
+      totalEntertainmentTaxAmount: entertainmentTaxAmount,
+      totalServiceTaxAmount: Math.round(((checkoutData.serviceFee * (checkoutData.serviceTax || 0) / 100) * checkoutData.quantity) * 1000) / 1000,
+      totalVatAmount: unifiedVatAmount, // Use unified value
+      entertainmentTaxRate: unifiedVatRate,
+      vatRate: unifiedVatRate // Use unified rate
+    };
+  }, [seatPricingBreakdown, checkoutData, pricingModel, ticketTypes]);
 
   // Calculate pricing breakdown (legacy, for payment intent)
   const perUnitSubtotal = checkoutData.price + checkoutData.serviceFee;
-  const perUnitVat = perUnitSubtotal * (checkoutData.vat / 100);
+  // VAT is calculated on base price only, not on service fee
+  const perUnitVat = checkoutData.price * (checkoutData.vat / 100);
 
   const createPaymentIntentPayload = () => {
+    // Validate required fields
+    if (!checkoutData.eventId) {
+      throw new Error('Missing required field: eventId');
+    }
+    if (!checkoutData.ticketId && !checkoutData.seatTickets?.length) {
+      throw new Error('Missing required field: ticketId (or seatTickets)');
+    }
+    if (!checkoutData.merchantId) {
+      throw new Error('Missing required field: merchantId');
+    }
+
     // Base metadata (always present)
-    const metadata: Record<string, string | boolean> = {
+    // For pricing_configuration, ticketId should be null (not a placeholder string)
+    const ticketIdValue = checkoutData.ticketId || checkoutData.seatTickets?.[0]?.ticketId || null;
+    const metadata: Record<string, string | boolean | null> = {
       eventId: checkoutData.eventId,
-      ticketId: checkoutData.ticketId,
+      ticketId: ticketIdValue, // null for pricing_configuration, valid ObjectId for ticket_info
       email: checkoutData.email,
       quantity: checkoutData.quantity.toString(),
       eventName: checkoutData.eventName,
       ticketName: checkoutData.ticketName,
       merchantId: checkoutData.merchantId,
-      externalMerchantId: checkoutData.externalMerchantId,
+      externalMerchantId: checkoutData.externalMerchantId || '',
+      // Nonce to prevent duplicate form submissions
+      nonce: nonce,
       basePrice: checkoutData.price.toString(),
       serviceFee: checkoutData.serviceFee.toString(),
-      vatRate: checkoutData.vat.toString(),
-      vatAmount: perUnitVat.toString(),
+      vatRate: (summaryTotals?.vatRate || checkoutData.vat || 0).toString(),
+      vatAmount: (summaryTotals?.totalVatAmount || (perUnitVat * checkoutData.quantity)).toFixed(3), // Total VAT amount from summary totals
       perUnitSubtotal: perUnitSubtotal.toString(),
       perUnitTotal: (perUnitSubtotal + perUnitVat).toString(),
-      totalBasePrice: (checkoutData.price * checkoutData.quantity).toString(),
-      totalServiceFee: (checkoutData.serviceFee * checkoutData.quantity).toString(),
-      totalVatAmount: (perUnitVat * checkoutData.quantity).toString(),
+      totalBasePrice: (summaryTotals?.totalBasePrice || checkoutData.totalBasePrice || (checkoutData.price * checkoutData.quantity)).toFixed(3),
+      totalServiceFee: (summaryTotals?.totalServiceFee || checkoutData.totalServiceFee || (checkoutData.serviceFee * checkoutData.quantity)).toFixed(3),
+      totalVatAmount: (summaryTotals?.totalVatAmount || (perUnitVat * checkoutData.quantity)).toFixed(3),
       totalAmount: totalPrice.toString(),
       country: checkoutData.country || 'Finland',
-      marketingOptIn: checkoutData.marketingOptIn || false,
+      marketingOptIn: marketingConsent,
     };
 
     // Optional fields - only include if they have values
@@ -1749,6 +2159,52 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
       metadata.entertainmentTax = checkoutData.entertainmentTax.toString();
     }
 
+    // Use summaryTotals for pricing_configuration (percentages calculated on totals, not per-seat)
+    if (pricingModel === 'pricing_configuration' && summaryTotals) {
+      // Set total amounts in metadata for backend validation
+      if (summaryTotals.totalEntertainmentTaxAmount > 0) {
+        metadata.entertainmentTaxAmount = summaryTotals.totalEntertainmentTaxAmount.toFixed(3);
+        metadata.totalEntertainmentTaxAmount = summaryTotals.totalEntertainmentTaxAmount.toFixed(3);
+        if (summaryTotals.entertainmentTaxRate > 0) {
+          metadata.entertainmentTax = summaryTotals.entertainmentTaxRate.toString();
+        }
+      }
+
+      if (summaryTotals.totalServiceTaxAmount > 0) {
+        metadata.serviceTaxAmount = summaryTotals.totalServiceTaxAmount.toFixed(3);
+        metadata.totalServiceTaxAmount = summaryTotals.totalServiceTaxAmount.toFixed(3);
+        // Get service tax rate from first seat
+        const firstSeat = seatPricingBreakdown[0]?.seat;
+        const serviceTaxRate = firstSeat?.serviceTax || checkoutData.serviceTax || 0;
+        if (serviceTaxRate > 0) {
+          metadata.serviceTax = serviceTaxRate.toString();
+        }
+      }
+
+      // For pricing_configuration, VAT is the same as entertainmentTax (tax on base price)
+      if (summaryTotals.totalVatAmount > 0) {
+        metadata.vatAmount = summaryTotals.totalVatAmount.toFixed(3);
+        metadata.totalVatAmount = summaryTotals.totalVatAmount.toFixed(3);
+        if (summaryTotals.vatRate > 0) {
+          metadata.vatRate = summaryTotals.vatRate.toString();
+        }
+      }
+    } else if (pricingModel === 'ticket_info' && seatPricingBreakdown.length > 0 && summaryTotals) {
+      // For ticket_info model with seatTickets, use summaryTotals
+      if (summaryTotals.totalEntertainmentTaxAmount > 0) {
+        metadata.entertainmentTaxAmount = summaryTotals.totalEntertainmentTaxAmount.toFixed(3);
+        metadata.entertainmentTax = summaryTotals.entertainmentTaxRate.toString();
+      }
+      if (summaryTotals.totalServiceTaxAmount > 0) {
+        metadata.serviceTaxAmount = summaryTotals.totalServiceTaxAmount.toFixed(3);
+      }
+    } else if (checkoutData?.entertainmentTax !== undefined && checkoutData?.entertainmentTax !== null && checkoutData?.price !== undefined) {
+      // For non-seat purchases, calculate: basePrice * entertainmentTax / 100 * quantity - round to 3 decimals
+      const perUnitEntertainmentTaxAmount = Math.round((checkoutData.price * checkoutData.entertainmentTax / 100) * 1000) / 1000;
+      const totalEntertainmentTaxAmount = Math.round((perUnitEntertainmentTaxAmount * checkoutData.quantity) * 1000) / 1000;
+      metadata.entertainmentTaxAmount = totalEntertainmentTaxAmount.toFixed(3);
+    }
+
     if (checkoutData?.serviceTax !== undefined && checkoutData.serviceTax !== null) {
       metadata.serviceTax = checkoutData.serviceTax.toString();
     }
@@ -1759,24 +2215,38 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
 
     return {
       amount: Math.round(totalPrice * 100), // Convert to cents
-      currency: getCurrencyCode(checkoutData.country ).toLowerCase() || checkoutData?.currency || 'EUR',
+      currency: getCurrencyCode(checkoutData.country || 'Finland').toLowerCase() || 'eur',
       metadata
     };
   };
 
   const createPaymentIntent = async () => {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/front'}/create-payment-intent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(createPaymentIntentPayload())
-    });
+    try {
+      const payload = createPaymentIntentPayload();
 
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || 'Failed to create payment intent');
+      // Double-check required fields before sending
+      // For pricing_configuration, ticketId can be null if seatTickets is provided
+      const hasSeatTickets = checkoutData.seatTickets && Array.isArray(checkoutData.seatTickets) && checkoutData.seatTickets.length > 0;
+      if (!payload.metadata.eventId || !payload.metadata.merchantId || (!payload.metadata.ticketId && !hasSeatTickets)) {
+        throw new Error('Missing required metadata: eventId, ticketId, and merchantId are required');
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/front'}/create-payment-intent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to create payment intent');
+      }
+
+      return await response.json();
+    } catch (error: unknown) {
+      console.error('Error creating payment intent:', error);
+      throw error;
     }
-
-    return await response.json();
   };
 
   const confirmPaymentWithStripe = async (clientSecret: string) => {
@@ -1811,10 +2281,11 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
           eventName: checkoutData.eventName,
           ticketName: checkoutData.ticketName,
           externalMerchantId: checkoutData.externalMerchantId,
-          marketingOptIn: checkoutData.marketingOptIn || false,
+          marketingOptIn: marketingConsent,
           placeIds: checkoutData.placeIds || [],
           seatTickets: checkoutData.seatTickets || [], // Map of placeId -> ticketId
           sessionId: checkoutData.sessionId || undefined,
+          nonce: nonce, // Include nonce to prevent duplicate submissions
         }
       })
     });
@@ -1912,9 +2383,23 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
               <span style={{ opacity: 0.8 }}>{t('seatSelection.event') || 'Event'}:</span>
               <span className="font-medium">{checkoutData.eventName}</span>
             </div>
-            <div className="flex justify-between">
-              <span style={{ opacity: 0.8 }}>{t('seatSelection.selectedSeats') || 'Selected Seats'}:</span>
-              <span className="font-medium">{checkoutData.quantity} {t('seatSelection.seats') || 'seat(s)'}</span>
+            <div className="space-y-1.5">
+              <span style={{ opacity: 0.8 }} className="block">{t('seatSelection.selectedSeats') || 'Selected Seats'}:</span>
+              {seatData && selectedSeats.map((placeId) => {
+                const seat = seatData.seats.find(s => s.placeId === placeId);
+                if (!seat) return null;
+                return (
+                  <div key={placeId} className="ml-3 text-xs" style={{ opacity: 0.9 }}>
+                    <span className="font-medium">
+                      {seat.section && `${t('seatSelection.section') || 'Section'} ${seat.section}`}
+                      {seat.section && seat.row && ' • '}
+                      {seat.row && `${t('seatSelection.row') || 'Row'} ${extractNumericPart(seat.row)}`}
+                      {seat.row && seat.seat && ' • '}
+                      {seat.seat && `${t('seatSelection.seat') || 'Seat'} ${extractNumericPart(seat.seat)}`}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1923,6 +2408,51 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
         <div className="rounded-lg p-4 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
           <h4 className="font-semibold mb-3 text-sm">{t('checkout.pricing') || 'Pricing Breakdown'}</h4>
           <div className="space-y-3">
+            {/* Summary Totals */}
+            {seatPricingBreakdown.length > 0 && summaryTotals && (
+              <div className="pb-3 border-b mb-3" style={{ borderColor: 'var(--border)' }}>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span style={{ opacity: 0.8 }}>{t('seatSelection.basePrice') || 'Base Price'} (x{selectedSeats.length}):</span>
+                    <span className="font-medium">{formatCurrency(summaryTotals.totalBasePrice)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ opacity: 0.8 }}>{t('seatSelection.serviceFee') || 'Service Fee'} (x{selectedSeats.length}):</span>
+                    <span className="font-medium">{formatCurrency(summaryTotals.totalServiceFee)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                  </div>
+                  {summaryTotals.totalServiceTaxAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span style={{ opacity: 0.8 }}>{t('seatSelection.serviceTax') || 'Service Tax'} {checkoutData.serviceTax ? `(${checkoutData.serviceTax}%)` : ''} {t('success.onServiceFee') || 'on Service Fee'}:</span>
+                      <span className="font-medium">{formatCurrency(summaryTotals.totalServiceTaxAmount)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                    </div>
+                  )}
+                  {/* Show unified VAT/Entertainment Tax - they're the same, use whichever is available */}
+                  {(() => {
+                    // Unify VAT and Entertainment Tax - if one is 0/null, use the other
+                    const unifiedVatAmount = (summaryTotals.totalVatAmount && summaryTotals.totalVatAmount > 0)
+                      ? summaryTotals.totalVatAmount
+                      : (summaryTotals.totalEntertainmentTaxAmount || 0);
+                    const unifiedVatRate = (summaryTotals.vatRate && summaryTotals.vatRate > 0)
+                      ? summaryTotals.vatRate
+                      : (summaryTotals.entertainmentTaxRate || 0);
+
+                    if (unifiedVatAmount > 0 && unifiedVatRate > 0) {
+                      return (
+                        <div className="flex justify-between">
+                          <span style={{ opacity: 0.8 }}>{t('checkout.vat') || 'VAT'} ({unifiedVatRate}%):</span>
+                          <span className="font-medium">{formatCurrency(unifiedVatAmount)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <div className="flex justify-between pt-1 border-t" style={{ borderColor: 'var(--border)' }}>
+                    <span style={{ opacity: 0.8 }} className="text-sm">{t('checkout.subtotal') || 'Subtotal'}:</span>
+                    <span className="font-medium text-sm">{formatCurrency(subtotal)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Individual Seat Breakdown */}
             {seatPricingBreakdown.map((item, index) => {
               if (!item) return null;
@@ -2003,10 +2533,26 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
             )}
 
             {/* Grand Total */}
-            <div className="flex justify-between text-base font-bold pt-1.5 border-t" style={{ borderColor: 'var(--border)' }}>
-              <span>{t('seatSelection.total') || 'Total'}:</span>
-              <span>{formatCurrency(totalPrice)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
-            </div>
+            {(() => {
+              // Calculate total from summaryTotals for consistency (subtotal + VAT + Service Tax + Order Fee)
+              // Round final total to 3 decimals (use round, not floor, to handle floating-point errors)
+              const calculatedTotal = summaryTotals
+                ? Math.round((
+                    (summaryTotals.totalBasePrice || 0) +
+                    (summaryTotals.totalServiceFee || 0) +
+                    ((summaryTotals.totalVatAmount && summaryTotals.totalVatAmount > 0) ? summaryTotals.totalVatAmount : (summaryTotals.totalEntertainmentTaxAmount || 0)) +
+                    (summaryTotals.totalServiceTaxAmount || 0) +
+                    (orderFeeInfo.orderFeeTotal || 0)
+                  ) * 1000) / 1000
+                : totalPrice;
+
+              return (
+                <div className="flex justify-between text-base font-bold pt-1.5 border-t" style={{ borderColor: 'var(--border)' }}>
+                  <span>{t('seatSelection.total') || 'Total'}:</span>
+                  <span>{formatCurrency(calculatedTotal)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -2059,6 +2605,23 @@ function PaymentForm({ checkoutData, totalPrice, currency, ticketTypes, seatTick
               <div>{error === 'TICKET_SOLD_OUT' ? (t('seatSelection.ticketSoldOut') || 'Unfortunately, the selected tickets are no longer available. Please select different seats or check back later.') : error}</div>
             </div>
           )}
+
+          {/* Marketing Consent */}
+          <div className="mb-4">
+            <label className="flex items-start space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={marketingConsent}
+                onChange={(e) => setMarketingConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2"
+                style={{ accentColor: 'var(--primary)' }}
+              />
+              <span className="text-xs leading-relaxed" style={{ color: 'var(--foreground)', opacity: 0.8 }}>
+                {t('checkout.marketingConsent') ||
+                  'I agree to receive marketing communications and special offers from this organizer. You can unsubscribe at any time.'}
+              </span>
+            </label>
+          </div>
 
           <div className="flex gap-2 mt-4">
             <button

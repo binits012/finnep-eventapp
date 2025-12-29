@@ -210,7 +210,7 @@ export const seatAPI = {
           id: string;
           name: string;
           color: string;
-          bounds: any;
+          bounds: Record<string, number> | null;
           polygon: Array<{ x: number; y: number }> | null;
         }>;
         places: Array<{
@@ -220,7 +220,7 @@ export const seatAPI = {
           row: string | null;
           seat: string | null;
           section: string | null;
-          [key: string]: any;
+          [key: string]: string | number | null | undefined;
         }>;
       };
     }>(`/event/${eventId}/seats`);

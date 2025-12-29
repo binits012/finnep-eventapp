@@ -31,13 +31,10 @@ export default function EventPage() {
 
         const eventPromise = api.get(`/event/${eventId}`) as Promise<{ event: Event }>;
 
-        const response = await Promise.race([eventPromise, timeoutPromise]) as { event: Event };
-
-        console.log('API Response:', response);
+        const response = await Promise.race([eventPromise, timeoutPromise]) as { event: Event }; 
 
         // Extract the event data from the response
         const eventData = response.event;
-        console.log('Event Data:', eventData);
         setEvent(eventData);
       } catch (err) {
         console.error('Error fetching event details:', err);

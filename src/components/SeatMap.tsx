@@ -11,15 +11,36 @@ interface Seat {
   seat: string | null;
   section: string | null;
   price: number | null;
-  status: 'available' | 'sold';
+  status: 'available' | 'sold' | 'reserved';
+  available?: boolean;
+  wheelchairAccessible?: boolean;
+  tags?: string[];
+}
+
+interface SectionBounds {
+  minX?: number;
+  minY?: number;
+  maxX?: number;
+  maxY?: number;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
 }
 
 interface Section {
   id: string;
   name: string;
   color: string;
-  bounds: any;
+  bounds: SectionBounds | null;
   polygon: Array<{ x: number; y: number }> | null;
+  spacingConfig?: {
+    seatSpacingVisual?: number;
+    rowSpacingVisual?: number;
+    seatRadius?: number;
+    topMargin?: number;
+    rotationAngle?: number;
+  };
 }
 
 interface DisplayConfig {
@@ -53,7 +74,7 @@ interface SeatMapProps {
   readOnly?: boolean;
   viewMode?: 'overview' | 'section' | 'full';
   selectedSection?: string | null;
-  onSectionClick?: (sectionId: string) => void;
+  onSectionClick?: (sectionId: string | null) => void;
 }
 
 const SeatMap: React.FC<SeatMapProps> = ({
@@ -75,7 +96,6 @@ const SeatMap: React.FC<SeatMapProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const hasCenteredRef = useRef(false);
   const [zoom, setZoom] = useState(0.5); // Start zoomed out to show full view
-
   // Calculate initial pan to center seats immediately (prevents bounce)
   const initialPan = useMemo(() => {
     if (seats.length === 0 || selectedSection) return { x: 0, y: 0 };
@@ -99,12 +119,13 @@ const SeatMap: React.FC<SeatMapProps> = ({
       x: centerX * (1 - initialZoom),
       y: centerY * (1 - initialZoom)
     };
-  }, [seats.length, selectedSection]); // Recalculate if seats change
+  }, [seats, selectedSection]); // Recalculate if seats change
 
   const [pan, setPan] = useState(initialPan);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredSeat, setHoveredSeat] = useState<string | null>(null);
+  const [hoveredSection, setHoveredSection] = useState<string | null>(null);
   const [svgImage, setSvgImage] = useState<string | null>(null);
 
   // Alignment offsets - seats are drawn relative to their coordinates,
@@ -115,19 +136,10 @@ const SeatMap: React.FC<SeatMapProps> = ({
 
   // Default seat radius - will be overridden by displayConfig if available
   const DEFAULT_SEAT_RADIUS = 8;
-  const SECTION_OPACITY = 0.3;
 
   // Parse backgroundSvg config and extract SVG content/URL
   // Also extract viewBox from SVG content to properly align with seat coordinates
   const svgConfig = useMemo(() => {
-    console.log('[SeatMap] backgroundSvg prop received:', backgroundSvg ? {
-      type: typeof backgroundSvg,
-      hasContent: !!(backgroundSvg as any)?.svgContent,
-      hasSourceUrl: !!(backgroundSvg as any)?.sourceUrl,
-      translateX: (backgroundSvg as any)?.translateX,
-      translateY: (backgroundSvg as any)?.translateY,
-      scale: (backgroundSvg as any)?.scale
-    } : 'null/undefined');
     if (!backgroundSvg) return null;
 
     let svgContent: string | null = null;
@@ -164,16 +176,6 @@ const SeatMap: React.FC<SeatMapProps> = ({
           seatGap: backgroundSvg.displayConfig?.seatGap ?? 12
         }
       };
-      console.log('[SeatMap] Parsed backgroundSvg config:', {
-        translateX: config.translateX,
-        translateY: config.translateY,
-        scale: config.scale,
-        opacity: config.opacity,
-        hasContent: !!config.svgContent,
-        hasSourceUrl: !!config.sourceUrl,
-        viewBox: config.viewBox,
-        displayConfig: config.displayConfig
-      });
       return config;
     }
 
@@ -209,58 +211,224 @@ const SeatMap: React.FC<SeatMapProps> = ({
   // Get seat radius from displayConfig or use default
   const SEAT_RADIUS = useMemo(() => {
     const radius = svgConfig?.displayConfig?.dotSize ?? DEFAULT_SEAT_RADIUS;
-    console.log('[SeatMap] SEAT_RADIUS:', radius, 'from displayConfig:', svgConfig?.displayConfig);
     return radius;
   }, [svgConfig]);
 
-  // Calculate seat spacing scales and centroid (matching CMS SeatMapViewer logic)
-  // Baseline spacing is 10, so scaling factor = configured value / 10
-  // Values < 10 shrink seats toward center, values > 10 expand (but should be clamped to max 1.0)
-  const seatSpacingConfig = useMemo(() => {
-    const baselineSpacing = 10;  // Match CMS baseline of 10
-    const seatGap = svgConfig?.displayConfig?.seatGap ?? 10;
-    const rowGap = svgConfig?.displayConfig?.rowGap ?? 10;
+  // Helper function to check if point is inside polygon
+  const isPointInPolygon = useCallback((point: { x: number; y: number }, polygon: Array<{ x: number; y: number }>): boolean => {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i].x, yi = polygon[i].y;
+      const xj = polygon[j].x, yj = polygon[j].y;
+      const intersect = ((yi > point.y) !== (yj > point.y)) &&
+        (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }, []);
 
-    // Calculate scale factors, clamped to max 1.0 to prevent expansion beyond polygon bounds
-    const seatSpacingScale = Math.min(1.0, seatGap / baselineSpacing);
-    const rowSpacingScale = Math.min(1.0, rowGap / baselineSpacing);
+  // Helper function to find nearest point on polygon edge
+  const findNearestPointOnPolygon = useCallback((point: { x: number; y: number }, polygon: Array<{ x: number; y: number }>): { x: number; y: number } => {
+    let minDist = Infinity;
+    let nearestPoint = { x: point.x, y: point.y };
 
-    // Calculate centroid of all seats for scaling from center
-    let centroidX = 0, centroidY = 0, validCount = 0;
-    seats.forEach(seat => {
-      if (seat.x !== null && seat.y !== null) {
-        centroidX += seat.x;
-        centroidY += seat.y;
-        validCount++;
+    for (let i = 0; i < polygon.length; i++) {
+      const p1 = polygon[i];
+      const p2 = polygon[(i + 1) % polygon.length];
+
+      // Find nearest point on line segment
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+
+      if (length > 0) {
+        const t = Math.max(0, Math.min(1, ((point.x - p1.x) * dx + (point.y - p1.y) * dy) / (length * length)));
+        const nearest = {
+          x: p1.x + t * dx,
+          y: p1.y + t * dy
+        };
+
+        const dist = Math.sqrt((point.x - nearest.x) ** 2 + (point.y - nearest.y) ** 2);
+        if (dist < minDist) {
+          minDist = dist;
+          nearestPoint = nearest;
+        }
       }
-    });
-
-    if (validCount > 0) {
-      centroidX /= validCount;
-      centroidY /= validCount;
     }
 
-    console.log('[SeatMap] Spacing config:', {
-      seatGap, rowGap, seatSpacingScale, rowSpacingScale,
-      centroid: { x: centroidX, y: centroidY }
-    });
+    return nearestPoint;
+  }, []);
 
-    return { seatSpacingScale, rowSpacingScale, centroidX, centroidY };
-  }, [svgConfig, seats]);
+  // Helper function to calculate scaled seat position (matching CMS SeatMapCanvas logic)
+  const getScaledSeatPosition = useCallback((seat: Seat) => {
+    if (seat.x === null || seat.y === null) return { x: 0, y: 0 };
 
-  // Helper function to calculate scaled seat position (matching CMS logic)
-  const getScaledSeatPosition = useCallback((x: number, y: number) => {
-    const { seatSpacingScale, rowSpacingScale, centroidX, centroidY } = seatSpacingConfig;
-    // Scale position from centroid
-    const scaledX = centroidX + (x - centroidX) * seatSpacingScale;
-    const scaledY = centroidY + (y - centroidY) * rowSpacingScale;
-    return { x: scaledX, y: scaledY };
-  }, [seatSpacingConfig]);
+    // Find section for this seat - try multiple matching strategies
+    const sectionName = seat.section || 'default';
+    let section = sections.find(s =>
+      s.name === sectionName ||
+      s.id === sectionName ||
+      s.name?.toLowerCase() === sectionName?.toLowerCase() ||
+      s.id?.toLowerCase() === sectionName?.toLowerCase()
+    );
+
+    // If no section found, try to find by matching any part of the name
+    if (!section && sectionName) {
+      section = sections.find(s =>
+        s.name?.includes(sectionName) ||
+        sectionName.includes(s.name || '')
+      );
+    }
+
+    // Debug: Log section matching
+    if (!section && process.env.NODE_ENV === 'development') {
+      console.warn(`[SeatMap] No section found for seat ${seat.placeId} with section name "${sectionName}". Available sections:`, sections.map(s => ({ name: s.name, id: s.id, hasPolygon: !!s.polygon })));
+    }
+
+    const spacingConfig = section?.spacingConfig || {};
+
+    // Priority: displayConfig (from backgroundSvg.displayConfig) > spacingConfig > defaults
+    const displayConfig: DisplayConfig = svgConfig?.displayConfig || {};
+    const baselineSpacing = 10;
+
+    // Get spacing multipliers
+    let rawSeatSpacingMultiplier: number;
+    let rawRowSpacingMultiplier: number;
+
+    if (displayConfig.seatGap !== undefined) {
+      rawSeatSpacingMultiplier = displayConfig.seatGap / baselineSpacing;
+    } else if (spacingConfig.seatSpacingVisual !== undefined) {
+      rawSeatSpacingMultiplier = spacingConfig.seatSpacingVisual;
+    } else {
+      rawSeatSpacingMultiplier = 1.0;
+    }
+
+    if (displayConfig.rowGap !== undefined) {
+      rawRowSpacingMultiplier = displayConfig.rowGap / baselineSpacing;
+    } else if (spacingConfig.rowSpacingVisual !== undefined) {
+      rawRowSpacingMultiplier = spacingConfig.rowSpacingVisual;
+    } else {
+      rawRowSpacingMultiplier = 1.0;
+    }
+
+    // CRITICAL: If section has no polygon, use bounds as fallback constraint
+    if (!section?.polygon || section.polygon.length === 0) {
+      // No polygon data - use bounds if available, otherwise use original position
+      if (section?.bounds && (section.bounds.minX !== undefined || section.bounds.x1 !== undefined)) {
+        const bounds = section.bounds;
+        const seatRadius = svgConfig?.displayConfig?.dotSize ?? DEFAULT_SEAT_RADIUS;
+
+        // Handle both minX/maxX and x1/x2 formats
+        const minX = bounds.minX ?? bounds.x1 ?? 0;
+        const minY = bounds.minY ?? bounds.y1 ?? 0;
+        const maxX = bounds.maxX ?? bounds.x2 ?? 1000;
+        const maxY = bounds.maxY ?? bounds.y2 ?? 1000;
+
+        // Constrain to bounds with margin for seat radius
+        const constrainedX = Math.max(minX + seatRadius, Math.min(maxX - seatRadius, seat.x));
+        const constrainedY = Math.max(minY + seatRadius, Math.min(maxY - seatRadius, seat.y));
+
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`[SeatMap] Section "${section.name}" (id: ${section.id}) has no polygon - using bounds constraint for ${seat.placeId}`);
+        }
+        return { x: constrainedX, y: constrainedY };
+      } else {
+        // No polygon and no bounds - use original position (no scaling)
+        if (process.env.NODE_ENV === 'development' && section) {
+          console.warn(`[SeatMap] Section "${section.name}" (id: ${section.id}) has no polygon or bounds - using original seat position for ${seat.placeId}`);
+        }
+        return { x: seat.x, y: seat.y };
+      }
+    }
+
+    // Calculate scaling factors - allow values from 0.1 to 3.0 (matching SeatMapViewer)
+    const seatSpacingMultiplier = Math.max(0.1, Math.min(3.0, rawSeatSpacingMultiplier));
+    const rowSpacingMultiplier = Math.max(0.1, Math.min(3.0, rawRowSpacingMultiplier));
+    const sectionTopMargin = spacingConfig.topMargin !== undefined ? spacingConfig.topMargin : 0;
+
+    // Get section center and rotation
+    const rotationAngle = spacingConfig.rotationAngle || 0;
+    const polygon = section.polygon;
+
+    // Use polygon centroid (matching SeatMapViewer logic)
+    const centerX = polygon.reduce((sum, p) => sum + p.x, 0) / polygon.length;
+    const centerY = polygon.reduce((sum, p) => sum + p.y, 0) / polygon.length;
+
+    // Only apply scaling if values differ from baseline (matching SeatMapViewer: simpleMode && scale !== 1)
+    // For customer-facing app, we always apply scaling when multipliers are not 1.0
+    if (seatSpacingMultiplier === 1.0 && rowSpacingMultiplier === 1.0 && rotationAngle === 0 && sectionTopMargin === 0) {
+      // No scaling needed - use original position
+      return { x: seat.x, y: seat.y };
+    }
+
+    // Calculate scaled position
+    let scaledX: number, scaledY: number;
+
+    if (rotationAngle !== 0) {
+      // For tilted/rotated sections, automatically reduce gaps to prevent overflow (matching SeatMapViewer)
+      // Apply reduction: if user sets gap to 20 (2x), tilted section gets reduced scaling
+      const reducedSeatScale = 0.6 + (seatSpacingMultiplier - 1);
+      const reducedRowScale = 0.8 + (rowSpacingMultiplier - 1);
+
+      // Scale in local coordinate system
+      const radians = (rotationAngle * Math.PI) / 180;
+      const cos = Math.cos(radians);
+      const sin = Math.sin(radians);
+
+      // Calculate offset from center
+      const offsetX = seat.x - centerX;
+      const offsetY = seat.y - centerY;
+
+      // Step 1: Rotate offset by -angle to get local coordinates
+      const localX = offsetX * cos + offsetY * sin;
+      const localY = -offsetX * sin + offsetY * cos;
+
+      // Step 2: Scale in local coordinate system (with reduced scaling for tilted sections)
+      const scaledLocalX = localX * reducedSeatScale;
+      const scaledLocalY = localY * reducedRowScale;
+
+      // Step 3: Rotate back by +angle to get global coordinates
+      const rotatedBackX = scaledLocalX * cos - scaledLocalY * sin;
+      const rotatedBackY = scaledLocalX * sin + scaledLocalY * cos;
+
+      // Step 4: Translate back to global position (matching SeatMapViewer - no topMargin for rotated sections)
+      scaledX = centerX + rotatedBackX;
+      scaledY = centerY + rotatedBackY;
+    } else {
+      // No rotation - standard scaling
+      scaledX = centerX + (seat.x - centerX) * seatSpacingMultiplier;
+      scaledY = sectionTopMargin + centerY + (seat.y - centerY) * rowSpacingMultiplier;
+    }
+
+    // Constrain to polygon (matching SeatMapViewer logic)
+    const scaledPoint = { x: scaledX, y: scaledY };
+
+    // Check if scaled position is inside polygon
+    if (isPointInPolygon(scaledPoint, polygon)) {
+      // Inside polygon - use scaled position
+      return { x: scaledX, y: scaledY };
+    }
+
+    // If outside polygon, find the closest point on polygon boundary
+    // For rotated/tilted sections, we need strict constraint to prevent overflow
+    const nearestPoint = findNearestPointOnPolygon(scaledPoint, polygon);
+    const dx = scaledX - nearestPoint.x;
+    const dy = scaledY - nearestPoint.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // If the scaled point is far outside (> 20px), use original position instead
+    // This prevents seats from jumping to polygon edges when scaling causes overflow
+    if (dist > 20) {
+      return { x: seat.x, y: seat.y };
+    }
+
+    // Return closest point on polygon edge (matching SeatMapViewer)
+    return { x: nearestPoint.x, y: nearestPoint.y };
+  }, [sections, svgConfig, isPointInPolygon, findNearestPointOnPolygon]);
 
   // Load SVG as image
   useEffect(() => {
     if (!svgConfig || !svgConfig.isVisible) {
-      console.log('[SeatMap] Background SVG not visible or config missing', { svgConfig });
       setSvgImage(null);
       return;
     }
@@ -269,7 +437,6 @@ const SeatMap: React.FC<SeatMapProps> = ({
     const svgSource = svgConfig.sourceUrl || svgConfig.svgContent;
 
     if (!svgSource) {
-      console.log('[SeatMap] No SVG source available', { svgConfig });
       setSvgImage(null);
       return;
     }
@@ -278,11 +445,8 @@ const SeatMap: React.FC<SeatMapProps> = ({
 
     // If SVG is a data URL or URL, use it directly
     if (svgSource.startsWith('data:') || svgSource.startsWith('http')) {
-      console.log('[SeatMap] Using SVG as URL/data URL');
       setSvgImage(svgSource);
     } else {
-      // If it's SVG content, convert to data URL (not blob URL - CSP blocks blob:)
-      console.log('[SeatMap] Converting SVG content to data URL');
       // Use base64 encoding for data URL to avoid CSP issues with blob URLs
       const base64Svg = btoa(unescape(encodeURIComponent(svgSource)));
       const dataUrl = `data:image/svg+xml;base64,${base64Svg}`;
@@ -291,7 +455,7 @@ const SeatMap: React.FC<SeatMapProps> = ({
   }, [svgConfig]);
 
   // Handle mouse wheel zoom
-  const handleWheel = useCallback((e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     if (!containerRef.current) return;
     e.preventDefault();
 
@@ -309,6 +473,18 @@ const SeatMap: React.FC<SeatMapProps> = ({
     setZoom(newZoom);
     setPan({ x: newPanX, y: newPanY });
   }, [zoom, pan]);
+
+  // Attach wheel event listener with passive: false to allow preventDefault
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [handleWheel]);
 
   // Handle drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -335,8 +511,12 @@ const SeatMap: React.FC<SeatMapProps> = ({
     if (selectedSeats.includes(seat.placeId)) {
       return '#3b82f6'; // Blue for selected
     }
-    if (seat.status === 'sold') {
-      return '#ef4444'; // Red for sold
+    // Check if seat is unavailable (available === false) - mark as sold
+    if (seat.available === false || seat.status === 'sold') {
+      return '#ef4444'; // Red for sold/unavailable
+    }
+    if (seat.status === 'reserved') {
+      return '#f59e0b'; // Orange/amber for reserved/occupied
     }
     return '#10b981'; // Green for available
   };
@@ -347,18 +527,26 @@ const SeatMap: React.FC<SeatMapProps> = ({
     if (selectedSection && viewMode === 'section') {
       const section = sections.find(s => s.id === selectedSection);
       if (section) {
-        if (section.bounds) {
-          const { minX, minY, maxX, maxY } = section.bounds;
-          const padding = 50;
-          return `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`;
+        // Try to get bounds from section.bounds or calculate from polygon
+        let minX: number | undefined, minY: number | undefined, maxX: number | undefined, maxY: number | undefined;
+
+        if (section.bounds && (section.bounds.minX !== undefined || section.bounds.x1 !== undefined)) {
+          minX = section.bounds.minX ?? section.bounds.x1;
+          minY = section.bounds.minY ?? section.bounds.y1;
+          maxX = section.bounds.maxX ?? section.bounds.x2;
+          maxY = section.bounds.maxY ?? section.bounds.y2;
         } else if (section.polygon && section.polygon.length > 0) {
           const xs = section.polygon.map(p => p.x);
           const ys = section.polygon.map(p => p.y);
-          const minX = Math.min(...xs) - 50;
-          const maxX = Math.max(...xs) + 50;
-          const minY = Math.min(...ys) - 50;
-          const maxY = Math.max(...ys) + 50;
-          return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
+          minX = Math.min(...xs);
+          minY = Math.min(...ys);
+          maxX = Math.max(...xs);
+          maxY = Math.max(...ys);
+        }
+
+        if (minX !== undefined && minY !== undefined && maxX !== undefined && maxY !== undefined) {
+          const padding = 50;
+          return `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`;
         }
       }
     }
@@ -369,7 +557,7 @@ const SeatMap: React.FC<SeatMapProps> = ({
     // Get scaled positions for all seats
     const scaledPositions = seats
       .filter(s => s.x !== null && s.y !== null)
-      .map(s => getScaledSeatPosition(s.x!, s.y!));
+      .map(s => getScaledSeatPosition(s));
 
     if (scaledPositions.length === 0) return '0 0 800 600';
 
@@ -382,7 +570,6 @@ const SeatMap: React.FC<SeatMapProps> = ({
     const maxY = Math.max(...ys) + 50;
 
     const viewBox = `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
-    console.log('[SeatMap] Calculated viewBox from scaled seats:', viewBox, { minX, maxX, minY, maxY, seatCount: seats.length });
     return viewBox;
   };
 
@@ -409,7 +596,6 @@ const SeatMap: React.FC<SeatMapProps> = ({
       ref={containerRef}
       className="relative w-full h-full border rounded-lg overflow-hidden"
       style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -417,18 +603,34 @@ const SeatMap: React.FC<SeatMapProps> = ({
     >
       {/* Mini-Map Overview */}
       {sections.length > 0 && (() => {
-        // Calculate bounds from all sections
+        // Calculate bounds from all sections (from polygon if bounds are missing)
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         sections.forEach(section => {
-          if (section.bounds) {
-            minX = Math.min(minX, section.bounds.minX || 0);
-            minY = Math.min(minY, section.bounds.minY || 0);
-            maxX = Math.max(maxX, section.bounds.maxX || 0);
-            maxY = Math.max(maxY, section.bounds.maxY || 0);
+          let sMinX: number | undefined, sMinY: number | undefined, sMaxX: number | undefined, sMaxY: number | undefined;
+
+          if (section.bounds && (section.bounds.minX !== undefined || section.bounds.x1 !== undefined)) {
+            sMinX = section.bounds.minX ?? section.bounds.x1;
+            sMinY = section.bounds.minY ?? section.bounds.y1;
+            sMaxX = section.bounds.maxX ?? section.bounds.x2;
+            sMaxY = section.bounds.maxY ?? section.bounds.y2;
+          } else if (section.polygon && section.polygon.length > 0) {
+            const xs = section.polygon.map(p => p.x);
+            const ys = section.polygon.map(p => p.y);
+            sMinX = Math.min(...xs);
+            sMinY = Math.min(...ys);
+            sMaxX = Math.max(...xs);
+            sMaxY = Math.max(...ys);
+          }
+
+          if (sMinX !== undefined && sMinY !== undefined && sMaxX !== undefined && sMaxY !== undefined) {
+            minX = Math.min(minX, sMinX);
+            minY = Math.min(minY, sMinY);
+            maxX = Math.max(maxX, sMaxX);
+            maxY = Math.max(maxY, sMaxY);
           }
         });
-        const totalWidth = maxX - minX || 1000;
-        const totalHeight = maxY - minY || 1000;
+        const totalWidth = maxX !== -Infinity && minX !== Infinity ? maxX - minX : 1000;
+        const totalHeight = maxY !== -Infinity && minY !== Infinity ? maxY - minY : 1000;
         const scale = Math.min(192 / totalWidth, 144 / totalHeight) || 0.1;
 
         return (
@@ -436,9 +638,45 @@ const SeatMap: React.FC<SeatMapProps> = ({
             <svg width="100%" height="100%" viewBox={`0 0 ${totalWidth * scale} ${totalHeight * scale}`} preserveAspectRatio="xMidYMid meet">
               {/* Render sections in mini-map */}
               {sections.map((section) => {
-                if (section.bounds) {
-                  const { minX: sMinX, minY: sMinY, maxX: sMaxX, maxY: sMaxY } = section.bounds;
-                  const isActive = selectedSection === section.id;
+                const isActive = selectedSection === section.id || hoveredSection === section.id;
+                const handleMiniMapClick = () => {
+                  if (onSectionClick) {
+                    // Toggle selection: if already selected, deselect (pass null)
+                    onSectionClick(isActive && selectedSection === section.id ? null : section.id);
+                  }
+                };
+
+                // Render polygon if available (more accurate for tilted sections)
+                if (section.polygon && section.polygon.length > 0) {
+                  const points = section.polygon
+                    .map(p => `${(p.x - minX) * scale},${(p.y - minY) * scale}`)
+                    .join(' ');
+                  return (
+                    <polygon
+                      key={section.id}
+                      points={points}
+                      fill={isActive ? '#3b82f6' : '#9ca3af'}
+                      fillOpacity={isActive ? 0.6 : 0.3}
+                      stroke={isActive ? '#3b82f6' : '#6b7280'}
+                      strokeWidth={isActive ? 2 : 1}
+                      onClick={handleMiniMapClick}
+                      style={{ cursor: onSectionClick ? 'pointer' : 'default' }}
+                    />
+                  );
+                }
+
+                // Fallback to rectangle bounds
+                let sMinX: number | undefined, sMinY: number | undefined, sMaxX: number | undefined, sMaxY: number | undefined;
+
+                if (section.bounds && (section.bounds.minX !== undefined || section.bounds.x1 !== undefined)) {
+                  // Handle both minX/maxX and x1/x2 formats
+                  sMinX = section.bounds.minX ?? section.bounds.x1;
+                  sMinY = section.bounds.minY ?? section.bounds.y1;
+                  sMaxX = section.bounds.maxX ?? section.bounds.x2;
+                  sMaxY = section.bounds.maxY ?? section.bounds.y2;
+                }
+
+                if (sMinX !== undefined && sMinY !== undefined && sMaxX !== undefined && sMaxY !== undefined) {
                   return (
                     <rect
                       key={section.id}
@@ -450,6 +688,8 @@ const SeatMap: React.FC<SeatMapProps> = ({
                       fillOpacity={isActive ? 0.6 : 0.3}
                       stroke={isActive ? '#3b82f6' : '#6b7280'}
                       strokeWidth={isActive ? 2 : 1}
+                      onClick={handleMiniMapClick}
+                      style={{ cursor: onSectionClick ? 'pointer' : 'default' }}
                     />
                   );
                 }
@@ -457,8 +697,26 @@ const SeatMap: React.FC<SeatMapProps> = ({
               })}
               {/* Section labels */}
               {sections.map((section) => {
-                if (section.bounds) {
-                  const { minX: sMinX, minY: sMinY, maxX: sMaxX, maxY: sMaxY } = section.bounds;
+                // Calculate bounds from polygon if bounds are not available
+                let sMinX: number | undefined, sMinY: number | undefined, sMaxX: number | undefined, sMaxY: number | undefined;
+
+                if (section.bounds && (section.bounds.minX !== undefined || section.bounds.x1 !== undefined)) {
+                  // Handle both minX/maxX and x1/x2 formats
+                  sMinX = section.bounds.minX ?? section.bounds.x1;
+                  sMinY = section.bounds.minY ?? section.bounds.y1;
+                  sMaxX = section.bounds.maxX ?? section.bounds.x2;
+                  sMaxY = section.bounds.maxY ?? section.bounds.y2;
+                } else if (section.polygon && section.polygon.length > 0) {
+                  // Calculate bounds from polygon
+                  const xs = section.polygon.map(p => p.x);
+                  const ys = section.polygon.map(p => p.y);
+                  sMinX = Math.min(...xs);
+                  sMinY = Math.min(...ys);
+                  sMaxX = Math.max(...xs);
+                  sMaxY = Math.max(...ys);
+                }
+
+                if (sMinX !== undefined && sMinY !== undefined && sMaxX !== undefined && sMaxY !== undefined) {
                   const centerX = ((sMinX + sMaxX) / 2 - minX) * scale;
                   const centerY = ((sMinY + sMaxY) / 2 - minY) * scale;
                   return (
@@ -506,11 +764,8 @@ const SeatMap: React.FC<SeatMapProps> = ({
 
               // Get viewBox to match the initial centering calculation
               const viewBox = getViewBox();
-              const viewBoxParts = viewBox.split(' ').map(Number);
-              const viewBoxX = viewBoxParts[0];
-              const viewBoxY = viewBoxParts[1];
-              const viewBoxWidth = viewBoxParts[2];
-              const viewBoxHeight = viewBoxParts[3];
+              // Parse viewBox for potential future use
+              viewBox.split(' ').map(Number);
 
               // Use the same centering formula as initial load
               const panX = centerX * (1 - newZoom);
@@ -601,19 +856,31 @@ const SeatMap: React.FC<SeatMapProps> = ({
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded-full" style={{ background: '#10b981' }}></div>
           <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
-            Available
+            {t('seatSelection.available') || 'Available'}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded-full" style={{ background: '#3b82f6' }}></div>
           <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
-            Selected
+            {t('seatSelection.selected') || 'Selected'}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded-full" style={{ background: '#ef4444' }}></div>
           <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
-            Occupied
+            {t('seatSelection.occupied') || 'Occupied'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full" style={{ background: '#f59e0b' }}></div>
+          <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+            {t('seatSelection.reserved') || 'Reserved'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full" style={{ background: '#10b981', border: '2px solid #9333ea' }}></div>
+          <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+            ♿ {t('seatSelection.wheelchair') || 'Wheelchair Accessible'}
           </span>
         </div>
       </div>
@@ -624,6 +891,14 @@ const SeatMap: React.FC<SeatMapProps> = ({
         viewBox={getViewBox()}
         className="w-full h-full"
         style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        onClick={(e) => {
+          // Deselect section when clicking on empty space (not on a section or seat)
+          if (e.target === svgRef.current || (e.target as Element).tagName === 'svg' || (e.target as Element).tagName === 'g') {
+            if (selectedSection && onSectionClick) {
+              onSectionClick(null);
+            }
+          }
+        }}
       >
         <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
           {/* Background SVG Image */}
@@ -646,14 +921,6 @@ const SeatMap: React.FC<SeatMapProps> = ({
               const bgWidth = naturalWidth * bgScale;
               const bgHeight = naturalHeight * bgScale;
 
-              console.log('[SeatMap] Rendering background (CMS match):', {
-                position: { x: bgX, y: bgY },
-                naturalSize: { width: naturalWidth, height: naturalHeight },
-                scaledSize: { width: bgWidth, height: bgHeight },
-                scale: bgScale,
-                viewBox: svgConfig.viewBox
-              });
-
               return (
                 <g opacity={1}>
                   <image
@@ -663,7 +930,7 @@ const SeatMap: React.FC<SeatMapProps> = ({
                     width={bgWidth}
                     height={bgHeight}
                     preserveAspectRatio="none"
-                    onLoad={() => console.log('[SeatMap] Background image loaded successfully')}
+                    onLoad={() => console.log('')}
                     onError={(e) => console.error('[SeatMap] Background image failed to load', e)}
                   />
                 </g>
@@ -674,47 +941,71 @@ const SeatMap: React.FC<SeatMapProps> = ({
           {/* Section Overlays */}
           {sections.map((section) => {
             const isSelected = selectedSection === section.id;
-            const handleClick = () => {
+            const isHovered = hoveredSection === section.id;
+            const shouldHighlight = isSelected || isHovered;
+            const handleClick = (e: React.MouseEvent) => {
+              e.stopPropagation(); // Prevent event bubbling to avoid bouncing
               if (onSectionClick) {
-                onSectionClick(section.id);
+                // Toggle selection: if already selected, deselect (pass null)
+                onSectionClick(isSelected ? null : section.id);
               } else if (onToggleSeats) {
                 onToggleSeats();
               }
             };
 
             if (section.polygon && section.polygon.length > 0) {
-              // Render polygon section
+              // Render polygon section (stroke only, matching CMS - no fill to avoid covering seats)
               const points = section.polygon.map(p => `${p.x},${p.y}`).join(' ');
               return (
                 <polygon
                   key={section.id}
                   points={points}
-                  fill={section.color || '#2196F3'}
-                  fillOpacity={isSelected ? SECTION_OPACITY * 1.5 : SECTION_OPACITY}
-                  stroke={section.color || '#2196F3'}
-                  strokeWidth={isSelected ? 3 : 2}
+                  fill={shouldHighlight ? (section.color || '#2196F3') : 'none'}
+                  fillOpacity={shouldHighlight ? 0.2 : 0}
+                  stroke={shouldHighlight ? '#FF6B35' : (section.color || '#2196F3')}
+                  strokeWidth={shouldHighlight ? 3 : 2}
+                  strokeDasharray={shouldHighlight ? 'none' : '5,5'}
                   onClick={handleClick}
                   style={{ cursor: (onSectionClick || onToggleSeats) ? 'pointer' : 'default' }}
                 />
               );
             } else if (section.bounds) {
-              // Render rectangle section
-              const { minX, minY, maxX, maxY } = section.bounds;
-              return (
-                <rect
-                  key={section.id}
-                  x={minX}
-                  y={minY}
-                  width={maxX - minX}
-                  height={maxY - minY}
-                  fill={section.color || '#2196F3'}
-                  fillOpacity={isSelected ? SECTION_OPACITY * 1.5 : SECTION_OPACITY}
-                  stroke={section.color || '#2196F3'}
-                  strokeWidth={isSelected ? 3 : 2}
-                  onClick={handleClick}
-                  style={{ cursor: (onSectionClick || onToggleSeats) ? 'pointer' : 'default' }}
-                />
-              );
+              // Calculate bounds from polygon if bounds are not available
+              let minX: number | undefined, minY: number | undefined, maxX: number | undefined, maxY: number | undefined;
+
+              if (section.bounds && (section.bounds.minX !== undefined || section.bounds.x1 !== undefined)) {
+                minX = section.bounds.minX ?? section.bounds.x1;
+                minY = section.bounds.minY ?? section.bounds.y1;
+                maxX = section.bounds.maxX ?? section.bounds.x2;
+                maxY = section.bounds.maxY ?? section.bounds.y2;
+              } else if (section.polygon && section.polygon.length > 0) {
+                const xs = section.polygon.map(p => p.x);
+                const ys = section.polygon.map(p => p.y);
+                minX = Math.min(...xs);
+                minY = Math.min(...ys);
+                maxX = Math.max(...xs);
+                maxY = Math.max(...ys);
+              }
+
+              if (minX !== undefined && minY !== undefined && maxX !== undefined && maxY !== undefined) {
+                // Render rectangle section (stroke only, matching CMS)
+                return (
+                  <rect
+                    key={section.id}
+                    x={minX}
+                    y={minY}
+                    width={maxX - minX}
+                    height={maxY - minY}
+                    fill={shouldHighlight ? (section.color || '#2196F3') : 'none'}
+                    fillOpacity={shouldHighlight ? 0.2 : 0}
+                    stroke={shouldHighlight ? '#FF6B35' : (section.color || '#2196F3')}
+                    strokeWidth={shouldHighlight ? 3 : 2}
+                    strokeDasharray={shouldHighlight ? 'none' : '5,5'}
+                    onClick={handleClick}
+                    style={{ cursor: (onSectionClick || onToggleSeats) ? 'pointer' : 'default' }}
+                  />
+                );
+              }
             }
             return null;
           })}
@@ -722,7 +1013,10 @@ const SeatMap: React.FC<SeatMapProps> = ({
           {/* Section Labels */}
           {!showSeats && sections.map((section) => {
             if (section.bounds) {
-              const { minX, minY, maxX, maxY } = section.bounds;
+              const minX = section.bounds.minX ?? section.bounds.x1 ?? 0;
+              const minY = section.bounds.minY ?? section.bounds.y1 ?? 0;
+              const maxX = section.bounds.maxX ?? section.bounds.x2 ?? 100;
+              const maxY = section.bounds.maxY ?? section.bounds.y2 ?? 100;
               const centerX = (minX + maxX) / 2;
               const centerY = (minY + maxY) / 2;
               return (
@@ -753,9 +1047,15 @@ const SeatMap: React.FC<SeatMapProps> = ({
             const color = getSeatColor(seat);
 
             // Apply spacing scale from displayConfig (matching CMS logic)
-            const scaledPos = getScaledSeatPosition(seat.x, seat.y);
+            // This function ALWAYS returns constrained positions
+            const scaledPos = getScaledSeatPosition(seat);
             const seatX = scaledPos.x + seatOffsetX;
             const seatY = scaledPos.y + seatOffsetY;
+
+            const isUnavailable = seat.available === false;
+            const isSold = seat.status === 'sold' || isUnavailable;
+            const isReserved = seat.status === 'reserved';
+            const isWheelchair = seat.wheelchairAccessible || seat.tags?.includes('wheelchair');
 
             return (
               <g key={seat.placeId}>
@@ -764,12 +1064,25 @@ const SeatMap: React.FC<SeatMapProps> = ({
                   cy={seatY}
                   r={SEAT_RADIUS}
                   fill={color}
-                  stroke={isSelected || isHovered ? '#ffffff' : 'none'}
-                  strokeWidth={isSelected || isHovered ? 2 : 0}
-                  opacity={seat.status === 'sold' ? 0.5 : 1}
-                  onClick={() => {
-                    if (!readOnly && seat.status === 'available' && onSeatClick) {
+                  stroke={isSelected || isHovered ? '#ffffff' : (isWheelchair ? '#9333ea' : 'none')}
+                  strokeWidth={isSelected || isHovered ? 2 : (isWheelchair ? 2 : 0)}
+                  opacity={isSold || isReserved ? 0.5 : 1}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent event bubbling
+                    if (!readOnly && seat.status === 'available' && !isUnavailable && onSeatClick) {
                       onSeatClick(seat.placeId, seat);
+                    }
+                    // Highlight section when seat is clicked (set, don't toggle to prevent bouncing)
+                    if (seat.section) {
+                      const section = sections.find(s =>
+                        s.name === seat.section ||
+                        s.id === seat.section ||
+                        s.name?.toLowerCase() === seat.section?.toLowerCase()
+                      );
+                      if (section && onSectionClick && selectedSection !== section.id) {
+                        // Only set if not already selected to prevent bouncing
+                        onSectionClick(section.id);
+                      }
                     }
                   }}
                   onMouseEnter={() => {
@@ -777,18 +1090,64 @@ const SeatMap: React.FC<SeatMapProps> = ({
                     if (onSeatHover) {
                       onSeatHover(seat.placeId);
                     }
+                    // Highlight section when seat is hovered
+                    if (seat.section) {
+                      const section = sections.find(s =>
+                        s.name === seat.section ||
+                        s.id === seat.section ||
+                        s.name?.toLowerCase() === seat.section?.toLowerCase()
+                      );
+                      if (section) {
+                        setHoveredSection(section.id);
+                      }
+                    }
                   }}
                   onMouseLeave={() => {
+                    // Only clear hover state if section is not selected (prevents bouncing)
+                    // Keep section highlighted if it's the selected section
+                    if (!seat.section || selectedSection === null) {
+                      setHoveredSection(null);
+                    } else {
+                      const section = sections.find(s =>
+                        s.name === seat.section ||
+                        s.id === seat.section ||
+                        s.name?.toLowerCase() === seat.section?.toLowerCase()
+                      );
+                      // Only clear if this section is not the selected one
+                      if (section && section.id !== selectedSection) {
+                        setHoveredSection(null);
+                      }
+                    }
                     setHoveredSeat(null);
                     if (onSeatHover) {
                       onSeatHover(null);
                     }
                   }}
                   style={{
-                    cursor: readOnly || seat.status !== 'available' ? 'not-allowed' : 'pointer',
+                    cursor: readOnly || seat.status !== 'available' || isUnavailable ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s ease'
                   }}
                 />
+                {/* Wheelchair indicator - small icon */}
+                {isWheelchair && (
+                  <text
+                    x={seatX +0.5}
+                    y={seatY + 0.5}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize="5"
+                    fill="#9333ea"
+                    fontWeight="normal"
+                    pointerEvents="none"
+                    style={{
+                      textRendering: 'geometricPrecision',
+                      WebkitFontSmoothing: 'antialiased',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}
+                  >
+                    ♿
+                  </text>
+                )}
                 {/* Checkmark for selected seats */}
                 {isSelected && (
                   <g>
@@ -813,53 +1172,104 @@ const SeatMap: React.FC<SeatMapProps> = ({
                     </text>
                   </g>
                 )}
-                {/* Tooltip for hovered seat */}
-                {isHovered && seat.row && seat.seat && (
-                  <g>
-                    {/* Tooltip background */}
-                    <rect
-                      x={seatX - 55}
-                      y={seatY - SEAT_RADIUS - 50}
-                      width="110"
-                      height="40"
-                      rx="4"
-                      fill="rgba(0, 0, 0, 0.85)"
-                      pointerEvents="none"
-                    />
-                    {/* Seat info */}
-                    <text
-                      x={seatX}
-                      y={seatY - SEAT_RADIUS - 30}
-                      textAnchor="middle"
-                      fontSize="13"
-                      fill="white"
-                      fontWeight="500"
-                      pointerEvents="none"
-                    >
-                      {seat.row} - Seat {seat.seat}
-                    </text>
-                    {/* Price */}
-                    {seat.price && (
-                      <text
-                        x={seatX}
-                        y={seatY - SEAT_RADIUS - 15}
-                        textAnchor="middle"
-                        fontSize="12"
-                        fill="#a5f3fc"
-                        fontWeight="400"
-                        pointerEvents="none"
-                      >
-                        {seat.price.toFixed(2)} EUR
-                      </text>
-                    )}
-                    {/* Tooltip arrow */}
-                    <polygon
-                      points={`${seatX - 8},${seatY - SEAT_RADIUS - 10} ${seatX + 8},${seatY - SEAT_RADIUS - 10} ${seatX},${seatY - SEAT_RADIUS}`}
-                      fill="rgba(0, 0, 0, 0.85)"
-                      pointerEvents="none"
-                    />
-                  </g>
+              </g>
+            );
+          })}
+
+          {/* Tooltips - render after all seats so they appear on top */}
+          {(showSeats || viewMode !== 'overview') && seats.map((seat) => {
+            if (seat.x === null || seat.y === null) return null;
+            if (hoveredSeat !== seat.placeId || !seat.row || !seat.seat) return null;
+
+            const scaledPos = getScaledSeatPosition(seat);
+            const seatX = scaledPos.x + seatOffsetX;
+            const seatY = scaledPos.y + seatOffsetY;
+
+            return (
+              <g key={`tooltip-${seat.placeId}`} style={{ pointerEvents: 'none' }}>
+                {/* Tooltip background - positioned above the seat with more space */}
+                <rect
+                  x={seatX - 55}
+                  y={seatY - SEAT_RADIUS - 60}
+                  width="110"
+                  height={seat.price ? 55 : 40}
+                  rx="4"
+                  fill="rgba(0, 0, 0, 0.9)"
+                  pointerEvents="none"
+                />
+                {/* Seat info */}
+                <text
+                  x={seatX}
+                  y={seatY - SEAT_RADIUS - 40}
+                  textAnchor="middle"
+                  fontSize="13"
+                  fill="white"
+                  fontWeight="500"
+                  pointerEvents="none"
+                >
+                  {seat.row} - Seat {seat.seat}
+                </text>
+                {/* Status indicator for sold/reserved/unavailable seats */}
+                {(seat.status === 'sold' || seat.available === false) && (
+                  <text
+                    x={seatX}
+                    y={seatY - SEAT_RADIUS - 25}
+                    textAnchor="middle"
+                    fontSize="11"
+                    fill="#ef4444"
+                    fontWeight="500"
+                    pointerEvents="none"
+                  >
+                    {seat.available === false ? 'Unavailable' : 'Sold'}
+                  </text>
                 )}
+                {seat.status === 'reserved' && seat.available !== false && (
+                  <text
+                    x={seatX}
+                    y={seatY - SEAT_RADIUS - 25}
+                    textAnchor="middle"
+                    fontSize="11"
+                    fill="#f59e0b"
+                    fontWeight="500"
+                    pointerEvents="none"
+                  >
+                    Reserved
+                  </text>
+                )}
+                {/* Wheelchair accessible indicator */}
+                {(seat.wheelchairAccessible || seat.tags?.includes('wheelchair')) && (
+                  <text
+                    x={seatX}
+                    y={seatY - SEAT_RADIUS - (seat.status === 'sold' || seat.available === false || seat.status === 'reserved' ? 10 : 25)}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill="#9333ea"
+                    fontWeight="500"
+                    pointerEvents="none"
+                  >
+                    ♿ {t('seatSelection.wheelchair') || 'Wheelchair Accessible'}
+                  </text>
+                )}
+                {/* Price - only show for available seats */}
+                {seat.price && seat.status === 'available' && (
+                  <text
+                    x={seatX}
+                    y={seatY - SEAT_RADIUS - 20}
+                    textAnchor="middle"
+                    fontSize="12"
+                    fill="#a5f3fc"
+                    fontWeight="400"
+                    pointerEvents="none"
+                  >
+                    {seat.price.toFixed(2)} EUR
+                  </text>
+                )}
+                {/* Tooltip arrow */}
+                <polygon
+                  points={`${seatX - 8},${seatY - SEAT_RADIUS - 5} ${seatX + 8},${seatY - SEAT_RADIUS - 5} ${seatX},${seatY - SEAT_RADIUS}`}
+                  fill="rgba(0, 0, 0, 0.9)"
+                  pointerEvents="none"
+                />
               </g>
             );
           })}

@@ -69,11 +69,37 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
   const [error, setError] = useState<string | null>(null);
   const [themeColors, setThemeColors] = useState(getThemeColors());
   const [cardComplete, setCardComplete] = useState(false); // Add this state
+  // Generate nonce once when component mounts to prevent duplicate submissions
+  const [nonce] = useState(() => {
+    // Generate a cryptographically secure random nonce
+    const array = new Uint8Array(32);
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(array);
+    } else {
+      // Fallback for environments without crypto API
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+    }
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  });
 
   // Use pre-calculated values from EventDetail component, fallback to calculation if not provided
   const perUnitSubtotal = checkoutData.perUnitSubtotal ?? (checkoutData.price + checkoutData.serviceFee);
-  const perUnitVat = checkoutData.perUnitVat ?? (perUnitSubtotal * (checkoutData.vat / 100));
-  const total = checkoutData.total ?? Math.round((perUnitSubtotal + perUnitVat) * checkoutData.quantity * 100) / 100;
+  // VAT is calculated on base price
+  const perUnitVat = checkoutData.perUnitVat ?? (checkoutData.price * (checkoutData.vat / 100));
+  // Calculate service tax on service fee (this is the "service VAT")
+  const serviceTaxRate = checkoutData.serviceTax ?? 0;
+  const perUnitServiceTax = (checkoutData.serviceFee > 0 && serviceTaxRate > 0)
+    ? checkoutData.serviceFee * (serviceTaxRate / 100)
+    : 0;
+  // Calculate service tax on order fee
+  const orderFee = checkoutData.orderFee ?? 0;
+  const orderFeeServiceTax = (orderFee > 0 && serviceTaxRate > 0)
+    ? orderFee * (serviceTaxRate / 100)
+    : 0;
+  // Total = (basePrice + serviceFee + VAT on price + serviceTax on serviceFee) * quantity + orderFee + serviceTax on orderFee
+  const total = checkoutData.total ?? Math.round((checkoutData.price + checkoutData.serviceFee + perUnitVat + perUnitServiceTax) * checkoutData.quantity * 100 + orderFee * 100 + orderFeeServiceTax * 100) / 100;
 
   // Helper functions for payment flow
   const createPaymentIntentPayload = () => ({
@@ -88,17 +114,28 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
       ticketName: checkoutData.ticketName,
       merchantId: checkoutData.merchantId,
       externalMerchantId: checkoutData.externalMerchantId,
-      // Detailed pricing breakdown
+      // Nonce to prevent duplicate form submissions
+      nonce: nonce,
+      // Detailed pricing breakdown - all values match the pricing breakdown display
       basePrice: checkoutData.price.toString(),
+      subtotal: (checkoutData.price * checkoutData.quantity).toFixed(3),
       serviceFee: checkoutData.serviceFee.toString(),
+      totalServiceFee: (checkoutData.serviceFee * checkoutData.quantity).toFixed(3),
+      serviceTax: serviceTaxRate.toString(),
+      serviceTaxAmount: (perUnitServiceTax * checkoutData.quantity).toFixed(3),
       vatRate: checkoutData.vat.toString(),
-      vatAmount: perUnitVat.toString(),
+      vatAmount: (perUnitVat * checkoutData.quantity).toFixed(3),
+      // Calculate entertainmentTaxAmount if entertainmentTax is provided
+      entertainmentTax: checkoutData.entertainmentTax ? checkoutData.entertainmentTax.toString() : undefined,
+      entertainmentTaxAmount: checkoutData.entertainmentTax ? ((checkoutData.price * checkoutData.entertainmentTax / 100) * checkoutData.quantity).toFixed(3) : undefined,
+      orderFee: orderFee.toString(),
+      orderFeeServiceTax: orderFeeServiceTax.toFixed(3),
+      totalAmount: total.toFixed(3),
+      // Legacy fields for backward compatibility
       perUnitSubtotal: perUnitSubtotal.toString(),
       perUnitTotal: (perUnitSubtotal + perUnitVat).toString(),
       totalBasePrice: (checkoutData.price * checkoutData.quantity).toString(),
-      totalServiceFee: (checkoutData.serviceFee * checkoutData.quantity).toString(),
       totalVatAmount: (perUnitVat * checkoutData.quantity).toString(),
-      totalAmount: total.toString(),
       country: checkoutData.country || 'Finland',
       marketingOptIn: checkoutData.marketingOptIn || false,
       // Seat selection
@@ -155,6 +192,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
           externalMerchantId: checkoutData.externalMerchantId,
           marketingOptIn: checkoutData.marketingOptIn || false,
           placeIds: checkoutData.placeIds || [],
+          nonce: nonce, // Include nonce to prevent duplicate submissions
         }
       })
     });
@@ -377,9 +415,21 @@ function CheckoutContent() {
     );
   }
 
-  const perUnitSubtotal = checkoutData.price + checkoutData.serviceFee;
-  const perUnitVat = perUnitSubtotal * (checkoutData.vat / 100);
-  const total = Math.round((perUnitSubtotal + perUnitVat) * checkoutData.quantity * 100) / 100;
+  const _perUnitSubtotal = checkoutData.price + checkoutData.serviceFee;
+  // VAT is calculated on base price
+  const perUnitVat = checkoutData.price * (checkoutData.vat / 100);
+  // Calculate service tax on service fee (this is the "service VAT")
+  const serviceTaxRate = checkoutData.serviceTax ?? 0;
+  const perUnitServiceTax = (checkoutData.serviceFee > 0 && serviceTaxRate > 0)
+    ? checkoutData.serviceFee * (serviceTaxRate / 100)
+    : 0;
+  // Calculate service tax on order fee
+  const orderFee = checkoutData.orderFee ?? 0;
+  const orderFeeServiceTax = (orderFee > 0 && serviceTaxRate > 0)
+    ? orderFee * (serviceTaxRate / 100)
+    : 0;
+  // Total = (basePrice + serviceFee + VAT on price + serviceTax on serviceFee) * quantity + orderFee + serviceTax on orderFee
+  const total = Math.round((checkoutData.price + checkoutData.serviceFee + perUnitVat + perUnitServiceTax) * checkoutData.quantity * 100 + orderFee * 100 + orderFeeServiceTax * 100) / 100;
 
   return (
     <Elements stripe={stripePromise}>
@@ -421,23 +471,43 @@ function CheckoutContent() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="opacity-80">{t('checkout.subtotal')}</span>
-                    <span>{checkoutData.price.toFixed(2)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                    <span>{(checkoutData.price * checkoutData.quantity).toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="opacity-80">{t('checkout.serviceFee')}</span>
-                    <span>{checkoutData.serviceFee.toFixed(2)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                    <span>{(checkoutData.serviceFee * checkoutData.quantity).toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
                   </div>
+                  {serviceTaxRate > 0 && perUnitServiceTax > 0 && (
+                    <div className="flex justify-between">
+                      <span className="opacity-80">{t('ticketModal.serviceTax') || 'Service Tax'} ({serviceTaxRate}%) {t('ticketModal.onServiceFee') || 'on Service Fee'}</span>
+                      <span>{(perUnitServiceTax * checkoutData.quantity).toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="opacity-80">{t('checkout.vat')} ({checkoutData.vat}%)</span>
-                    <span>{perUnitVat.toFixed(2)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                    <span>{(perUnitVat * checkoutData.quantity).toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
                   </div>
+                  {orderFee > 0 && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="opacity-80">{t('ticketModal.orderFee') || 'Order Fee'} {t('ticketModal.perTransaction') || '(per transaction)'}</span>
+                        <span>{orderFee.toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                      </div>
+                      {serviceTaxRate > 0 && orderFeeServiceTax > 0 && (
+                        <div className="flex justify-between">
+                          <span className="opacity-80">{t('ticketModal.serviceTax') || 'Service Tax'} ({serviceTaxRate}%) {t('ticketModal.onOrderFee') || 'on Order Fee'}</span>
+                          <span>{orderFeeServiceTax.toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div className="flex justify-between">
                     <span className="opacity-80">{t('checkout.quantity')}</span>
                     <span>{checkoutData.quantity}</span>
                   </div>
                   <div className="border-t pt-3 flex justify-between text-lg font-semibold" style={{ borderColor: 'var(--border)' }}>
                     <span>{t('checkout.total')}</span>
-                    <span>{total.toFixed(2)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+                    <span>{total.toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
                   </div>
                 </div>
               </div>

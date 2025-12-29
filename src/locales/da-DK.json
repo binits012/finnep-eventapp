@@ -284,6 +284,8 @@
     "error": "Ups!",
     "ticketNotFound": "Billet ikke fundet",
     "browseEvents": "Gennemse Begivenheder",
+    "orderInformation": "Bestillingsinformation",
+    "orderNumber": "Bestillingsnummer",
     "ticketInformation": "Billetinformation",
     "ticketName": "Billetnavn",
     "quantity": "Antal",
@@ -292,6 +294,20 @@
     "ticketCode": "Billetkode",
     "contactInformation": "Kontaktoplysninger",
     "email": "E-mail",
+    "fullName": "Fulde Navn",
+    "selectedSeats": "Valgte Sæder",
+    "pricingBreakdown": "Prisopdeling",
+    "basePrice": "Grundpris",
+    "serviceFee": "Servicegebyr",
+    "entertainmentTax": "Afgift",
+    "serviceTax": "Serviceafgift",
+    "onServiceFee": "på servicegebyr",
+    "vat": "Moms",
+    "orderFee": "Bestillingsgebyr",
+    "perTransaction": "per transaktion",
+    "onOrderFee": "på bestillingsgebyr",
+    "subtotal": "Subtotal",
+    "total": "Total",
     "qrCode": "QR-kode til indgang",
     "qrCodeHint": "Vis denne QR-kode ved indgangen til stedet",
     "ticketCodeEntry": "Brug denne billetkode til indgang",
@@ -432,6 +448,8 @@
     "tickets": {
       "title": "Billetter",
       "serviceFee": "Servicegebyr",
+      "serviceTax": "Servicegebyrsskat",
+      "orderFee": "Bestillingsgebyr",
       "vat": "MOMS",
       "total": "Total",
       "available": "Tilgængelig",
@@ -458,6 +476,10 @@
       "selectTicketType": "Vælg Billettype",
       "free": "Gratis",
       "freeTicket": "Gratis Billet"
+    },
+    "seatSelection": {
+      "available": "Tilgængelig",
+      "selectSeats": "Vælg Sæder"
     },
     "freeEventRegistration": {
       "title": "Tilmeld dig Gratis Begivenhed",
@@ -516,7 +538,7 @@
     "price": "Pris",
     "perTransaction": "pr. transaktion",
     "yourSelection": "Dit Valg",
-    "serviceFeeDisclaimer": "Priser inkluderer servicegebyrer. Gebyrer pr. ordrebetaling kan forekomme afhængigt af den anvendte digitale betalingsmetode.",
+    "serviceFeeDisclaimer": "Gebyrer pr. ordrebetaling kan forekomme afhængigt af den anvendte digitale betalingsmetode.",
     "viewSeatMap": "Se sædeoversigt",
     "seeBestAvailable": "Se bedste ledige",
     "steps": {
@@ -563,7 +585,12 @@
     "onOrderFee": "Ordregebyr",
     "seatsMustBeAdjacent": "Vælg venligst sæder, der ligger ved siden af dit nuværende valg",
     "cannotDeselectStranded": "Kan ikke fravælge dette sæde, da det ville efterlade andre sæder isolerede. Fravælg venligst sæder på en måde, der holder dit valg forbundet.",
-    "maxSeatsReached": "Maksimalt 10 sæder kan vælges ad gangen"
+    "maxSeatsReached": "Maksimalt 10 sæder kan vælges ad gangen",
+    "available": "Tilgængelig",
+    "selected": "Valgt",
+    "occupied": "Optaget",
+    "reserved": "Reserveret",
+    "wheelchair": "Kørestolsvenlig"
   },
   "checkout": {
     "title": "Gennemfør dit Køb",
@@ -601,7 +628,8 @@
     "loading": "Indlæser...",
     "error": "Fejl",
     "invalidData": "Ugyldige checkout-data",
-    "decodeError": "Kunne ikke afkode checkout-data"
+    "decodeError": "Kunne ikke afkode checkout-data",
+    "marketingConsent": "Jeg accepterer at modtage marketingkommunikation og specialtilbud fra denne arrangør. Du kan afmelde dig når som helst."
   },
   "ticketModal": {
     "title": "Køb Billet",
@@ -614,6 +642,11 @@
     "quantityHint": "Indtast antal mellem 1 og 10",
     "price": "Pris",
     "serviceFee": "Servicegebyr",
+    "serviceTax": "Servicegebyrsskat",
+    "onServiceFee": "på servicegebyr",
+    "orderFee": "Bestillingsgebyr",
+    "perTransaction": "per transaktion",
+    "onOrderFee": "på bestillingsgebyr",
     "vat": "MOMS",
     "total": "Total",
     "marketingOptIn": "Vil du gerne kontaktes med markedsføringsmateriale?",

@@ -47,6 +47,7 @@ export const useSeatReservation = (eventId: string) => {
 
     // Load existing reservations
     loadReservations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   // Cleanup expired reservations
@@ -60,6 +61,7 @@ export const useSeatReservation = (eventId: string) => {
         clearInterval(cleanupIntervalRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   // Load reservations from localStorage
@@ -158,8 +160,8 @@ export const useSeatReservation = (eventId: string) => {
       }
 
       return { success: false, reserved: [], failed: placeIds };
-    } catch (error: any) {
-      console.error('Error reserving seats:', error);
+    } catch (err: unknown) {
+      console.error('Error reserving seats:', err);
       return { success: false, reserved: [], failed: placeIds };
     } finally {
       setIsReserving(false);
@@ -252,7 +254,7 @@ export const useSeatReservation = (eventId: string) => {
         const elapsed = Date.now() - data.timestamp;
         const remaining = RESERVATION_TTL - elapsed;
         return Math.max(0, remaining);
-      } catch (error) {
+      } catch (_error) {
         return 0;
       }
     }

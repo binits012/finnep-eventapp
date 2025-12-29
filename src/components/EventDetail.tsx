@@ -8,13 +8,13 @@ import {
     FaCalendarAlt, FaMapMarkerAlt, FaTicketAlt, FaInfoCircle, FaGlobe,
     FaFacebookF, FaTwitter, FaInstagram, FaTiktok, FaExternalLinkAlt
 } from 'react-icons/fa';
-import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getCurrencySymbol, getCurrencyCode } from '@/utils/currency';
 import TicketPurchaseModal from '@/components/TicketPurchaseModal';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
+import dynamic from 'next/dynamic';
 
 
 // Dynamically import the map components with no SSR
@@ -236,10 +236,13 @@ function useDebouncedValue<T>(value: T, delay = 250): T {
 export default function EventDetail({ event }: { event: Event }) {
     const { t, locale } = useTranslation();
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
-    const [, setIsLeafletReady] = useState(false);
+    const [isLeafletReady, setIsLeafletReady] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [markerIcon, setMarkerIcon] = useState<L.Icon | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [showAllImages, setShowAllImages] = useState(false);
     const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
+    const [tiktokUrl, setTiktokUrl] = useState<string | null>(null);
     const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
     const [isFreeRegistrationOpen, setIsFreeRegistrationOpen] = useState(false);
     const selectedTicketObj = useMemo(() => event.ticketInfo.find(t => t._id === selectedTicket) || null, [event.ticketInfo, selectedTicket]);
@@ -258,6 +261,8 @@ export default function EventDetail({ event }: { event: Event }) {
             const basePrice = Number(ticket?.price ?? 0);
             const serviceFee = Number(ticket?.serviceFee ?? 0);
             const vatRate = Number(ticket?.vat ?? 0);
+            const orderFee = Number(ticket?.orderFee ?? 0);
+            const serviceTaxRate = Number(ticket?.serviceTax ?? 0);
 
             // Validate inputs
             if (isNaN(basePrice) || isNaN(serviceFee) || isNaN(vatRate)) {
@@ -268,11 +273,24 @@ export default function EventDetail({ event }: { event: Event }) {
             // Calculate subtotal (price + service fee)
             const subtotal = basePrice + serviceFee;
 
-            // Calculate VAT amount
-            const vatAmount = subtotal * (vatRate / 100);
+            // Calculate serviceTax on serviceFee (if serviceFee exists and serviceTaxRate is set)
+            // Keep full precision, round only when displaying
+            const serviceFeeServiceTax = (serviceFee > 0 && serviceTaxRate > 0)
+              ? serviceFee * (serviceTaxRate / 100)
+              : 0;
 
-            // Calculate total (subtotal + VAT)
-            const total = subtotal + vatAmount;
+            // Calculate VAT amount (on base price only, not service fee)
+            const vatAmount = basePrice * (vatRate / 100);
+
+            // Calculate serviceTax on orderFee (if orderFee exists and serviceTaxRate is set)
+            // Keep full precision, round only when displaying
+            const orderFeeServiceTax = (orderFee > 0 && serviceTaxRate > 0)
+              ? orderFee * (serviceTaxRate / 100)
+              : 0;
+
+            // Calculate total (subtotal + serviceTax on serviceFee + VAT + orderFee + serviceTax on orderFee)
+            // Note: orderFee is per transaction, not per ticket
+            const total = subtotal + serviceFeeServiceTax + vatAmount + orderFee + orderFeeServiceTax;
 
             // Format with 2 decimal places and handle potential rounding issues
             return (Math.round(total * 100) / 100).toFixed(2);
@@ -296,6 +314,11 @@ export default function EventDetail({ event }: { event: Event }) {
         return (match && match[2].length === 11) ? match[2] : null;
     };
 
+    // Check if URL is TikTok
+    const isTikTokUrl = (url: string | null | undefined): boolean => {
+        return !!(url && url.includes('tiktok.com'));
+    };
+
     useEffect(() => {
         // Dynamically import Leaflet and set up icons on client side only
         Promise.all([
@@ -304,11 +327,19 @@ export default function EventDetail({ event }: { event: Event }) {
             delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
             // Use absolute URLs to ensure paths work in both dev and production
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-            L.Icon.Default.mergeOptions({
+
+            // Create a custom icon instance
+            const icon = new L.Icon({
                 iconRetinaUrl: `${baseUrl}/marker-icon-2x.png`,
                 iconUrl: `${baseUrl}/marker-icon.png`,
                 shadowUrl: `${baseUrl}/marker-shadow.png`,
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
             });
+
+            setMarkerIcon(icon);
             setIsLeafletReady(true);
         });
     }, []);
@@ -324,7 +355,23 @@ export default function EventDetail({ event }: { event: Event }) {
     const eventPhotos = useMemo(() => debouncedPhotos, [debouncedPhotos]);
 
     useEffect(() => {
-        setYoutubeVideoId(getYoutubeVideoId(event?.videoUrl));
+        const videoUrl = event?.videoUrl;
+        if (!videoUrl) {
+            setYoutubeVideoId(null);
+            setTiktokUrl(null);
+            return;
+        }
+
+        // Check for TikTok first (since it's the example URL)
+        if (isTikTokUrl(videoUrl)) {
+            setTiktokUrl(videoUrl);
+            setYoutubeVideoId(null);
+        } else {
+            // Check for YouTube
+            const youtubeId = getYoutubeVideoId(videoUrl);
+            setYoutubeVideoId(youtubeId);
+            setTiktokUrl(null);
+        }
     }, [event?.videoUrl]);
 
     if (!event) {
@@ -376,18 +423,48 @@ export default function EventDetail({ event }: { event: Event }) {
                         <div className="lg:col-span-2">
 
 
-                            {/* YouTube Video */}
-                            {youtubeVideoId && (
+                            {/* Video Section - YouTube or TikTok */}
+                            {(youtubeVideoId || tiktokUrl) && (
                                 <div className="rounded-lg shadow p-6 mb-8" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
                                     <h2 className="text-2xl font-bold mb-4">{t('eventDetail.video.title')}</h2>
                                     <div className="aspect-w-16 aspect-h-9">
-                                        <iframe
-                                            src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                                            title="YouTube video player"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowFullScreen
-                                            className="w-full h-64 sm:h-96 rounded-lg"
-                                        ></iframe>
+                                        {youtubeVideoId && (
+                                            <iframe
+                                                src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+                                                title="YouTube video player"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                                className="w-full h-64 sm:h-96 rounded-lg"
+                                            ></iframe>
+                                        )}
+                                        {tiktokUrl && (
+                                            <div className="w-full max-w-sm mx-auto rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                                {/* Compact TikTok embed */}
+                                                <div className="relative w-full" style={{ paddingBottom: '133.33%' /* 4:3 aspect ratio - more compact */ }}>
+                                                    <iframe
+                                                        src={`https://www.tiktok.com/embed/v2/${tiktokUrl.split('/video/')[1]?.split('?')[0] || ''}`}
+                                                        title="TikTok video player"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowFullScreen
+                                                        className="absolute inset-0 w-full h-full rounded-lg"
+                                                        style={{ border: 'none' }}
+                                                    ></iframe>
+                                                </div>
+                                                {/* TikTok attribution */}
+                                                <div className="p-2 text-center">
+                                                    <a
+                                                        href={tiktokUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400 transition-colors"
+                                                    >
+                                                        <FaTiktok />
+                                                        <span>View on TikTok</span>
+                                                        <FaExternalLinkAlt className="text-xs" />
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -568,7 +645,7 @@ export default function EventDetail({ event }: { event: Event }) {
 
                                 {/* Map */}
                                 <div className="h-80 rounded-lg overflow-hidden">
-                                    {typeof window !== 'undefined' && lat && lng && (
+                                    {typeof window !== 'undefined' && lat && lng && isLeafletReady && markerIcon && (
                                         <MapContainer
                                             center={[lat, lng] as LatLngExpression}
                                             zoom={14}
@@ -579,7 +656,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                             />
-                                            <Marker position={[lat, lng] as LatLngExpression}>
+                                            <Marker position={[lat, lng] as LatLngExpression} icon={markerIcon}>
                                                 <Popup>
                                                     {event.venueInfo?.name || event.eventTitle}
                                                 </Popup>
@@ -884,9 +961,15 @@ export default function EventDetail({ event }: { event: Event }) {
                                                         <span className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{ticket.price.toFixed(2)} {getCurrencySymbol(event.country || 'Finland')}</span>
                                                     </div>
 
-                                                    {/* Service Fee and VAT info */}
+                                                    {/* Service Fee, VAT, Order Fee, and Service Tax info */}
                                                     <div className="mt-2 text-sm font-medium" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
                                                         {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {ticket.vat}%
+                                                        {(ticket.orderFee ?? 0) > 0 && (
+                                                            <> • {t('eventDetail.tickets.orderFee')}: +{(ticket.orderFee ?? 0).toFixed(2)}</>
+                                                        )}
+                                                        {(ticket.serviceTax ?? 0) > 0 && (ticket.orderFee ?? 0) > 0 && (
+                                                            <> • {t('eventDetail.tickets.serviceTax')}: {ticket.serviceTax}%</>
+                                                        )}
                                                     </div>
 
                                                     {/* Total price calculation */}
@@ -1054,6 +1137,8 @@ export default function EventDetail({ event }: { event: Event }) {
                             price: ticket.price,
                             serviceFee: ticket.serviceFee ?? 0,
                             vat: ticket.vat ?? 0,
+                            serviceTax: ticket.serviceTax ?? 0,
+                            orderFee: ticket.orderFee ?? 0,
                             eventName: event.eventTitle,
                             country: event.country || 'Finland',
                             marketingOptIn,
@@ -1081,6 +1166,7 @@ export default function EventDetail({ event }: { event: Event }) {
                     externalMerchantId={event?.externalMerchantId}
                     hasSeatSelection={event?.venue?.hasSeatSelection || false}
                     currency={getCurrencyCode(event?.country || 'Finland')}
+                    country={event?.country || 'Finland'}
                 />
             )}
         </>

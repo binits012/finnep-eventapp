@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { getCurrencySymbol } from '@/utils/currency';
 import SeatSelectionModal from './SeatSelectionModal';
 
 interface TicketInfoLite {
@@ -10,6 +11,8 @@ interface TicketInfoLite {
   price: number;
   serviceFee?: number;
   vat?: number; // percent
+  orderFee?: number; // fixed amount per transaction
+  serviceTax?: number; // percent on serviceFee and orderFee
 }
 
 interface TicketPurchaseModalProps {
@@ -22,9 +25,10 @@ interface TicketPurchaseModalProps {
   externalMerchantId?: string;
   hasSeatSelection?: boolean;
   currency?: string;
+  country?: string;
 }
 
-export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket, eventId, merchantId, externalMerchantId, hasSeatSelection = false, currency = 'EUR' }: TicketPurchaseModalProps) {
+export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket, eventId, merchantId, externalMerchantId, hasSeatSelection = false, currency = 'EUR', country = 'Finland' }: TicketPurchaseModalProps) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
@@ -32,6 +36,9 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [showSeatSelection, setShowSeatSelection] = useState(false);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+
+  // Get currency symbol from country
+  const currencySymbol = useMemo(() => getCurrencySymbol(country), [country]);
 
   useEffect(() => {
     // Disable body scroll while modal is open
@@ -59,17 +66,49 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
   const emailsMatch = useMemo(() => email.trim() !== "" && email === confirmEmail, [email, confirmEmail]);
   const isQuantityValid = useMemo(() => quantity >= 1 && quantity <= 10, [quantity]);
 
-  const perUnitSubtotal = useMemo(() => {
-    const base = Number(ticket?.price ?? 0);
-    const fee = Number(ticket?.serviceFee ?? 0);
-    return base + fee;
-  }, [ticket]);
+  const basePrice = useMemo(() => Number(ticket?.price ?? 0), [ticket]);
+  const serviceFee = useMemo(() => Number(ticket?.serviceFee ?? 0), [ticket]);
+  const vatRate = useMemo(() => Number(ticket?.vat ?? 0), [ticket]);
+  const serviceTaxRate = useMemo(() => Number(ticket?.serviceTax ?? 0), [ticket]);
+  const orderFee = useMemo(() => Number(ticket?.orderFee ?? 0), [ticket]);
+
+  // Calculate per unit subtotal (base price + service fee)
+  const perUnitSubtotal = useMemo(() => basePrice + serviceFee, [basePrice, serviceFee]);
+
+  // Calculate VAT on base price only (VAT is applied to basePrice, not serviceFee)
   const perUnitVat = useMemo(() => {
-    const rate = Number(ticket?.vat ?? 0);
-    return perUnitSubtotal * (rate / 100);
-  }, [ticket, perUnitSubtotal]);
-  const perUnitTotal = useMemo(() => perUnitSubtotal + perUnitVat, [perUnitSubtotal, perUnitVat]);
-  const total = useMemo(() => Math.max(0, Math.round(perUnitTotal * quantity * 100) / 100), [perUnitTotal, quantity]);
+    return basePrice * (vatRate / 100);
+  }, [basePrice, vatRate]);
+
+  // Calculate serviceTax on serviceFee (per unit)
+  // Keep full precision, round only when displaying
+  const perUnitServiceTax = useMemo(() => {
+    if (serviceFee > 0 && serviceTaxRate > 0) {
+      return serviceFee * (serviceTaxRate / 100);
+    }
+    return 0;
+  }, [serviceFee, serviceTaxRate]);
+
+  // Per unit total = basePrice + serviceFee + VAT + serviceTax on serviceFee
+  const perUnitTotal = useMemo(() => {
+    return perUnitSubtotal + perUnitVat + perUnitServiceTax;
+  }, [perUnitSubtotal, perUnitVat, perUnitServiceTax]);
+
+  // Calculate serviceTax on orderFee (per transaction)
+  // Keep full precision, round only when displaying
+  const orderFeeServiceTax = useMemo(() => {
+    if (orderFee > 0 && serviceTaxRate > 0) {
+      return orderFee * (serviceTaxRate / 100);
+    }
+    return 0;
+  }, [orderFee, serviceTaxRate]);
+
+  // Total = (per unit total * quantity) + orderFee + serviceTax on orderFee
+  // orderFee is per transaction, not per unit
+  const total = useMemo(() => {
+    const subtotalWithVatAndServiceTax = perUnitTotal * quantity;
+    return Math.max(0, Math.round((subtotalWithVatAndServiceTax + orderFee + orderFeeServiceTax) * 100) / 100);
+  }, [perUnitTotal, quantity, orderFee, orderFeeServiceTax]);
 
   // For seat-based events, require seat selection
   const seatsSelected = !hasSeatSelection || selectedSeats.length === quantity;
@@ -225,19 +264,39 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
           <div className="pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
             <div className="flex justify-between text-sm mb-1">
               <span className="opacity-80">{t('ticketModal.price')} (x{quantity})</span>
-              <span className="opacity-90">{((ticket?.price ?? 0) * quantity).toFixed(2)}</span>
+              <span className="opacity-90">{(basePrice * quantity).toFixed(3)} {currencySymbol}</span>
             </div>
             <div className="flex justify-between text-sm mb-1">
               <span className="opacity-80">{t('ticketModal.serviceFee')} (x{quantity})</span>
-              <span className="opacity-90">{((ticket?.serviceFee ?? 0) * quantity).toFixed(2)}</span>
+              <span className="opacity-90">{(serviceFee * quantity).toFixed(3)} {currencySymbol}</span>
             </div>
-            <div className="flex justify-between text-sm mb-2">
-              <span className="opacity-80">{t('ticketModal.vat')} ({ticket?.vat ?? 0}%)</span>
-              <span className="opacity-90">{(perUnitVat * quantity).toFixed(2)}</span>
+            {serviceTaxRate > 0 && perUnitServiceTax > 0 && (
+              <div className="flex justify-between text-sm mb-1">
+                <span className="opacity-80">{t('ticketModal.serviceTax') || 'Service Tax'} ({serviceTaxRate}%) {t('ticketModal.onServiceFee') || 'on Service Fee'} (x{quantity})</span>
+                <span className="opacity-90">{(perUnitServiceTax * quantity).toFixed(3)} {currencySymbol}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm mb-1">
+              <span className="opacity-80">{t('ticketModal.vat')} ({vatRate}%)</span>
+              <span className="opacity-90">{(perUnitVat * quantity).toFixed(3)} {currencySymbol}</span>
             </div>
+            {orderFee > 0 && (
+              <>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="opacity-80">{t('ticketModal.orderFee') || 'Order Fee'} ({t('ticketModal.perTransaction') || 'per transaction'})</span>
+                  <span className="opacity-90">{orderFee.toFixed(3)} {currencySymbol}</span>
+                </div>
+                {serviceTaxRate > 0 && orderFeeServiceTax > 0 && (
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="opacity-80">{t('ticketModal.serviceTax') || 'Service Tax'} ({serviceTaxRate}%) {t('ticketModal.onOrderFee') || 'on Order Fee'}</span>
+                    <span className="opacity-90">{orderFeeServiceTax.toFixed(3)} {currencySymbol}</span>
+                  </div>
+                )}
+              </>
+            )}
             <div className="flex justify-between text-base font-semibold">
               <span>{t('ticketModal.total')}</span>
-              <span>{total.toFixed(2)}</span>
+              <span>{total.toFixed(3)} {currencySymbol}</span>
             </div>
           </div>
 

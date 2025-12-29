@@ -284,6 +284,8 @@
     "error": "Oops!",
     "ticketNotFound": "Ticket not found",
     "browseEvents": "Browse Events",
+    "orderInformation": "Order Information",
+    "orderNumber": "Order Number",
     "ticketInformation": "Ticket Information",
     "ticketName": "Ticket Name",
     "quantity": "Quantity",
@@ -292,6 +294,20 @@
     "ticketCode": "Ticket Code",
     "contactInformation": "Contact Information",
     "email": "Email",
+    "fullName": "Full Name",
+    "selectedSeats": "Selected Seats",
+    "pricingBreakdown": "Pricing Breakdown",
+    "basePrice": "Base Price",
+    "serviceFee": "Service Fee",
+    "entertainmentTax": "Entertainment Tax",
+    "serviceTax": "Service Tax",
+    "onServiceFee": "on Service Fee",
+    "vat": "VAT",
+    "orderFee": "Order Fee",
+    "perTransaction": "per transaction",
+    "onOrderFee": "on Order Fee",
+    "subtotal": "Subtotal",
+    "total": "Total",
     "qrCode": "QR Code for entry",
     "qrCodeHint": "Show this QR code at the venue entrance",
     "ticketCodeEntry": "Use this ticket code for entry",
@@ -432,6 +448,8 @@
     "tickets": {
       "title": "Tickets",
       "serviceFee": "Service Fee",
+      "serviceTax": "Service Tax",
+      "orderFee": "Order Fee",
       "vat": "VAT",
       "total": "Total",
       "available": "Available",
@@ -458,6 +476,10 @@
       "selectTicketType": "Select Ticket Type",
       "free": "Free",
       "freeTicket": "Free Ticket"
+    },
+    "seatSelection": {
+      "available": "Available",
+      "selectSeats": "Select Seats"
     },
     "freeEventRegistration": {
       "title": "Register for Free Event",
@@ -516,7 +538,7 @@
     "price": "Price",
     "perTransaction": "per transaction",
     "yourSelection": "Your Selection",
-    "serviceFeeDisclaimer": "Prices include service fees. Per order payment fees may apply depending on digital payment method used.",
+    "serviceFeeDisclaimer": "Per order payment fees may apply depending on digital payment method used.",
     "viewSeatMap": "View seat map",
     "seeBestAvailable": "See best available",
     "steps": {
@@ -563,7 +585,12 @@
     "onOrderFee": "on Order Fee",
     "seatsMustBeAdjacent": "Please select seats that are adjacent to your current selection",
     "cannotDeselectStranded": "Cannot deselect this seat as it would leave other seats isolated. Please deselect seats in a way that keeps your selection connected.",
-    "maxSeatsReached": "Maximum 10 seats can be selected at a time"
+    "maxSeatsReached": "Maximum 10 seats can be selected at a time",
+    "available": "Available",
+    "selected": "Selected",
+    "occupied": "Occupied",
+    "reserved": "Reserved",
+    "wheelchair": "Wheelchair Accessible"
   },
   "checkout": {
     "title": "Complete Your Purchase",
@@ -601,7 +628,8 @@
     "loading": "Loading...",
     "error": "Error",
     "invalidData": "Invalid checkout data",
-    "decodeError": "Failed to decode checkout data"
+    "decodeError": "Failed to decode checkout data",
+    "marketingConsent": "I agree to receive marketing communications and special offers from this organizer. You can unsubscribe at any time."
   },
   "ticketModal": {
     "title": "Purchase Ticket",
@@ -614,6 +642,11 @@
     "quantityHint": "Enter quantity between 1 and 10",
     "price": "Price",
     "serviceFee": "Service Fee",
+    "serviceTax": "Service Tax",
+    "onServiceFee": "on Service Fee",
+    "orderFee": "Order Fee",
+    "perTransaction": "per transaction",
+    "onOrderFee": "on Order Fee",
     "vat": "VAT",
     "total": "Total",
     "marketingOptIn": "Would you like to be contacted for marketing material?",

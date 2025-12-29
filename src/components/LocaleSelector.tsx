@@ -56,11 +56,20 @@ export default function LocaleSelector() {
     <div className="relative inline-block" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-1 px-2 py-1.5 rounded-md border transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 text-sm"
+        className="flex items-center space-x-1 px-2 py-1.5 rounded-md border transition-all text-sm"
         style={{
           background: 'var(--surface)',
           color: 'var(--foreground)',
           borderColor: 'var(--border)'
+        }}
+        onMouseEnter={(e) => {
+          // Create a subtle hover effect using opacity on a pseudo-background
+          e.currentTarget.style.opacity = '0.9';
+          e.currentTarget.style.transform = 'scale(0.98)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '1';
+          e.currentTarget.style.transform = 'scale(1)';
         }}
         aria-label="Select language"
       >
@@ -88,25 +97,50 @@ export default function LocaleSelector() {
             marginTop: '4px'
           }}
         >
-          {locales.map((localeOption) => (
-            <button
-              key={localeOption.code}
-              onClick={() => handleLocaleChange(localeOption.code)}
-              className={`w-full flex items-center space-x-2 px-3 py-2 text-left transition-colors first:rounded-t-md last:rounded-b-md text-sm ${
-                locale === localeOption.code
-                  ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <span className="text-sm">{localeOption.flag}</span>
-              <span className="text-xs font-medium">{localeOption.name}</span>
-              {locale === localeOption.code && (
-                <svg className="w-3 h-3 ml-auto" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              )}
-            </button>
-          ))}
+          {locales.map((localeOption) => {
+            const isSelected = locale === localeOption.code;
+            return (
+              <button
+                key={localeOption.code}
+                onClick={() => handleLocaleChange(localeOption.code)}
+                className="w-full flex items-center space-x-2 px-3 py-2 text-left transition-colors first:rounded-t-md last:rounded-b-md text-sm"
+                style={{
+                  background: isSelected ? 'var(--surface)' : 'transparent',
+                  color: 'var(--foreground)',
+                  opacity: isSelected ? 1 : 0.9
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    // Hover effect: show background with slight opacity
+                    e.currentTarget.style.background = 'var(--surface)';
+                    e.currentTarget.style.opacity = '1';
+                    // Add a subtle box-shadow for depth
+                    e.currentTarget.style.boxShadow = 'inset 0 0 0 1px var(--border)';
+                  } else {
+                    // Selected item hover: subtle darkening
+                    e.currentTarget.style.opacity = '0.95';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.opacity = '0.9';
+                    e.currentTarget.style.boxShadow = 'none';
+                  } else {
+                    e.currentTarget.style.opacity = '1';
+                  }
+                }}
+              >
+                <span className="text-sm">{localeOption.flag}</span>
+                <span className="text-xs font-medium">{localeOption.name}</span>
+                {isSelected && (
+                  <svg className="w-3 h-3 ml-auto" fill="currentColor" viewBox="0 0 20 20" style={{ color: 'var(--foreground)' }}>
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

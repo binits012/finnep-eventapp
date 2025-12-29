@@ -284,6 +284,8 @@
     "error": "Ops!",
     "ticketNotFound": "Biljett hittades inte",
     "browseEvents": "Bläddra Bland Evenemang",
+    "orderInformation": "Beställningsinformation",
+    "orderNumber": "Beställningsnummer",
     "ticketInformation": "Biljettinformation",
     "ticketName": "Biljettnamn",
     "quantity": "Antal",
@@ -292,6 +294,20 @@
     "ticketCode": "Biljettkod",
     "contactInformation": "Kontaktinformation",
     "email": "E-post",
+    "fullName": "Fullständigt Namn",
+    "selectedSeats": "Valda Platser",
+    "pricingBreakdown": "Prisuppdelning",
+    "basePrice": "Grundpris",
+    "serviceFee": "Serviceavgift",
+    "entertainmentTax": "Skatt",
+    "serviceTax": "Servicesskatt",
+    "onServiceFee": "på serviceavgift",
+    "vat": "Moms",
+    "orderFee": "Beställningsavgift",
+    "perTransaction": "per transaktion",
+    "onOrderFee": "på beställningsavgift",
+    "subtotal": "Delsumma",
+    "total": "Totalt",
     "qrCode": "QR-kod för inträde",
     "qrCodeHint": "Visa denna QR-kod vid platsens ingång",
     "ticketCodeEntry": "Använd denna biljettkod för inträde",
@@ -432,6 +448,8 @@
     "tickets": {
       "title": "Biljetter",
       "serviceFee": "Serviceavgift",
+      "serviceTax": "Serviceavgiftsskatt",
+      "orderFee": "Beställningsavgift",
       "vat": "MOMS",
       "total": "Totalt",
       "available": "Tillgänglig",
@@ -458,6 +476,10 @@
       "selectTicketType": "Välj Biljettyp",
       "free": "Gratis",
       "freeTicket": "Gratis Biljett"
+    },
+    "seatSelection": {
+      "available": "Tillgänglig",
+      "selectSeats": "Välj Platser"
     },
     "freeEventRegistration": {
       "title": "Registrera dig för Gratis Evenemang",
@@ -516,7 +538,7 @@
     "price": "Pris",
     "perTransaction": "per transaktion",
     "yourSelection": "Ditt Val",
-    "serviceFeeDisclaimer": "Priserna inkluderar serviceavgifter. Betalningsavgifter per beställning kan tillkomma beroende på vilken digital betalningsmetod som används.",
+    "serviceFeeDisclaimer": "Betalningsavgifter per beställning kan tillkomma beroende på vilken digital betalningsmetod som används.",
     "viewSeatMap": "Visa platskarta",
     "seeBestAvailable": "Se bästa tillgängliga",
     "steps": {
@@ -563,7 +585,12 @@
     "onOrderFee": "på Orderavgift",
     "seatsMustBeAdjacent": "Vänligen välj platser som ligger intill ditt nuvarande val",
     "cannotDeselectStranded": "Kan inte avmarkera denna plats eftersom det skulle lämna andra platser isolerade. Vänligen avmarkera platser på ett sätt som håller ditt val anslutet.",
-    "maxSeatsReached": "Maximalt 10 platser kan väljas åt gången"
+    "maxSeatsReached": "Maximalt 10 platser kan väljas åt gången",
+    "available": "Tillgänglig",
+    "selected": "Vald",
+    "occupied": "Upptagen",
+    "reserved": "Reserverad",
+    "wheelchair": "Rullstolsanpassad"
   },
   "checkout": {
     "title": "Slutför Ditt Köp",
@@ -601,7 +628,8 @@
     "loading": "Laddar...",
     "error": "Fel",
     "invalidData": "Ogiltig kassadata",
-    "decodeError": "Misslyckades med att avkoda kassadata"
+    "decodeError": "Misslyckades med att avkoda kassadata",
+    "marketingConsent": "Jag godkänner att ta emot marknadsföringskommunikation och specialerbjudanden från denna arrangör. Du kan avbryta prenumerationen när som helst."
   },
   "ticketModal": {
     "title": "Köp Biljett",
@@ -614,6 +642,11 @@
     "quantityHint": "Ange antal mellan 1 och 10",
     "price": "Pris",
     "serviceFee": "Serviceavgift",
+    "serviceTax": "Serviceavgiftsskatt",
+    "onServiceFee": "på serviceavgift",
+    "orderFee": "Beställningsavgift",
+    "perTransaction": "per transaktion",
+    "onOrderFee": "på beställningsavgift",
     "vat": "MOMS",
     "total": "Totalt",
     "marketingOptIn": "Vill du bli kontaktad för marknadsföringsmaterial?",

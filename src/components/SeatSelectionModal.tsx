@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { seatAPI } from '@/services/apiClient';
 import { useSeatReservation } from '@/hooks/useSeatReservation';
@@ -16,7 +16,7 @@ interface Seat {
   seat: string | null;
   section: string | null;
   price: number | null;
-  status: 'available' | 'sold';
+  status: 'available' | 'sold' | 'reserved';
 }
 
 interface SeatSelectionModalProps {
@@ -36,12 +36,29 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
   quantity,
   currency = 'EUR'
 }) => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  interface SectionBounds {
+    minX?: number;
+    minY?: number;
+    maxX?: number;
+    maxY?: number;
+    x1?: number;
+    y1?: number;
+    x2?: number;
+    y2?: number;
+  }
+  interface Section {
+    id: string;
+    name: string;
+    color: string;
+    bounds: SectionBounds | null;
+    polygon: Array<{ x: number; y: number }> | null;
+  }
   const [seatMapData, setSeatMapData] = useState<{
     backgroundSvg: string | null;
-    sections: any[];
+    sections: Section[];
     seats: Seat[];
   } | null>(null);
   const [showSeats, setShowSeats] = useState(false);
@@ -52,7 +69,7 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
     isReserving,
     addSeat,
     removeSeat,
-    clearReservations,
+    clearReservations: _clearReservations,
     getRemainingTime
   } = useSeatReservation(eventId);
 
@@ -63,6 +80,7 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
     if (isOpen && eventId) {
       loadSeatMap();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, eventId]);
 
   // Update remaining time
@@ -134,9 +152,10 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
         seats
       });
       setLoading(false);
-    } catch (err: any) {
-      console.error('Error loading seat map:', err);
-      setError(err.response?.data?.message || 'Failed to load seat map');
+    } catch (err: unknown) {
+      const error = err as Error & { response?: { data?: { message?: string } } };
+      console.error('Error loading seat map:', error);
+      setError(error.response?.data?.message || 'Failed to load seat map');
       setLoading(false);
     }
   };
