@@ -2167,7 +2167,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
         metadata.totalEntertainmentTaxAmount = summaryTotals.totalEntertainmentTaxAmount.toFixed(3);
         if (summaryTotals.entertainmentTaxRate > 0) {
           metadata.entertainmentTax = summaryTotals.entertainmentTaxRate.toString();
-        }
+      }
       }
 
       if (summaryTotals.totalServiceTaxAmount > 0) {
@@ -2194,7 +2194,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       if (summaryTotals.totalEntertainmentTaxAmount > 0) {
         metadata.entertainmentTaxAmount = summaryTotals.totalEntertainmentTaxAmount.toFixed(3);
         metadata.entertainmentTax = summaryTotals.entertainmentTaxRate.toString();
-      }
+        }
       if (summaryTotals.totalServiceTaxAmount > 0) {
         metadata.serviceTaxAmount = summaryTotals.totalServiceTaxAmount.toFixed(3);
       }
@@ -2547,10 +2547,10 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
                 : totalPrice;
 
               return (
-                <div className="flex justify-between text-base font-bold pt-1.5 border-t" style={{ borderColor: 'var(--border)' }}>
-                  <span>{t('seatSelection.total') || 'Total'}:</span>
+            <div className="flex justify-between text-base font-bold pt-1.5 border-t" style={{ borderColor: 'var(--border)' }}>
+              <span>{t('seatSelection.total') || 'Total'}:</span>
                   <span>{formatCurrency(calculatedTotal)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
-                </div>
+            </div>
               );
             })()}
           </div>

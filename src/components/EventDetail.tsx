@@ -822,7 +822,31 @@ export default function EventDetail({ event }: { event: Event }) {
                             <div className="rounded-lg shadow p-6 sticky top-24" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
                                 <h2 className="text-2xl font-bold mb-6">{t('eventDetail.tickets.title')}</h2>
 
-                                {hasSeatSelection ? (
+                                {/* External Event - Show external ticketing link */}
+                                {event.otherInfo?.isExternalEvent && event.otherInfo?.externalEventDetails ? (
+                                    <div className="text-center py-8">
+                                        <div className="mb-6">
+                                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
+                                                <FaExternalLinkAlt className="text-4xl text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
+                                                {t('eventDetail.externalEvent.title') || 'External Ticketing'}
+                                            </h3>
+                                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                                {t('eventDetail.externalEvent.description') || 'Tickets for this event are sold through an external platform. Click below to purchase tickets.'}
+                                            </p>
+                                        </div>
+                                        <a
+                                            href={event.otherInfo?.externalEventDetails as string}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center justify-center w-full py-3 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+                                        >
+                                            <FaExternalLinkAlt className="mr-2" />
+                                            {t('eventDetail.externalEvent.purchaseTickets') || 'Purchase Tickets Externally'}
+                                        </a>
+                                    </div>
+                                ) : hasSeatSelection ? (
                                     /* Seat Selection UI - Takes priority over everything when venue.venueId exists */
                                     <div className="text-center py-8">
                                         <p className="text-gray-600 dark:text-gray-400 mb-4">

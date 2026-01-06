@@ -468,6 +468,11 @@
     "social": {
       "shareEvent": "Share This Event"
     },
+    "externalEvent": {
+      "title": "External Ticketing",
+      "description": "Tickets for this event are sold through an external platform. Click below to purchase tickets.",
+      "purchaseTickets": "Purchase Tickets Externally"
+    },
     "freeEvent": {
       "title": "Free Event",
       "description": "This event is free to attend. No payment required.",

@@ -460,6 +460,11 @@
         "attendees": "Teilnehmer"
       },
       "social": { "shareEvent": "Event teilen" },
+      "externalEvent": {
+        "title": "Externe Ticketvermittlung",
+        "description": "Tickets für diese Veranstaltung werden über eine externe Plattform verkauft. Klicken Sie unten, um Tickets zu kaufen.",
+        "purchaseTickets": "Tickets Extern Kaufen"
+      },
       "freeEvent": {
         "title": "Kostenloses Event",
         "description": "Dieses Event ist kostenlos.",

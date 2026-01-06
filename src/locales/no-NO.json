@@ -468,6 +468,11 @@
     "social": {
       "shareEvent": "Del Dette Arrangementet"
     },
+    "externalEvent": {
+      "title": "Ekstern Billettsalg",
+      "description": "Billetter til dette arrangementet selges gjennom en ekstern plattform. Klikk nedenfor for å kjøpe billetter.",
+      "purchaseTickets": "Kjøp Billetter Eksternt"
+    },
     "freeEvent": {
       "title": "Gratis Arrangement",
       "description": "Dette arrangementet er gratis å delta på. Ingen betaling kreves.",

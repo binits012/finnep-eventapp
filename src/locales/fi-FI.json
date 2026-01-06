@@ -468,6 +468,11 @@
     "social": {
       "shareEvent": "Jaa Tämä Tapahtuma"
     },
+    "externalEvent": {
+      "title": "Ulkoinen Lipunmyynti",
+      "description": "Tämän tapahtuman liput myydään ulkoisen alustan kautta. Klikkaa alla olevaa painiketta ostaaksesi liput.",
+      "purchaseTickets": "Osta Liput Ulkoisesti"
+    },
     "freeEvent": {
       "title": "Ilmainen Tapahtuma",
       "description": "Tähän tapahtumaan on ilmainen pääsy. Maksua ei vaadita.",

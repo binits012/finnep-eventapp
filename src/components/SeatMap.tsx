@@ -954,7 +954,7 @@ const SeatMap: React.FC<SeatMapProps> = ({
             };
 
             if (section.polygon && section.polygon.length > 0) {
-              // Render polygon section (stroke only, matching CMS - no fill to avoid covering seats)
+              // Render polygon section (stroke only when highlighted - no dotted lines for cleaner UI)
               const points = section.polygon.map(p => `${p.x},${p.y}`).join(' ');
               return (
                 <polygon
@@ -962,9 +962,9 @@ const SeatMap: React.FC<SeatMapProps> = ({
                   points={points}
                   fill={shouldHighlight ? (section.color || '#2196F3') : 'none'}
                   fillOpacity={shouldHighlight ? 0.2 : 0}
-                  stroke={shouldHighlight ? '#FF6B35' : (section.color || '#2196F3')}
-                  strokeWidth={shouldHighlight ? 3 : 2}
-                  strokeDasharray={shouldHighlight ? 'none' : '5,5'}
+                  stroke={shouldHighlight ? '#FF6B35' : 'none'}
+                  strokeWidth={shouldHighlight ? 3 : 0}
+                  strokeDasharray="none"
                   onClick={handleClick}
                   style={{ cursor: (onSectionClick || onToggleSeats) ? 'pointer' : 'default' }}
                 />
@@ -988,7 +988,7 @@ const SeatMap: React.FC<SeatMapProps> = ({
               }
 
               if (minX !== undefined && minY !== undefined && maxX !== undefined && maxY !== undefined) {
-                // Render rectangle section (stroke only, matching CMS)
+                // Render rectangle section (stroke only when highlighted - no dotted lines for cleaner UI)
                 return (
                   <rect
                     key={section.id}
@@ -998,9 +998,9 @@ const SeatMap: React.FC<SeatMapProps> = ({
                     height={maxY - minY}
                     fill={shouldHighlight ? (section.color || '#2196F3') : 'none'}
                     fillOpacity={shouldHighlight ? 0.2 : 0}
-                    stroke={shouldHighlight ? '#FF6B35' : (section.color || '#2196F3')}
-                    strokeWidth={shouldHighlight ? 3 : 2}
-                    strokeDasharray={shouldHighlight ? 'none' : '5,5'}
+                    stroke={shouldHighlight ? '#FF6B35' : 'none'}
+                    strokeWidth={shouldHighlight ? 3 : 0}
+                    strokeDasharray="none"
                     onClick={handleClick}
                     style={{ cursor: (onSectionClick || onToggleSeats) ? 'pointer' : 'default' }}
                   />

@@ -468,6 +468,11 @@
     "social": {
       "shareEvent": "Dela Detta Evenemang"
     },
+    "externalEvent": {
+      "title": "Extern Biljettförsäljning",
+      "description": "Biljetter till detta evenemang säljs genom en extern plattform. Klicka nedan för att köpa biljetter.",
+      "purchaseTickets": "Köp Biljetter Externt"
+    },
     "freeEvent": {
       "title": "Gratis Evenemang",
       "description": "Detta evenemang är gratis att delta i. Ingen betalning krävs.",

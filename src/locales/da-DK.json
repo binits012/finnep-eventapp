@@ -468,6 +468,11 @@
     "social": {
       "shareEvent": "Del Denne Begivenhed"
     },
+    "externalEvent": {
+      "title": "Ekstern Billetudstedelse",
+      "description": "Billetter til denne begivenhed sælges gennem en ekstern platform. Klik nedenfor for at købe billetter.",
+      "purchaseTickets": "Køb Billetter Eksternt"
+    },
     "freeEvent": {
       "title": "Gratis Begivenhed",
       "description": "Denne begivenhed er gratis at deltage i. Ingen betaling er påkrævet.",
