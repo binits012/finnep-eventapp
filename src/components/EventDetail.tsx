@@ -476,58 +476,26 @@ export default function EventDetail({ event }: { event: Event }) {
                                 </div>
 
                                 {/* Additional Information */}
-                                {event.otherInfo && Object.keys(event.otherInfo).length > 0 && (
+                                {event.otherInfo && (event.otherInfo.age || event.otherInfo.notes) && (
                                     <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
                                         <h3 className="text-xl font-semibold mb-3">{t('eventDetail.additionalInfo.title')}</h3>
-                                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
-                                            {Object.entries(event.otherInfo).map(([key, value]) => {
-                                                // Skip eventExtraInfo as it's an object - we'll render it separately
-                                                if (key === 'eventExtraInfo' && typeof value === 'object' && value !== null) {
-                                                    return null;
-                                                }
+                                        <dl className="grid grid-cols-1 gap-y-3">
+                                            {/* Age restriction */}
+                                            {event.otherInfo.age && (
+                                                <div className="flex flex-col">
+                                                    <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>Age Restriction</dt>
+                                                    <dd className="mt-1" style={{ color: 'var(--foreground)' }}>{String(event.otherInfo.age)}</dd>
+                                                </div>
+                                            )}
 
-                                                // Skip categoryName and subCategoryName
-                                                if (key === 'categoryName' || key === 'subCategoryName') {
-                                                    return null;
-                                                }
-
-                                                // Handle null or undefined values
-                                                if (value === null || value === undefined) {
-                                                    return null;
-                                                }
-
-                                                // Handle objects (other than eventExtraInfo)
-                                                if (typeof value === 'object' && !Array.isArray(value)) {
-                                                    return null;
-                                                }
-
-                                                // Render primitive values
-                                                return (
-                                                    <div key={key} className="flex flex-col">
-                                                        <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>{key}</dt>
-                                                        <dd className="mt-1" style={{ color: 'var(--foreground)' }}>{String(value)}</dd>
-                                                    </div>
-                                                );
-                                            })}
-
-                                            {/* Render door sale info only for paid events with door sale enabled */}
-                                            {event.otherInfo?.eventExtraInfo &&
-                                             typeof event.otherInfo.eventExtraInfo === 'object' &&
-                                             event.otherInfo.eventExtraInfo !== null &&
-                                             event.otherInfo.eventExtraInfo.eventType === 'paid' &&
-                                             event.otherInfo.eventExtraInfo.doorSaleAllowed === true && (
-                                                <>
-                                                    <div key="doorSaleAllowed" className="flex flex-col">
-                                                        <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>Door Sale Allowed</dt>
-                                                        <dd className="mt-1" style={{ color: 'var(--foreground)' }}>Yes</dd>
-                                                    </div>
-                                                    {event.otherInfo.eventExtraInfo.doorSaleExtraAmount && event.otherInfo.eventExtraInfo.doorSaleExtraAmount !== null && (
-                                                        <div key="doorSaleExtraAmount" className="flex flex-col">
-                                                            <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>Door Sale Extra Amount</dt>
-                                                            <dd className="mt-1" style={{ color: 'var(--foreground)' }}>{String(event.otherInfo.eventExtraInfo.doorSaleExtraAmount)}</dd>
-                                                        </div>
-                                                    )}
-                                                </>
+                                            {/* Notes (rich text) */}
+                                            {event.otherInfo.notes && (
+                                                <div className="flex flex-col">
+                                                    <dt className="text-sm font-medium capitalize" style={{ color: 'var(--foreground)', opacity: 0.75 }}>Notes</dt>
+                                                    <dd className="mt-1 prose prose-sm max-w-none" style={{ color: 'var(--foreground)' }}>
+                                                        <div dangerouslySetInnerHTML={{ __html: event.otherInfo.notes }} />
+                                                    </dd>
+                                                </div>
                                             )}
                                         </dl>
                                     </div>
@@ -667,7 +635,7 @@ export default function EventDetail({ event }: { event: Event }) {
                             </div>
 
                             {/* Organizer Information */}
-                            {event?.merchant && (
+                            {event?.merchant && !event?.otherInfo?.isExternalEvent && (
                                 <div className="rounded-lg shadow p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
                                     <h2 className="text-2xl font-bold mb-4">{t('eventDetail.organizer.title')}</h2>
                                     <div className="flex items-center">
