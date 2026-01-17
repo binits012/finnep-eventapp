@@ -62,6 +62,9 @@ importers:
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.2.7)(react@19.1.2)
+      react-tiktok-embed:
+        specifier: ^1.0.0
+        version: 1.0.0
       rehype-raw:
         specifier: ^7.0.0
         version: 7.0.0
@@ -1975,6 +1978,9 @@ packages:
     peerDependencies:
       '@types/react': '>=18'
       react: '>=18'
+
+  react-tiktok-embed@1.0.0:
+    resolution: {integrity: sha512-Q3ixX6vBF3KTZTntlah1v2b5qCDpfx0NnwMuImJPUHJkH+k/YDqPx72nKybLRIw+LsQqnBXLNG2y6Rjl1/oxYg==}
 
   react@19.1.2:
     resolution: {integrity: sha512-MdWVitvLbQULD+4DP8GYjZUrepGW7d+GQkNVqJEzNxE+e9WIa4egVFE/RDfVb1u9u/Jw7dNMmPB4IqxzbFYJ0w==}
@@ -4500,6 +4506,8 @@ snapshots:
       vfile: 6.0.3
     transitivePeerDependencies:
       - supports-color
+
+  react-tiktok-embed@1.0.0: {}
 
   react@19.1.2: {}
 

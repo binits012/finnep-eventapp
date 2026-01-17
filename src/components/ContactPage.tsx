@@ -451,7 +451,7 @@ export default function ContactPage({ data }: ContactPageProps) {
                       placeholder={t('contact.answerPlaceholder')}
                       required
                       aria-required="true"
-                      aria-invalid={userCaptchaInput && !captchaCorrect}
+                      aria-invalid={userCaptchaInput ? !captchaCorrect : false}
                       aria-describedby={userCaptchaInput ? 'captcha-feedback' : 'captcha-question'}
                     />
                   </div>
