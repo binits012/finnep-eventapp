@@ -321,7 +321,9 @@
     "goBack": "Palaa Takaisin",
     "totalPaid": "Maksettu Yhteensä",
     "ticketConfirmed": "Lippusi on vahvistettu",
-    "showAtVenue": "Näytä tämä lippu tapahtumapaikan sisäänkäynnillä"
+    "showAtVenue": "Näytä tämä lippu tapahtumapaikan sisäänkäynnillä",
+    "currency": "Valuutta",
+    "officialTicketConfirmation": "Tämä on virallinen lippusi ja tilausvahvistus"
   },
   "merchant": {
     "title": "Liity Alustallemme",
@@ -494,6 +496,10 @@
       "registrationSuccessMessage": "Sinut on rekisteröity tähän ilmaiseen tapahtumaan. Tarkista sähköpostisi vahvistusta varten.",
       "registrationFailed": "Rekisteröinti epäonnistui. Yritä uudelleen.",
       "emailPlaceholder": "sinun.sahkoposti@esimerkki.com"
+    },
+    "seatSelection": {
+      "available": "Saatavilla",
+      "selectSeats": "Valitse Paikat"
     }
   },
   "seatSelection": {
@@ -560,6 +566,8 @@
     "yourInformation": "Tietosi",
     "fullName": "Koko Nimi",
     "email": "Sähköposti",
+    "confirmEmail": "Vahvista Sähköposti",
+    "emailsDoNotMatch": "Sähköpostit eivät täsmää",
     "captcha": "CAPTCHA",
     "sendOTP": "Lähetä OTP",
     "verifyEmail": "Vahvista Sähköpostiosoitteesi",

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getCurrencySymbol } from '@/utils/currency';
 import SeatSelectionModal from './SeatSelectionModal';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface TicketInfoLite {
   _id: string;
@@ -36,6 +37,26 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [showSeatSelection, setShowSeatSelection] = useState(false);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const titleId = 'ticket-modal-title';
+  const descriptionId = 'ticket-modal-description';
+
+  // Focus trap
+  useFocusTrap(isOpen, modalRef);
+
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
 
   // Get currency symbol from country
   const currencySymbol = useMemo(() => getCurrencySymbol(country), [country]);
@@ -120,11 +141,17 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop (no click-to-close to avoid accidental dismiss) */}
       <div className="absolute inset-0 bg-black/60" aria-hidden="true" />
-      <div className="relative z-50 w-[92vw] max-w-md rounded-xl p-5 sm:p-6 shadow-xl"
+      <div
+        ref={modalRef}
+        className="relative z-50 w-[92vw] max-w-md rounded-xl p-5 sm:p-6 shadow-xl"
         style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
-        role="dialog" aria-modal="true" aria-label="Ticket purchase"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
       >
-        <h2 className="text-xl font-semibold mb-2">{t('ticketModal.title')}</h2>
+        <h2 id={titleId} className="text-xl font-semibold mb-2">{t('ticketModal.title')}</h2>
+        <p id={descriptionId} className="sr-only">Purchase tickets for this event. Fill in your email and select quantity.</p>
         <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium"
           style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'color-mix(in srgb, var(--foreground) 8%, var(--surface))' }}
         >
@@ -134,37 +161,45 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t('ticketModal.email')}</label>
+            <label htmlFor="ticket-email" className="block text-sm font-medium mb-1">{t('ticketModal.email')}</label>
             <input
+              id="ticket-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
               placeholder={t('ticketModal.emailPlaceholder')}
+              aria-required="true"
+              aria-invalid={!isEmailValid && email.length > 0}
+              aria-describedby={!isEmailValid && email.length > 0 ? 'ticket-email-error' : undefined}
             />
             {!isEmailValid && email.length > 0 && (
-              <p className="mt-1 text-xs text-red-600">{t('ticketModal.validEmail')}</p>
+              <p id="ticket-email-error" className="mt-1 text-xs text-red-600" role="alert">{t('ticketModal.validEmail')}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">{t('ticketModal.confirmEmail')}</label>
+            <label htmlFor="ticket-confirm-email" className="block text-sm font-medium mb-1">{t('ticketModal.confirmEmail')}</label>
             <input
+              id="ticket-confirm-email"
               type="email"
               value={confirmEmail}
               onChange={(e) => setConfirmEmail(e.target.value)}
               className="w-full rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
               placeholder={t('ticketModal.confirmEmailPlaceholder')}
+              aria-required="true"
+              aria-invalid={confirmEmail.length > 0 && !emailsMatch}
+              aria-describedby={confirmEmail.length > 0 && !emailsMatch ? 'ticket-confirm-email-error' : undefined}
             />
             {confirmEmail.length > 0 && !emailsMatch && (
-              <p className="mt-1 text-xs text-red-600">{t('ticketModal.emailsMatch')}</p>
+              <p id="ticket-confirm-email-error" className="mt-1 text-xs text-red-600" role="alert">{t('ticketModal.emailsMatch')}</p>
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">{t('ticketModal.quantity')}</label>
+          <fieldset>
+            <legend className="block text-sm font-medium mb-1">{t('ticketModal.quantity')}</legend>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -187,7 +222,9 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
               >
                 −
               </button>
+              <label htmlFor="ticket-quantity" className="sr-only">{t('ticketModal.quantity')}</label>
               <input
+                id="ticket-quantity"
                 type="text"
                 value={quantity}
                 onChange={(e) => {
@@ -210,6 +247,9 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
                 className="flex-1 rounded-md px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
                 placeholder={t('ticketModal.quantityPlaceholder')}
+                aria-required="true"
+                aria-invalid={!isQuantityValid}
+                aria-describedby="ticket-quantity-hint"
               />
               <button
                 type="button"
@@ -233,8 +273,8 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
                 +
               </button>
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('ticketModal.quantityHint')}</p>
-          </div>
+            <p id="ticket-quantity-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('ticketModal.quantityHint')}</p>
+          </fieldset>
 
           {/* Seat Selection Button */}
           {hasSeatSelection && (
@@ -300,18 +340,29 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={marketingOptIn} onChange={(e) => setMarketingOptIn(e.target.checked)} />
-            <span>
+          <div className="flex items-center gap-2 text-sm">
+            <input
+              id="ticket-marketing-optin"
+              type="checkbox"
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+              aria-describedby="ticket-marketing-optin-desc"
+            />
+            <label htmlFor="ticket-marketing-optin" className="cursor-pointer">
               {t('ticketModal.marketingOptIn')}
-            </span>
-          </label>
+            </label>
+            <span id="ticket-marketing-optin-desc" className="sr-only">Optional: Receive marketing communications</span>
+          </div>
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 rounded-md border"
-            style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
-{t('ticketModal.cancel')}
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-md border"
+            style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+            aria-label="Cancel ticket purchase"
+          >
+            {t('ticketModal.cancel')}
           </button>
           <button
             disabled={!canProceed}
@@ -329,6 +380,7 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
               placeIds: hasSeatSelection ? selectedSeats : undefined
             })}
             className={`px-4 py-2 rounded-md text-white ${canProceed ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'}`}
+            aria-label={canProceed ? `Proceed to checkout for ${quantity} ticket${quantity !== 1 ? 's' : ''}` : 'Please complete all required fields to proceed'}
           >
             {t('ticketModal.proceed')}
           </button>

@@ -106,6 +106,7 @@ type Step = 'seats' | 'info' | 'otp' | 'payment';
 
 interface CheckoutData {
   email: string;
+  confirmEmail?: string;
   quantity: number;
   eventId: string;
   externalMerchantId: string;
@@ -163,6 +164,16 @@ const areAdjacentStrings = (seat1: string, seat2: string): boolean => {
 };
 
 export default function SeatSelectionPage() {
+  // Get locale from localStorage, default to 'en-US'
+  const [locale, setLocale] = useState<string>('en-US');
+
+  useEffect(() => {
+    // Get locale from localStorage on mount
+    if (typeof window !== 'undefined') {
+      const storedLocale = localStorage.getItem('locale') || 'en-US';
+      setLocale(storedLocale);
+    }
+  }, []);
   const params = useParams();
   const { t } = useTranslation();
   const eventId = params?.id as string;
@@ -227,6 +238,7 @@ export default function SeatSelectionPage() {
   // User info state
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [captchaVerified, setCaptchaVerified] = useState(false);
 
   // OTP state
@@ -817,14 +829,29 @@ export default function SeatSelectionPage() {
 
   // Step 2: Send OTP
   const handleSendOTP = async () => {
-    if (!fullName.trim() || !email.trim() || !captchaVerified) {
+    if (!fullName.trim() || !email.trim() || !confirmEmail.trim() || !captchaVerified) {
       setError('Please fill in all fields and complete CAPTCHA');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /.+@.+\..+/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Validate emails match
+    if (email !== confirmEmail) {
+      setError('Email addresses do not match');
       return;
     }
 
     try {
       setError(null);
-      await api.post(`/event/${eventId}/seats/send-otp`, {
+      // Add locale as query parameter (BCP 47 format) - get from localStorage
+      const localeParam = typeof window !== 'undefined' ? (localStorage.getItem('locale') || 'en-US') : 'en-US';
+      await api.post(`/event/${eventId}/seats/send-otp?locale=${encodeURIComponent(localeParam)}`, {
         email,
         fullName,
         placeIds: selectedSeats
@@ -937,6 +964,7 @@ export default function SeatSelectionPage() {
 
       return {
         email,
+        confirmEmail,
         quantity: selectedSeats.length,
         eventId,
         externalMerchantId: externalMerchantId,
@@ -1009,6 +1037,7 @@ export default function SeatSelectionPage() {
 
     return {
       email,
+      confirmEmail,
       quantity: selectedSeats.length,
       eventId,
       externalMerchantId: externalMerchantId,
@@ -1056,11 +1085,11 @@ export default function SeatSelectionPage() {
         </div>
 
         {/* Modern Step Indicator */}
-        <div className="mb-6">
+        <nav className="mb-6" aria-label="Checkout progress">
           <div className="max-w-xl">
-            <div className="flex items-center justify-between relative gap-2">
+            <ol className="flex items-center justify-between relative gap-2" role="list">
               {/* Progress Line */}
-              <div className="absolute top-3 left-0 right-0 h-0.5 z-0" style={{ background: 'var(--border)' }}>
+              <div className="absolute top-3 left-0 right-0 h-0.5 z-0" style={{ background: 'var(--border)' }} aria-hidden="true">
                 <div
                   className="h-full transition-all duration-300 ease-in-out"
                   style={{
@@ -1084,7 +1113,7 @@ export default function SeatSelectionPage() {
                   (stepItem.key === 'otp' && step === 'payment');
 
                 return (
-                  <div key={stepItem.key} className="flex flex-col items-center relative z-10 flex-1">
+                  <li key={stepItem.key} className="flex flex-col items-center relative z-10 flex-1">
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-[10px] transition-all duration-300 ${
                         isActive
@@ -1098,14 +1127,16 @@ export default function SeatSelectionPage() {
                         MozOsxFontSmoothing: 'grayscale',
                         textRendering: 'optimizeLegibility'
                       }}
+                      aria-current={isActive ? 'step' : undefined}
                     >
                       {isCompleted ? (
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       ) : (
-                        stepItem.number
+                        <span className="sr-only">Step {stepItem.number}</span>
                       )}
+                      {!isCompleted && <span aria-hidden="true">{stepItem.number}</span>}
                     </div>
                     <span
                       className={`mt-1.5 text-xs font-medium text-center ${
@@ -1123,15 +1154,15 @@ export default function SeatSelectionPage() {
                     >
                       {t(stepItem.labelKey) || stepItem.defaultLabel}
                     </span>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
           </div>
-        </div>
+        </nav>
 
         {error && (
-          <div className="mb-3 p-2.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm">
+          <div className="mb-3 p-2.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm" role="alert" aria-live="assertive">
             {error}
           </div>
         )}
@@ -1422,30 +1453,70 @@ export default function SeatSelectionPage() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">{t('seatSelection.fullName') || 'Full Name'}</label>
+                    <label htmlFor="seat-full-name" className="block text-sm font-medium mb-1">{t('seatSelection.fullName') || 'Full Name'}</label>
                     <input
+                      id="seat-full-name"
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       className="w-full px-2.5 py-1.5 border rounded-lg text-sm"
                       style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                       required
+                      aria-required="true"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">{t('seatSelection.email') || 'Email'}</label>
+                    <label htmlFor="seat-email" className="block text-sm font-medium mb-1">{t('seatSelection.email') || 'Email'}</label>
                     <input
+                      id="seat-email"
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setError(null); // Clear error when user types
+                      }}
                       className="w-full px-2.5 py-1.5 border rounded-lg text-sm"
-                      style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                      style={{
+                        background: 'var(--surface)',
+                        borderColor: (email && confirmEmail && email !== confirmEmail) ? '#ef4444' : 'var(--border)',
+                        color: 'var(--foreground)'
+                      }}
                       required
+                      aria-required="true"
+                      aria-invalid={(email && confirmEmail && email !== confirmEmail) ? true : undefined}
+                      aria-describedby={(email && confirmEmail && email !== confirmEmail) ? 'email-match-error' : undefined}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">{t('seatSelection.captcha') || 'CAPTCHA'}</label>
-                    <div className="mt-1">
+                    <label htmlFor="seat-confirm-email" className="block text-sm font-medium mb-1">{t('seatSelection.confirmEmail') || 'Confirm Email'}</label>
+                    <input
+                      id="seat-confirm-email"
+                      type="email"
+                      value={confirmEmail}
+                      onChange={(e) => {
+                        setConfirmEmail(e.target.value);
+                        setError(null); // Clear error when user types
+                      }}
+                      className="w-full px-2.5 py-1.5 border rounded-lg text-sm"
+                      style={{
+                        background: 'var(--surface)',
+                        borderColor: (email && confirmEmail && email !== confirmEmail) ? '#ef4444' : 'var(--border)',
+                        color: 'var(--foreground)'
+                      }}
+                      required
+                      aria-required="true"
+                      aria-invalid={(email && confirmEmail && email !== confirmEmail) ? true : undefined}
+                      aria-describedby={(email && confirmEmail && email !== confirmEmail) ? 'email-match-error' : undefined}
+                    />
+                    {email && confirmEmail && email !== confirmEmail && (
+                      <p id="email-match-error" className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert" aria-live="polite">
+                        {t('seatSelection.emailsDoNotMatch') || 'Email addresses do not match'}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="seat-captcha" className="block text-sm font-medium mb-1">{t('seatSelection.captcha') || 'CAPTCHA'}</label>
+                    <div id="seat-captcha" className="mt-1" role="group" aria-label="Complete CAPTCHA verification">
                       <CapjsWidget
                         onVerify={() => setCaptchaVerified(true)}
                         onError={() => setCaptchaVerified(false)}
@@ -1462,7 +1533,7 @@ export default function SeatSelectionPage() {
                     </button>
                     <button
                       onClick={handleSendOTP}
-                      disabled={!fullName.trim() || !email.trim() || !captchaVerified}
+                      disabled={!fullName.trim() || !email.trim() || !confirmEmail.trim() || !captchaVerified || !!(email && confirmEmail && email !== confirmEmail)}
                       className="flex-1 px-3 py-1.5 rounded-lg font-medium text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
                       {t('seatSelection.sendOTP') || 'Send OTP'}
@@ -1538,7 +1609,9 @@ export default function SeatSelectionPage() {
               {t('seatSelection.otpSent') || "We've sent an 8-digit code to"} <strong style={{ color: 'var(--foreground)' }}>{obfuscateEmail(email)}</strong>
             </p>
             <div className="mb-3">
+              <label htmlFor="seat-otp" className="sr-only">{t('seatSelection.enterOTP') || 'Enter 8-digit verification code'}</label>
               <input
+                id="seat-otp"
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
@@ -1546,7 +1619,11 @@ export default function SeatSelectionPage() {
                 className="w-full px-3 py-2 text-center text-xl tracking-widest border rounded-lg"
                 style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 maxLength={8}
+                aria-required="true"
+                aria-label="8-digit verification code"
+                aria-describedby="otp-instructions"
               />
+              <p id="otp-instructions" className="sr-only">Enter the 8-digit code sent to your email address</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -2096,7 +2173,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
   // VAT is calculated on base price only, not on service fee
   const perUnitVat = checkoutData.price * (checkoutData.vat / 100);
 
-  const createPaymentIntentPayload = () => {
+  const createPaymentIntentPayload = useCallback(() => {
     // Validate required fields
     if (!checkoutData.eventId) {
       throw new Error('Missing required field: eventId');
@@ -2122,6 +2199,8 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       externalMerchantId: checkoutData.externalMerchantId || '',
       // Nonce to prevent duplicate form submissions
       nonce: nonce,
+      // Locale for email templates (BCP 47 format) - get from localStorage
+      locale: typeof window !== 'undefined' ? (localStorage.getItem('locale') || 'en-US') : 'en-US',
       basePrice: checkoutData.price.toString(),
       serviceFee: checkoutData.serviceFee.toString(),
       vatRate: (summaryTotals?.vatRate || checkoutData.vat || 0).toString(),
@@ -2218,7 +2297,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       currency: getCurrencyCode(checkoutData.country || 'Finland').toLowerCase() || 'eur',
       metadata
     };
-  };
+  }, [checkoutData, summaryTotals, pricingModel, seatPricingBreakdown, ticketTypes, nonce, totalPrice, marketingConsent]);
 
   const createPaymentIntent = async () => {
     try {
@@ -2266,7 +2345,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
     });
   };
 
-  const handlePaymentSuccess = async (paymentIntentId: string) => {
+  const handlePaymentSuccess = useCallback(async (paymentIntentId: string) => {
     const successResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/front'}/payment-success`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2286,6 +2365,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
           seatTickets: checkoutData.seatTickets || [], // Map of placeId -> ticketId
           sessionId: checkoutData.sessionId || undefined,
           nonce: nonce, // Include nonce to prevent duplicate submissions
+          locale: typeof window !== 'undefined' ? (localStorage.getItem('locale') || 'en-US') : 'en-US', // Locale for email templates (BCP 47 format)
         }
       })
     });
@@ -2295,7 +2375,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
     }
 
     return await successResponse.json();
-  };
+  }, [checkoutData, marketingConsent, nonce]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -2371,6 +2451,10 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
             <div>
               <span style={{ opacity: 0.8 }}>{t('seatSelection.email') || 'Email'}:</span>
               <span className="font-medium ml-2">{checkoutData.email}</span>
+            </div>
+            <div>
+              <span style={{ opacity: 0.8 }}>{t('seatSelection.confirmEmail') || 'Confirm Email'}:</span>
+              <span className="font-medium ml-2">{checkoutData.confirmEmail || checkoutData.email}</span>
             </div>
           </div>
         </div>

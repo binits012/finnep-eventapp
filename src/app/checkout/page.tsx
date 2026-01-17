@@ -40,15 +40,30 @@ interface CheckoutData {
   fullName?: string;
 }
 
-// Add this function to detect theme
+// Add this function to detect theme - handles browser automatic theme switching
 const getThemeColors = () => {
-  const isDark = document.documentElement.classList.contains('dark') ||
-                 window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (typeof window === 'undefined') {
+    // SSR fallback
+    return {
+      textColor: '#000000',
+      placeholderColor: '#6b7280',
+      iconColor: '#000000',
+    };
+  }
+
+  // Check for explicit dark class first (user preference)
+  const hasDarkClass = document.documentElement.classList.contains('dark');
+
+  // Check system preference (browser automatic theme switching)
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  // Use explicit class if present, otherwise use system preference
+  const isDark = hasDarkClass || (!document.documentElement.classList.contains('light') && prefersDark);
 
   return {
-    textColor: isDark ? '#ffffff' : '#000000',
+    textColor: isDark ? '#ffffff' : '#1f2937', // Better contrast in light mode
     placeholderColor: isDark ? '#9ca3af' : '#6b7280',
-    iconColor: isDark ? '#ffffff' : '#000000',
+    iconColor: isDark ? '#ffffff' : '#374151', // Better contrast in light mode
   };
 };
 
@@ -69,6 +84,12 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
   const [error, setError] = useState<string | null>(null);
   const [themeColors, setThemeColors] = useState(getThemeColors());
   const [cardComplete, setCardComplete] = useState(false); // Add this state
+  const [themeKey, setThemeKey] = useState(() => {
+    // Generate a key based on current theme to force CardElement re-render
+    const isDark = document.documentElement.classList.contains('dark') ||
+                   window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return `card-element-${isDark ? 'dark' : 'light'}`;
+  });
   // Generate nonce once when component mounts to prevent duplicate submissions
   const [nonce] = useState(() => {
     // Generate a cryptographically secure random nonce
@@ -251,7 +272,15 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
   };
 
   useEffect(() => {
-    const updateColors = () => setThemeColors(getThemeColors());
+    const updateColors = () => {
+      const newColors = getThemeColors();
+      setThemeColors(newColors);
+
+      // Update theme key to force CardElement re-render
+      const isDark = document.documentElement.classList.contains('dark') ||
+                     window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setThemeKey(`card-element-${isDark ? 'dark' : 'light'}`);
+    };
 
     // Listen for theme changes
     const observer = new MutationObserver(updateColors);
@@ -273,9 +302,9 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Customer Information */}
-      <div className="rounded-xl p-6 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <FaUser className="mr-2 text-indigo-600" />
+      <section className="rounded-xl p-6 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }} aria-labelledby="customer-info-heading">
+        <h2 id="customer-info-heading" className="text-xl font-semibold mb-4 flex items-center">
+          <FaUser className="mr-2 text-indigo-600" aria-hidden="true" />
           {t('checkout.customerInformation')}
         </h2>
         <div className="space-y-3">
@@ -284,19 +313,20 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
             <div className="text-base font-medium">{checkoutData.email}</div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Payment Information */}
-      <div className="rounded-xl p-6 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <FaCreditCard className="mr-2 text-indigo-600" />
+      <section className="rounded-xl p-6 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }} aria-labelledby="payment-info-heading">
+        <h2 id="payment-info-heading" className="text-xl font-semibold mb-4 flex items-center">
+          <FaCreditCard className="mr-2 text-indigo-600" aria-hidden="true" />
           {t('checkout.paymentDetails')}
         </h2>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">{t('checkout.cardNumber')}</label>
-          <div className="p-3 border rounded-lg bg-transparent" style={{ borderColor: 'var(--border)' }}>
+          <label htmlFor="card-element" className="block text-sm font-medium mb-2">{t('checkout.cardNumber')}</label>
+          <div id="card-element" className="p-3 border rounded-lg bg-transparent" style={{ borderColor: 'var(--border)' }} role="group" aria-label={t('checkout.cardNumber')}>
             <CardElement
+              key={themeKey} // Force re-render when theme changes
               options={{
                 style: {
                   base: {
@@ -320,18 +350,18 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
                 hidePostalCode: true,
                 disabled: false,
               }}
-              onChange={handleCardChange} // Add this handler
+              onChange={handleCardChange}
             />
           </div>
         </div>
 
         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4">
-          <FaLock className="mr-2" />
+          <FaLock className="mr-2" aria-hidden="true" />
           <span>{t('checkout.securePaymentText')}</span>
         </div>
 
         {error && (
-          <div className="text-red-600 text-sm mb-4">{error}</div>
+          <div className="text-red-600 text-sm mb-4" role="alert" aria-live="assertive">{error}</div>
         )}
 
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
@@ -363,7 +393,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
             {loading ? t('checkout.processing') : `${t('checkout.completePurchase')} ${total.toFixed(2)} ${' '} ${getCurrencySymbol(checkoutData.country || 'Finland')}`}
           </button>
         </div>
-      </div>
+      </section>
     </form>
   );
 }

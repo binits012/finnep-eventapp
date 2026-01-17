@@ -321,7 +321,9 @@
       "goBack": "Voltar",
       "totalPaid": "Total pago",
       "ticketConfirmed": "O seu bilhete está confirmado",
-      "showAtVenue": "Apresente este bilhete à entrada"
+      "showAtVenue": "Apresente este bilhete à entrada",
+      "currency": "Moeda",
+      "officialTicketConfirmation": "Este é seu bilhete oficial e confirmação de pedido"
     },
     "merchant": {
       "title": "Junte-se à Plataforma",
@@ -556,6 +558,8 @@
       "yourInformation": "Informação",
       "fullName": "Nome Completo",
       "email": "E-mail",
+      "confirmEmail": "Confirmar E-mail",
+      "emailsDoNotMatch": "E-mails não coincidem",
       "captcha": "CAPTCHA",
       "sendOTP": "Enviar Código",
       "verifyEmail": "Verificar E-mail",

@@ -176,11 +176,11 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
       if (ticketInfo.seatTickets && Array.isArray(ticketInfo.seatTickets) && ticketInfo.seatTickets.length > 0) {
         seatInfoHTML = `
           <div class="order-section">
-            <h3>Selected Seats</h3>
+            <h3>${t('success.selectedSeats') || 'Selected Seats'}</h3>
             <div class="seat-list">
               ${ticketInfo.seatTickets.map((seat: { ticketName?: string; placeId?: string }, index: number) => `
                 <div class="seat-item">
-                  ${index + 1}. ${seat.ticketName || `Seat ${seat.placeId || index + 1}`}
+                  ${index + 1}. ${seat.ticketName || `${t('seatSelection.seat') || 'Seat'} ${seat.placeId || index + 1}`}
                 </div>
               `).join('')}
             </div>
@@ -189,11 +189,11 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
       } else if (ticketInfo.placeIds && Array.isArray(ticketInfo.placeIds) && ticketInfo.placeIds.length > 0) {
         seatInfoHTML = `
           <div class="order-section">
-            <h3>Selected Seats</h3>
+            <h3>${t('success.selectedSeats') || 'Selected Seats'}</h3>
             <div class="seat-list">
               ${ticketInfo.placeIds.map((placeId: string, index: number) => `
                 <div class="seat-item">
-                  ${index + 1}. Seat ID: ${placeId}
+                  ${index + 1}. ${t('seatSelection.seat') || 'Seat'} ID: ${placeId}
                 </div>
               `).join('')}
             </div>
@@ -379,23 +379,23 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
 
             <!-- Order Information -->
             <div class="section">
-              <h3>Order Information</h3>
+              <h3>${t('success.orderInformation') || 'Order Information'}</h3>
               <div class="details">
                 <div class="detail-row">
-                  <span class="label">Order Number:</span>
+                  <span class="label">${t('success.orderNumber') || 'Order Number'}:</span>
                   <span class="value order-number">${ticketInfo.paymentIntentId || (isFullTicketData(ticketData) ? ticketData._id : 'N/A') || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Purchase Date:</span>
+                  <span class="label">${t('success.purchaseDate') || 'Purchase Date'}:</span>
                   <span class="value">${formatEventDateLocale(ticketInfo.purchaseDate || (ticketData as TicketData)?.createdAt || '', undefined, locale)}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Email:</span>
+                  <span class="label">${t('success.email') || 'Email'}:</span>
                   <span class="value">${ticketInfo.email || 'N/A'}</span>
                 </div>
                 ${ticketInfo.fullName ? `
                 <div class="detail-row">
-                  <span class="label">Full Name:</span>
+                  <span class="label">${t('success.fullName') || 'Full Name'}:</span>
                   <span class="value">${ticketInfo.fullName}</span>
                 </div>
                 ` : ''}
@@ -406,44 +406,44 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
 
             <!-- Pricing Breakdown -->
             <div class="section">
-              <h3>Pricing Breakdown</h3>
+              <h3>${t('success.pricingBreakdown') || 'Pricing Breakdown'}</h3>
               <table class="pricing-table">
                 <tr>
-                  <td class="label-col">Base Price (x${quantity}):</td>
+                  <td class="label-col">${t('success.basePrice') || 'Base Price'} (x${quantity}):</td>
                   <td class="value-col">${currencySymbol}${formatCurrency(totalBasePrice)}</td>
                 </tr>
                 ${totalServiceFee > 0 ? `
                 <tr>
-                  <td class="label-col">Service Fee (x${quantity}):</td>
+                  <td class="label-col">${t('success.serviceFee') || 'Service Fee'} (x${quantity}):</td>
                   <td class="value-col">${currencySymbol}${formatCurrency(totalServiceFee)}</td>
                 </tr>
                 ` : ''}
                 ${unifiedVatAmount > 0 && unifiedVatRate > 0 ? `
                 <tr>
-                  <td class="label-col">VAT (${unifiedVatRate}%):</td>
+                  <td class="label-col">${t('success.vat') || 'VAT'} (${unifiedVatRate}%):</td>
                   <td class="value-col">${currencySymbol}${formatCurrency(unifiedVatAmount)}</td>
                 </tr>
                 ` : ''}
                 ${serviceTaxAmount > 0 ? `
                 <tr>
-                  <td class="label-col">Service Tax${serviceTax > 0 ? ` (${serviceTax}%)` : ''} on Service Fee:</td>
+                  <td class="label-col">${t('success.serviceTax') || 'Service Tax'}${serviceTax > 0 ? ` (${serviceTax}%)` : ''} ${t('success.onServiceFee') || 'on Service Fee'}:</td>
                   <td class="value-col">${currencySymbol}${formatCurrency(serviceTaxAmount)}</td>
                 </tr>
                 ` : ''}
                 ${orderFee > 0 ? `
                 <tr>
-                  <td class="label-col">Order Fee (per transaction):</td>
+                  <td class="label-col">${t('success.orderFee') || 'Order Fee'} (${t('success.perTransaction') || 'per transaction'}):</td>
                   <td class="value-col">${currencySymbol}${formatCurrency(orderFee)}</td>
                 </tr>
                 ` : ''}
                 ${orderFeeServiceTax > 0 ? `
                 <tr>
-                  <td class="label-col">Service Tax${serviceTax > 0 ? ` (${serviceTax}%)` : ''} on Order Fee:</td>
+                  <td class="label-col">${t('success.serviceTax') || 'Service Tax'}${serviceTax > 0 ? ` (${serviceTax}%)` : ''} ${t('success.onOrderFee') || 'on Order Fee'}:</td>
                   <td class="value-col">${currencySymbol}${formatCurrency(orderFeeServiceTax)}</td>
                 </tr>
                 ` : ''}
                 <tr class="total-row">
-                  <td class="label-col">Total Amount:</td>
+                  <td class="label-col">${t('success.total') || 'Total'}:</td>
                   <td class="value-col">${currencySymbol}${formatCurrency(totalAmount)}</td>
                 </tr>
               </table>
@@ -451,18 +451,18 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
 
             <!-- Ticket Details -->
             <div class="section">
-              <h3>Ticket Details</h3>
+              <h3>${t('success.ticketInformation') || 'Ticket Information'}</h3>
               <div class="details">
                 <div class="detail-row">
-                  <span class="label">Ticket Code:</span>
+                  <span class="label">${t('success.ticketCode') || 'Ticket Code'}:</span>
                   <span class="value ticket-code">${isFullTicketData(ticketData) ? ticketData.otp : 'N/A'}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Quantity:</span>
+                  <span class="label">${t('success.quantity') || 'Quantity'}:</span>
                   <span class="value">${quantity}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Currency:</span>
+                  <span class="label">${t('success.currency') || t('common.currency') || 'Currency'}:</span>
                   <span class="value">${currency}</span>
                 </div>
               </div>
@@ -477,8 +477,8 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
             </div>
 
             <div class="footer">
-              <p>${t('success.showAtVenue') || 'Please bring this ticket to the event'}</p>
-              <p style="margin-top: 10px;">This is your official ticket and order confirmation.</p>
+              <p>${t('success.showAtVenue') || 'Show this ticket at the venue entrance'}</p>
+              <p style="margin-top: 10px;">${t('success.ticketConfirmed') || 'Your ticket is confirmed'}</p>
             </div>
           </div>
         </body>
@@ -790,7 +790,6 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                         if (dataString.startsWith('data:image/')) {
                           // It's already a complete data URL
                           dataUrl = dataString;
-                          console.log('Using complete data URL');
                         } else {
                           // Convert to base64 and create data URL
                           const uint8Array = new Uint8Array(ticketData.qrCode.data);
@@ -800,7 +799,6 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                           }
                           const base64String = btoa(binaryString);
                           dataUrl = `data:image/png;base64,${base64String}`;
-                          console.log('Created data URL from base64');
                         }
                       } catch (error) {
                         console.error('Data URL conversion error:', error);

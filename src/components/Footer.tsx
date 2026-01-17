@@ -37,44 +37,49 @@ export default function Footer() {
               <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
                 {t('footer.tagline')}
               </p>
-              <div className="mt-4 flex justify-center sm:justify-start space-x-6">
+              <div className="mt-4 flex justify-center sm:justify-start space-x-6" role="list">
                 {socialMedia?.fb && (
                   <a href={socialMedia.fb} target="_blank" rel="noreferrer"
                      className="transition p-2 opacity-70 hover:opacity-100"
-                     style={{ color: 'var(--foreground)' }}>
-                    <FaFacebook size={20} />
+                     style={{ color: 'var(--foreground)' }}
+                     aria-label={t('footer.srFacebook') || 'Visit our Facebook page'}>
+                    <FaFacebook size={20} aria-hidden="true" />
                     <span className="sr-only">{t('footer.srFacebook')}</span>
                   </a>
                 )}
                 {socialMedia?.x && (
                   <a href={socialMedia.x} target="_blank" rel="noreferrer"
                      className="transition p-2 opacity-70 hover:opacity-100"
-                     style={{ color: 'var(--foreground)' }}>
-                    <FaTwitter size={20} />
+                     style={{ color: 'var(--foreground)' }}
+                     aria-label={t('footer.srTwitter') || 'Visit our Twitter page'}>
+                    <FaTwitter size={20} aria-hidden="true" />
                     <span className="sr-only">{t('footer.srTwitter')}</span>
                   </a>
                 )}
                 {socialMedia?.in && (
                   <a href={socialMedia?.in} target="_blank" rel="noreferrer"
                      className="transition p-2 opacity-70 hover:opacity-100"
-                     style={{ color: 'var(--foreground)' }}>
-                    <FaInstagram size={20} />
+                     style={{ color: 'var(--foreground)' }}
+                     aria-label={t('footer.srInstagram') || 'Visit our Instagram page'}>
+                    <FaInstagram size={20} aria-hidden="true" />
                     <span className="sr-only">{t('footer.srInstagram')}</span>
                   </a>
                 )}
                 {socialMedia?.ln && (
                   <a href={socialMedia.ln} target="_blank" rel="noreferrer"
                      className="transition p-2 opacity-70 hover:opacity-100"
-                     style={{ color: 'var(--foreground)' }}>
-                    <FaLinkedin size={20} />
+                     style={{ color: 'var(--foreground)' }}
+                     aria-label={t('footer.srLinkedIn') || 'Visit our LinkedIn page'}>
+                    <FaLinkedin size={20} aria-hidden="true" />
                     <span className="sr-only">{t('footer.srLinkedIn')}</span>
                   </a>
                 )}
                 {socialMedia?.tk && (
                   <a href={socialMedia.tk} target="_blank" rel="noreferrer"
                      className="transition p-2 opacity-70 hover:opacity-100"
-                     style={{ color: 'var(--foreground)' }}>
-                    <FaTiktok size={20} />
+                     style={{ color: 'var(--foreground)' }}
+                     aria-label={t('footer.srTiktok') || 'Visit our TikTok page'}>
+                    <FaTiktok size={20} aria-hidden="true" />
                     <span className="sr-only">{t('footer.srTiktok')}</span>
                   </a>
                 )}
@@ -145,34 +150,34 @@ export default function Footer() {
             <p className="mt-4 text-sm opacity-80 max-w-md" style={{ color: 'var(--foreground)' }}>
               {t('footer.tagline')}
             </p>
-            <div className="mt-6 flex space-x-4">
+            <div className="mt-6 flex space-x-4" role="list">
               {socialMedia?.fb && (
-                <a href={socialMedia.fb} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
-                  <FaFacebook size={20} />
+                <a href={socialMedia.fb} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }} aria-label={t('footer.srFacebook') || 'Visit our Facebook page'}>
+                  <FaFacebook size={20} aria-hidden="true" />
                   <span className="sr-only">{t('footer.srFacebook')}</span>
                 </a>
               )}
               {socialMedia?.x && (
-                <a href={socialMedia.x} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
-                  <FaTwitter size={20} />
+                <a href={socialMedia.x} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }} aria-label={t('footer.srTwitter') || 'Visit our Twitter page'}>
+                  <FaTwitter size={20} aria-hidden="true" />
                   <span className="sr-only">{t('footer.srTwitter')}</span>
                 </a>
               )}
               {socialMedia?.in && (
-                <a href={socialMedia.in} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
-                  <FaInstagram size={20} />
+                <a href={socialMedia.in} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }} aria-label={t('footer.srInstagram') || 'Visit our Instagram page'}>
+                  <FaInstagram size={20} aria-hidden="true" />
                   <span className="sr-only">{t('footer.srInstagram')}</span>
                 </a>
               )}
               {socialMedia?.ln && (
-                <a href={socialMedia.ln} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
-                  <FaLinkedin size={20} />
+                <a href={socialMedia.ln} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }} aria-label={t('footer.srLinkedIn') || 'Visit our LinkedIn page'}>
+                  <FaLinkedin size={20} aria-hidden="true" />
                   <span className="sr-only">{t('footer.srLinkedIn')}</span>
                 </a>
               )}
               {socialMedia?.tk && (
-                <a href={socialMedia.tk} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
-                  <FaTiktok size={20} />
+                <a href={socialMedia.tk} target="_blank" rel="noreferrer" className="transition duration-150 opacity-70 hover:opacity-100" style={{ color: 'var(--foreground)' }} aria-label={t('footer.srTiktok') || 'Visit our TikTok page'}>
+                  <FaTiktok size={20} aria-hidden="true" />
                   <span className="sr-only">{t('footer.srTiktok')}</span>
                 </a>
               )}

@@ -200,7 +200,7 @@ export default function HomePage() {
                   ) : (
                     <Image
                       src={slide.image}
-                      alt={slide.title || 'Featured Event'}
+                      alt={slide.title ? `Featured event: ${slide.title}` : 'Featured event image'}
                       fill
                       className="object-cover brightness-50 max-w-full"
                       priority={idx === 0}
@@ -212,7 +212,7 @@ export default function HomePage() {
           ) : (
             <Image
               src={"https://images.unsplash.com/photo-1501281668745-f7f57925c3b4"}
-              alt="Featured Event"
+              alt="Featured event banner"
               fill
               className="object-cover brightness-50 max-w-full"
               priority
@@ -222,10 +222,12 @@ export default function HomePage() {
         {/* Controls */}
         {slides.length > 1 && (
           <div className="absolute inset-x-0 bottom-6 z-10 flex flex-col items-center gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" role="tablist" aria-label="Carousel slides">
               {slides.map((_: Slide, i: number) => (
                 <button key={i}
-                  aria-label={`Go to slide ${i + 1}`}
+                  role="tab"
+                  aria-label={`Go to slide ${i + 1} of ${slides.length}: ${slides[i]?.title || 'Featured event'}`}
+                  aria-selected={currentSlide === i}
                   onClick={() => setCurrentSlide(i)}
                   className={`h-2.5 w-2.5 rounded-full ${currentSlide === i ? 'bg-white' : 'bg-white/60'} border border-white/30`}
                 />
@@ -233,22 +235,26 @@ export default function HomePage() {
             </div>
             <div className="flex items-center gap-3">
               <button
-                aria-label="Previous"
+                aria-label={`Previous slide. Currently viewing slide ${currentSlide + 1} of ${slides.length}`}
                 onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
                 className="h-10 w-10 rounded-full flex items-center justify-center bg-white/15 hover:bg-white/25 text-white shadow-md border border-white/25 backdrop-blur"
               >
-                <FaChevronLeft />
+                <FaChevronLeft aria-hidden="true" />
               </button>
               <button
-                aria-label="Next"
+                aria-label={`Next slide. Currently viewing slide ${currentSlide + 1} of ${slides.length}`}
                 onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
                 className="h-10 w-10 rounded-full flex items-center justify-center bg-white/15 hover:bg-white/25 text-white shadow-md border border-white/25 backdrop-blur"
               >
-                <FaChevronRight />
+                <FaChevronRight aria-hidden="true" />
               </button>
             </div>
           </div>
         )}
+        {/* Live region for carousel announcements */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {slides[currentSlide]?.title && `Now showing: ${slides[currentSlide].title}`}
+        </div>
         <div className="absolute inset-x-0 bottom-24 sm:bottom-28 z-10 hidden lg:block">
           <div className="container mx-auto px-4 text-white">
             <div className="max-w-xl bg-black/40 backdrop-blur-md rounded-xl p-4 sm:p-6 shadow-lg">
@@ -401,7 +407,7 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
         <div className="relative h-48">
           <Image
             src={event.eventPromotionPhoto || "https://via.placeholder.com/500x300"}
-            alt={event.eventTitle}
+            alt={event.eventTitle ? `Promotional image for ${event.eventTitle}` : 'Event promotional image'}
             fill
             className="object-cover max-w-full"
           />
@@ -415,13 +421,13 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
       </Link>
       <div className="p-4 sm:p-6">
         {/* Merchant chip */}
-        {event.merchant?.name && (
+        {event.merchant?.name && !event.otherInfo?.isExternalEvent && (
           <Link href={`/events?merchant=${encodeURIComponent(event.merchant.name)}`}>
             <div className="mb-2 flex items-center gap-2 cursor-pointer transition-all duration-200 w-fit px-2 py-1 -ml-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-700">
               {event.merchant.logo ? (
-                <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
+                <Image src={event.merchant.logo} alt={`${event.merchant.name} logo`} width={60} height={32} className="rounded-full" />
               ) : (
-                <div className="h-7 w-7 rounded-full" style={{ background: 'var(--border)' }} />
+                <div className="h-7 w-7 rounded-full" style={{ background: 'var(--border)' }} aria-hidden="true" />
               )}
               <span className="text-sm sm:text-base font-medium text-indigo-600 dark:text-indigo-400">{event.merchant.name}</span>
               <svg className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -466,30 +472,33 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
             )}
           </span>
         </div>
-        <div className="mt-1 flex items-center justify-between">
-          {isFreeEvent ? (
-            <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-sm px-3 py-1 rounded-full">
-              {t('eventDetail.freeEvent.free')}
-            </span>
-          ) : (
-            <div className="flex items-center text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
-              <FaTicketAlt className="mr-2 flex-shrink-0" />
-              <span>
-                {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+        {!event.otherInfo?.isExternalEvent && (
+          <div className="mt-1 flex items-center justify-between">
+            {isFreeEvent ? (
+              <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-sm px-3 py-1 rounded-full">
+                {t('eventDetail.freeEvent.free')}
               </span>
-            </div>
-          )}
-          {/*
-          <span
-            className="text-[11px] sm:text-xs px-2 py-1 rounded border"
-            style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-            aria-label={event.ticketsSold ? t('home.ticketsSold', { count: event.ticketsSold }) : event.occupancy ? t('home.capacity', { capacity: event.occupancy }) : t('home.limitedCapacity')}
-          >
-            {t('home.audience', { capacity: event.occupancy || 0 })}
-          </span>
-          */}
-        </div>
-        <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+            ) : (
+              <div className="flex items-center text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
+                <FaTicketAlt className="mr-2 flex-shrink-0" />
+                <span>
+                  {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+        {/*
+        <span
+          className="text-[11px] sm:text-xs px-2 py-1 rounded border"
+          style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+          aria-label={event.ticketsSold ? t('home.ticketsSold', { count: event.ticketsSold }) : event.occupancy ? t('home.capacity', { capacity: event.occupancy }) : t('home.limitedCapacity')}
+        >
+          {t('home.audience', { capacity: event.occupancy || 0 })}
+        </span>
+        */}
+      </div>
+      <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
           <Link href={`/events/${event._id}`}>
             <span className="inline-flex items-center justify-center w-full text-center font-medium px-4 py-2 rounded-lg transition-colors duration-200 bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400">
               {t('home.viewDetails')}
@@ -510,7 +519,6 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
             )}
           </div>
         </div>
-      </div>
     </div>
   );
 }
@@ -543,7 +551,7 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
           <div className="relative h-40 sm:h-44">
             <Image
               src={promoImg}
-              alt={event.eventTitle}
+              alt={event.eventTitle ? `Promotional image for ${event.eventTitle}` : 'Event promotional image'}
               fill
               className="object-cover max-w-full"
             />
@@ -560,13 +568,13 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
 
         <div className="p-3 sm:p-4">
           {/* Merchant chip (compact) */}
-          {event.merchant?.name && (
+          {event.merchant?.name && !event.otherInfo?.isExternalEvent && (
             <Link href={`/events?merchant=${encodeURIComponent(event.merchant.name)}`}>
               <div className="mb-1 flex items-center gap-2 cursor-pointer transition-all duration-200 w-fit px-2 py-1 -ml-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-700">
                 {event.merchant.logo ? (
-                  <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
+                  <Image src={event.merchant.logo} alt={`${event.merchant.name} logo`} width={60} height={32} className="rounded-full" />
                 ) : (
-                  <div className="h-6 w-6 rounded-full" style={{ background: 'var(--border)' }} />
+                  <div className="h-6 w-6 rounded-full" style={{ background: 'var(--border)' }} aria-hidden="true" />
                 )}
                 <span className="text-xs sm:text-sm font-medium text-indigo-600 dark:text-indigo-400">{event.merchant.name}</span>
                 <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -610,44 +618,46 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
             </span>
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
-            {isFreeEvent ? (
-              <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-xs sm:text-sm px-2 py-1 rounded-full">
-                {t('eventDetail.freeEvent.free')}
-              </span>
-            ) : (
-              <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
-              </span>
-            )}
-            {/*
-            <span
-              className="text-[11px] sm:text-xs px-2 py-1 rounded border"
-              style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-              aria-label={event.ticketsSold ? t('home.ticketsSold', { count: event.ticketsSold }) : event.occupancy ? t('home.capacity', { capacity: event.occupancy }) : t('home.limitedCapacity')}
-            >
-              {t('home.audience', { capacity: event.occupancy || 0 })}
-            </span>
-            */}
-          </div>
-
-          {(event.transportLink || event.videoUrl) && (
-            <div className="mt-2 flex items-center gap-3 text-[11px] opacity-80" style={{ color: 'var(--foreground)' }}>
-              {event.transportLink && (
-                <a href={event.transportLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
-                  <FaExternalLinkAlt className="text-[9px]" />
-                  <span>{t('home.directions')}</span>
-                </a>
-              )}
-              {event.videoUrl && (
-                <a href={event.videoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
-                  <FaPlay className="text-[9px]" />
-                  <span>{t('home.watchVideo')}</span>
-                </a>
+          {!event.otherInfo?.isExternalEvent && (
+            <div className="mt-3 flex items-center justify-between">
+              {isFreeEvent ? (
+                <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-xs sm:text-sm px-2 py-1 rounded-full">
+                  {t('eventDetail.freeEvent.free')}
+                </span>
+              ) : (
+                <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                  {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+                </span>
               )}
             </div>
           )}
+          {/*
+          <span
+            className="text-[11px] sm:text-xs px-2 py-1 rounded border"
+            style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+            aria-label={event.ticketsSold ? t('home.ticketsSold', { count: event.ticketsSold }) : event.occupancy ? t('home.capacity', { capacity: event.occupancy }) : t('home.limitedCapacity')}
+          >
+            {t('home.audience', { capacity: event.occupancy || 0 })}
+          </span>
+          */}
         </div>
+
+        {(event.transportLink || event.videoUrl) && (
+          <div className="px-3 sm:px-4 pb-3 sm:pb-4 mt-2 flex items-center gap-3 text-[11px] opacity-80" style={{ color: 'var(--foreground)' }}>
+            {event.transportLink && (
+              <a href={event.transportLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
+                <FaExternalLinkAlt className="text-[9px]" />
+                <span>{t('home.directions')}</span>
+              </a>
+            )}
+            {event.videoUrl && (
+              <a href={event.videoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
+                <FaPlay className="text-[9px]" />
+                <span>{t('home.watchVideo')}</span>
+              </a>
+            )}
+          </div>
+        )}
       </div>
   );
 }
@@ -717,7 +727,7 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
         <div className="relative h-40 sm:h-44">
           <Image
             src={promoImg}
-            alt={event.eventTitle}
+            alt={event.eventTitle ? `Promotional image for ${event.eventTitle}` : 'Event promotional image'}
             fill
             className="object-cover max-w-full"
           />
@@ -732,13 +742,13 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
 
       <div className="p-3 sm:p-4">
         {/* Merchant chip */}
-        {event.merchant?.name && (
+        {event.merchant?.name && !event.otherInfo?.isExternalEvent && (
           <Link href={`/events?merchant=${encodeURIComponent(event.merchant.name)}`}>
             <div className="mb-1 flex items-center gap-2 cursor-pointer transition-all duration-200 w-fit px-2 py-1 -ml-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-700">
               {event.merchant.logo ? (
-                <Image src={event.merchant.logo} alt={event.merchant.name} width={60} height={32} className="rounded-full" />
+                <Image src={event.merchant.logo} alt={`${event.merchant.name} logo`} width={60} height={32} className="rounded-full" />
               ) : (
-                <div className="h-6 w-6 rounded-full" style={{ background: 'var(--border)' }} />
+                <div className="h-6 w-6 rounded-full" style={{ background: 'var(--border)' }} aria-hidden="true" />
               )}
               <span className="text-xs sm:text-sm font-medium text-indigo-600 dark:text-indigo-400">{event.merchant.name}</span>
               <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -782,44 +792,46 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
           </span>
         </div>
 
-        <div className="mt-3 flex items-center justify-between">
-          {isFreeEvent ? (
-            <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-xs sm:text-sm px-2 py-1 rounded-full">
-              {t('eventDetail.freeEvent.free')}
-            </span>
-          ) : (
-            <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
-            </span>
-          )}
-          {/*
-          <span
-            className="text-[11px] sm:text-xs px-2 py-1 rounded border"
-            style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
-            aria-label={event.ticketsSold ? t('home.ticketsSold', { count: event.ticketsSold }) : event.occupancy ? t('home.capacity', { capacity: event.occupancy }) : t('home.limitedCapacity')}
-          >
-            {t('home.audience', { capacity: event.occupancy || 0 })}
-          </span>
-          */}
-        </div>
-
-        {(event.transportLink || event.videoUrl) && (
-          <div className="mt-2 flex items-center gap-3 text-[11px] opacity-80" style={{ color: 'var(--foreground)' }}>
-            {event.transportLink && (
-              <a href={event.transportLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
-                <FaExternalLinkAlt className="text-[9px]" />
-                <span>{t('home.directions')}</span>
-              </a>
-            )}
-            {event.videoUrl && (
-              <a href={event.videoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
-                <FaPlay className="text-[9px]" />
-                <span>{t('home.watchVideo')}</span>
-              </a>
+        {!event.otherInfo?.isExternalEvent && (
+          <div className="mt-3 flex items-center justify-between">
+            {isFreeEvent ? (
+              <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-xs sm:text-sm px-2 py-1 rounded-full">
+                {t('eventDetail.freeEvent.free')}
+              </span>
+            ) : (
+              <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+              </span>
             )}
           </div>
         )}
+        {/*
+        <span
+          className="text-[11px] sm:text-xs px-2 py-1 rounded border"
+          style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+          aria-label={event.ticketsSold ? t('home.ticketsSold', { count: event.ticketsSold }) : event.occupancy ? t('home.capacity', { capacity: event.occupancy }) : t('home.limitedCapacity')}
+        >
+          {t('home.audience', { capacity: event.occupancy || 0 })}
+        </span>
+        */}
       </div>
+
+      {(event.transportLink || event.videoUrl) && (
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 mt-2 flex items-center gap-3 text-[11px] opacity-80" style={{ color: 'var(--foreground)' }}>
+          {event.transportLink && (
+            <a href={event.transportLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
+              <FaExternalLinkAlt className="text-[9px]" />
+              <span>{t('home.directions')}</span>
+            </a>
+          )}
+          {event.videoUrl && (
+            <a href={event.videoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
+              <FaPlay className="text-[9px]" />
+              <span>{t('home.watchVideo')}</span>
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }

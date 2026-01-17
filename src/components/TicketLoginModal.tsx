@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/services/apiClient';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import CapjsWidget from './CapjsWidget';
 import { AxiosError } from 'axios';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface TicketLoginModalProps {
   isOpen: boolean;
@@ -40,6 +41,26 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
   const [resendTimer, setResendTimer] = useState(0);
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const router = useRouter();
+  const modalRef = useRef<HTMLDivElement>(null);
+  const titleId = 'ticket-login-title';
+  const descriptionId = 'ticket-login-description';
+
+  // Focus trap
+  useFocusTrap(isOpen, modalRef);
+
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen]);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -160,34 +181,40 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
 
           {/* Modal */}
           <motion.div
+            ref={modalRef}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 md:p-8"
             style={{ color: 'var(--foreground)', background: 'var(--background)' }}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={descriptionId}
           >
             {/* Close button */}
             <button
               onClick={handleClose}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-              aria-label="Close"
+              aria-label="Close login modal"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <h2 className="text-2xl font-bold mb-6">{t('ticketLogin.title')}</h2>
+            <h2 id={titleId} className="text-2xl font-bold mb-6">{t('ticketLogin.title')}</h2>
+            <p id={descriptionId} className="sr-only">Login to view your tickets. Enter your email and verification code.</p>
 
             {step === 'email' ? (
               <form onSubmit={handleEmailSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-2">
+                  <label htmlFor="login-email" className="block text-sm font-medium mb-2">
                     {t('ticketLogin.emailLabel')}
                   </label>
                   <input
-                    id="email"
+                    id="login-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -200,6 +227,9 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
                     }}
                     placeholder={t('ticketLogin.emailPlaceholder')}
                     disabled={loading}
+                    aria-required="true"
+                    aria-invalid={error.includes('email')}
+                    aria-describedby={error.includes('email') ? 'login-email-error' : undefined}
                   />
                 </div>
 
@@ -229,14 +259,14 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
             ) : (
               <form onSubmit={handleCodeSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="code" className="block text-sm font-medium mb-2">
+                  <label htmlFor="login-code" className="block text-sm font-medium mb-2">
                     {t('ticketLogin.verificationCodeLabel')}
                   </label>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3" id="code-sent-message">
                     {t('ticketLogin.codeSentMessage')} <strong>{obfuscateEmail(email)}</strong>
                   </p>
                   <input
-                    id="code"
+                    id="login-code"
                     type="text"
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
@@ -250,11 +280,15 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
                     }}
                     placeholder={t('ticketLogin.codePlaceholder')}
                     disabled={loading}
+                    aria-required="true"
+                    aria-invalid={!!error}
+                    aria-describedby={error ? 'login-code-error' : 'code-sent-message'}
+                    aria-label="8-digit verification code"
                   />
                 </div>
 
                 {error && (
-                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+                  <div id="login-code-error" className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm" role="alert" aria-live="assertive">
                     {error}
                   </div>
                 )}

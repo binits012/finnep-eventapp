@@ -321,7 +321,9 @@
       "goBack": "Zurück",
       "totalPaid": "Gesamtbetrag",
       "ticketConfirmed": "Ticket bestätigt",
-      "showAtVenue": "Ticket am Eingang vorzeigen"
+      "showAtVenue": "Ticket am Eingang vorzeigen",
+      "currency": "Währung",
+      "officialTicketConfirmation": "Dies ist Ihr offizielles Ticket und Bestellbestätigung"
     },
     "merchant": {
       "title": "Werde Partner",
@@ -556,6 +558,8 @@
       "yourInformation": "Deine Info",
       "fullName": "Name",
       "email": "E-Mail",
+      "confirmEmail": "E-Mail bestätigen",
+      "emailsDoNotMatch": "E-Mails nicht gleich",
       "captcha": "CAPTCHA",
       "sendOTP": "Code senden",
       "verifyEmail": "E-Mail prüfen",

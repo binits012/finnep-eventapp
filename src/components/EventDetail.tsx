@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { formatEventDateLocale } from '@/utils/common';
@@ -8,6 +8,7 @@ import {
     FaCalendarAlt, FaMapMarkerAlt, FaTicketAlt, FaInfoCircle, FaGlobe,
     FaFacebookF, FaTwitter, FaInstagram, FaTiktok, FaExternalLinkAlt
 } from 'react-icons/fa';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getCurrencySymbol, getCurrencyCode } from '@/utils/currency';
@@ -47,6 +48,26 @@ function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const modalRef = useRef<HTMLDivElement>(null);
+    const titleId = 'free-registration-title';
+    const descriptionId = 'free-registration-description';
+
+    // Focus trap
+    useFocusTrap(isOpen, modalRef);
+
+    // Escape key handler
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [isOpen, onClose]);
 
     useEffect(() => {
         const prevOverflow = document.body.style.overflow;
@@ -121,13 +142,16 @@ function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
             <div
+                ref={modalRef}
                 className="relative z-50 w-[92vw] max-w-md rounded-xl p-5 sm:p-6 shadow-xl"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
                 role="dialog"
                 aria-modal="true"
-                aria-label="Free event registration"
+                aria-labelledby={titleId}
+                aria-describedby={descriptionId}
             >
-                <h2 className="text-xl font-semibold mb-2">{t('eventDetail.freeEventRegistration.title')}</h2>
+                <h2 id={titleId} className="text-xl font-semibold mb-2">{t('eventDetail.freeEventRegistration.title')}</h2>
+                <p id={descriptionId} className="sr-only">Register for this free event. Enter your email address.</p>
                 {ticket && (
                     <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium"
                         style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'color-mix(in srgb, var(--foreground) 8%, var(--surface))' }}
@@ -138,8 +162,8 @@ function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen
                 )}
 
                 {success ? (
-                    <div className="text-center py-8">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+                    <div className="text-center py-8" role="status" aria-live="polite">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4" aria-hidden="true">
                             <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
@@ -160,7 +184,13 @@ function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen
                                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
                                 placeholder={t('eventDetail.freeEventRegistration.emailPlaceholder')}
                                 required
+                                aria-required="true"
+                                aria-invalid={email.length > 0 && !isEmailValid}
+                                aria-describedby={email.length > 0 && !isEmailValid ? 'free-email-error' : undefined}
                             />
+                            {email.length > 0 && !isEmailValid && (
+                                <p id="free-email-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{t('eventDetail.freeEventRegistration.invalidEmail') || 'Please enter a valid email address'}</p>
+                            )}
                         </div>
 
                         <div>
@@ -174,9 +204,12 @@ function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen
                                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
                                 placeholder={t('eventDetail.freeEventRegistration.emailPlaceholder')}
                                 required
+                                aria-required="true"
+                                aria-invalid={confirmEmail.length > 0 && !emailsMatch}
+                                aria-describedby={confirmEmail.length > 0 && !emailsMatch ? 'free-confirm-email-error' : undefined}
                             />
                             {email && !emailsMatch && (
-                                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{t('eventDetail.freeEventRegistration.emailsDoNotMatch')}</p>
+                                <p id="free-confirm-email-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{t('eventDetail.freeEventRegistration.emailsDoNotMatch')}</p>
                             )}
                         </div>
 
@@ -187,12 +220,14 @@ function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen
                                 checked={marketingOptIn}
                                 onChange={(e) => setMarketingOptIn(e.target.checked)}
                                 className="mr-2"
+                                aria-describedby="free-marketing-desc"
                             />
-                            <label htmlFor="free-marketing" className="text-sm">{t('eventDetail.freeEventRegistration.marketingOptIn')}</label>
+                            <label htmlFor="free-marketing" className="text-sm cursor-pointer">{t('eventDetail.freeEventRegistration.marketingOptIn')}</label>
+                            <span id="free-marketing-desc" className="sr-only">Optional: Receive marketing communications</span>
                         </div>
 
                         {error && (
-                            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+                            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm" role="alert" aria-live="assertive">
                                 {error}
                             </div>
                         )}
@@ -386,7 +421,7 @@ export default function EventDetail({ event }: { event: Event }) {
                 <div className="absolute inset-0 z-0">
                     <Image
                         src={event.eventPromotionPhoto || "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4"}
-                        alt={event.eventTitle}
+                        alt={event.eventTitle ? `Promotional image for ${event.eventTitle}` : 'Event promotional image'}
                         fill
                         className="object-cover brightness-[0.7]"
                         priority
@@ -406,6 +441,7 @@ export default function EventDetail({ event }: { event: Event }) {
                             </span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">{event.eventTitle}</h1>
+                        <span className="sr-only">Event details page</span>
                         <div className="flex items-center text-white mb-2">
                             <FaMapMarkerAlt className="mr-2" />
                             <span>{event.venueInfo?.name}, {event.city}, {event.country}</span>
@@ -431,10 +467,11 @@ export default function EventDetail({ event }: { event: Event }) {
                                         {youtubeVideoId && (
                                             <iframe
                                                 src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                                                title="YouTube video player"
+                                                title={event.eventTitle ? `YouTube video for ${event.eventTitle}` : 'YouTube video player'}
                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                 allowFullScreen
                                                 className="w-full h-64 sm:h-96 rounded-lg"
+                                                aria-label={event.eventTitle ? `YouTube video for ${event.eventTitle}` : 'YouTube video player'}
                                             ></iframe>
                                         )}
                                         {tiktokUrl && (
@@ -443,11 +480,12 @@ export default function EventDetail({ event }: { event: Event }) {
                                                 <div className="relative w-full" style={{ paddingBottom: '133.33%' /* 4:3 aspect ratio - more compact */ }}>
                                                     <iframe
                                                         src={`https://www.tiktok.com/embed/v2/${tiktokUrl.split('/video/')[1]?.split('?')[0] || ''}`}
-                                                        title="TikTok video player"
+                                                        title={event.eventTitle ? `TikTok video for ${event.eventTitle}` : 'TikTok video player'}
                                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                         allowFullScreen
                                                         className="absolute inset-0 w-full h-full rounded-lg"
                                                         style={{ border: 'none' }}
+                                                        aria-label={event.eventTitle ? `TikTok video for ${event.eventTitle}` : 'TikTok video player'}
                                                     ></iframe>
                                                 </div>
                                                 {/* TikTok attribution */}
@@ -521,7 +559,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                         <div className="mb-4">
                                             <Image
                                                 src={event.venueInfo.media.photo[0]}
-                                                alt={event.venueInfo?.name || 'Venue photo'}
+                                                alt={event.venueInfo?.name ? `Photo of ${event.venueInfo.name} venue` : 'Venue photo'}
                                                 width={900}
                                                 height={500}
                                                 className="w-full h-auto rounded-lg object-cover"

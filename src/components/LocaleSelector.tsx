@@ -71,7 +71,10 @@ export default function LocaleSelector() {
           e.currentTarget.style.opacity = '1';
           e.currentTarget.style.transform = 'scale(1)';
         }}
-        aria-label="Select language"
+        aria-label={`Select language. Current language: ${currentLocale.name}`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls="locale-dropdown"
       >
         <span className="text-sm">{currentLocale.flag}</span>
         <span className="text-xs font-medium hidden sm:inline">{currentLocale.name}</span>
@@ -87,6 +90,8 @@ export default function LocaleSelector() {
 
       {isOpen && (
         <div
+          id="locale-dropdown"
+          role="listbox"
           className="absolute top-full right-0 mt-1 w-40 rounded-md shadow-lg border z-[9999]"
           style={{
             background: 'var(--surface)',
@@ -102,6 +107,8 @@ export default function LocaleSelector() {
             return (
               <button
                 key={localeOption.code}
+                role="option"
+                aria-selected={isSelected}
                 onClick={() => handleLocaleChange(localeOption.code)}
                 className="w-full flex items-center space-x-2 px-3 py-2 text-left transition-colors first:rounded-t-md last:rounded-b-md text-sm"
                 style={{

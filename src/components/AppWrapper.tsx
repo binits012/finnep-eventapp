@@ -5,6 +5,7 @@ import { LocaleProvider } from '@/contexts/LocaleContext';
 import { TranslationLoader } from '@/components/TranslationLoader';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { AccessibilityWrapper } from '@/components/AccessibilityWrapper';
 import { ReactNode } from 'react';
 
 interface AppWrapperProps {
@@ -17,8 +18,9 @@ function AppContent({ children }: AppWrapperProps) {
   return (
     <LocaleProvider apiLocales={apiLocales}>
       <TranslationLoader>
+        <AccessibilityWrapper />
         <Header />
-        <main className="pt-24">{children}</main>
+        <main id="main-content" className="pt-24" tabIndex={-1}>{children}</main>
         <Footer />
       </TranslationLoader>
     </LocaleProvider>

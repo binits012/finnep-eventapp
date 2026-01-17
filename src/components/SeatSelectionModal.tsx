@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { seatAPI } from '@/services/apiClient';
 import { useSeatReservation } from '@/hooks/useSeatReservation';
 import SeatMap from './SeatMap';
 import { getCurrencySymbol } from '@/utils/currency';
 import { matchPlaceIdsWithPlaces } from '@/utils/placeIdDecoder';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface Seat {
   placeId: string;
@@ -39,6 +40,26 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
   const { t: _t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const titleId = 'seat-selection-title';
+  const descriptionId = 'seat-selection-description';
+
+  // Focus trap
+  useFocusTrap(isOpen, modalRef);
+
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
   interface SectionBounds {
     minX?: number;
     minY?: number;
@@ -220,6 +241,7 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
 
       {/* Modal */}
       <div
+        ref={modalRef}
         className="relative z-50 w-[95vw] max-w-6xl h-[90vh] rounded-xl p-6 shadow-xl flex flex-col"
         style={{
           background: 'var(--surface)',
@@ -229,21 +251,22 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
         }}
         role="dialog"
         aria-modal="true"
-        aria-label="Seat selection"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-semibold mb-1">Select Your Seats</h2>
-            <p className="text-sm opacity-70">
+            <h2 id={titleId} className="text-2xl font-semibold mb-1">Select Your Seats</h2>
+            <p id={descriptionId} className="text-sm opacity-70">
               Select {quantity} seat{quantity !== 1 ? 's' : ''} • {selectedSeats.length} selected
             </p>
           </div>
           <button
             onClick={onClose}
             className="text-2xl leading-none opacity-70 hover:opacity-100"
-            aria-label="Close"
+            aria-label="Close seat selection"
           >
             ×
           </button>
@@ -251,23 +274,23 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
 
         {/* Timer */}
         {remainingTime > 0 && (
-          <div className="mb-4 p-2 rounded bg-yellow-500/20 border border-yellow-500/50 text-sm">
+          <div className="mb-4 p-2 rounded bg-yellow-500/20 border border-yellow-500/50 text-sm" role="status" aria-live="polite">
             <span className="font-medium">Reservation expires in: {formatTime(remainingTime)}</span>
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 rounded bg-red-500/20 border border-red-500/50 text-sm text-red-600">
+          <div className="mb-4 p-3 rounded bg-red-500/20 border border-red-500/50 text-sm text-red-600" role="alert" aria-live="assertive">
             {error}
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center" aria-busy="true" aria-live="polite">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" aria-hidden="true"></div>
               <p>Loading seat map...</p>
             </div>
           </div>
@@ -299,7 +322,7 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
 
         {/* Selected Seats Info */}
         {selectedSeats.length > 0 && seatMapData && (
-          <div className="mb-4 p-4 rounded border" style={{ borderColor: 'var(--border)' }}>
+          <div className="mb-4 p-4 rounded border" style={{ borderColor: 'var(--border)' }} role="status" aria-live="polite">
             <h3 className="font-semibold mb-2">Selected Seats:</h3>
             <div className="flex flex-wrap gap-2">
               {selectedSeats.map(placeId => {
@@ -350,6 +373,7 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 rounded border hover:bg-gray-500/10"
             style={{ borderColor: 'var(--border)' }}
+            aria-label="Cancel seat selection"
           >
             Cancel
           </button>
@@ -357,6 +381,7 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
             onClick={handleConfirm}
             disabled={selectedSeats.length !== quantity || isReserving}
             className="px-6 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={selectedSeats.length !== quantity ? `Please select ${quantity} seat${quantity !== 1 ? 's' : ''}. Currently selected: ${selectedSeats.length}` : `Confirm ${selectedSeats.length} seat${selectedSeats.length !== 1 ? 's' : ''} selection`}
           >
             {isReserving ? 'Reserving...' : `Confirm ${selectedSeats.length} Seat${selectedSeats.length !== 1 ? 's' : ''}`}
           </button>

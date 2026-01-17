@@ -109,7 +109,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8" aria-label="Main navigation">
             {[
               { href: "/events", label: t('header.events') },
               { href: "/merchant", label: t('header.merchant') },
@@ -140,7 +140,8 @@ export default function Header() {
             {/* Theme Switcher - Desktop (cycle system -> light -> dark) */}
             <button
               onClick={cycleTheme}
-              aria-label="Toggle theme"
+              aria-label={buttonTitle}
+              aria-pressed={theme === 'dark'}
               className="ml-2 inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
               title={buttonTitle}
               style={{ borderWidth: 1, borderColor: 'var(--border)', color: 'var(--foreground)' }}
@@ -157,7 +158,8 @@ export default function Header() {
             {/* Theme Switcher - Mobile */}
             <button
               onClick={cycleTheme}
-              aria-label="Toggle theme"
+              aria-label={buttonTitle}
+              aria-pressed={theme === 'dark'}
               className="inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
               title={buttonTitle}
               style={{ borderWidth: 1, borderColor: 'var(--border)', color: 'var(--foreground)' }}
@@ -169,8 +171,11 @@ export default function Header() {
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="focus:outline-none"
               style={{ color: 'var(--foreground)' }}
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-menu"
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{isMobileMenuOpen ? 'Close menu' : 'Open menu'}</span>
               <div className="w-6 flex items-center justify-center relative">
                 <span
                   className={`block w-6 h-0.5 bg-current transform transition duration-300 ease-in-out ${
@@ -197,14 +202,16 @@ export default function Header() {
 
       {/* Mobile Menu */}
       <div
+        id="mobile-menu"
         className={`md:hidden transition-all duration-300 ease-in-out ${
           isMobileMenuOpen
             ? 'opacity-100 max-h-64'
             : 'opacity-0 max-h-0 pointer-events-none'
         }`}
+        aria-hidden={!isMobileMenuOpen}
       >
           <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
-          <nav className="flex flex-col space-y-4">
+          <nav className="flex flex-col space-y-4" aria-label="Mobile navigation">
             {[
               { href: "/events", label: t('header.events') },
               { href: "/merchant", label: t('header.merchant') },

@@ -39,55 +39,54 @@ const CapjsWidget = ({
       return;
     }
 
-    if (widgetRef.current && !isInitialized) {
-      setIsInitialized(true);
+    if (!widgetRef.current) return;
 
-      // Replace any previous widget cleanly
-      widgetRef.current.innerHTML = '';
-      window.CAP_CUSTOM_FETCH = function (url: string, options: RequestInit = {}) {
-        const headers = {
-          ...(options.headers as Record<string, string> || {}),
-          'X-API-Key': process.env.NEXT_PUBLIC_CAPJS_API_KEY || '',
-        };
-
-        return fetch(url, {
-          ...options,
-          headers
-        });
+    // Replace any previous widget cleanly
+    widgetRef.current.innerHTML = '';
+    window.CAP_CUSTOM_FETCH = function (url: string, options: RequestInit = {}) {
+      const headers = {
+        ...(options.headers as Record<string, string> || {}),
+        'X-API-Key': process.env.NEXT_PUBLIC_CAPJS_API_KEY || '',
       };
-      const capWidget = document.createElement('cap-widget');
-      capWidget.setAttribute('data-cap-api-endpoint', `${serverUrl}/api/`);
-      capWidget.setAttribute('theme', theme);
 
-      // ✅ Use correct event name
-      capWidget.addEventListener('solve', (e: Event) => {
-        const customEvent = e as CustomEvent<CustomEventDetail>;
-        setIsVerified(true);
-        setError(null);
-        onVerify(customEvent.detail);
+      return fetch(url, {
+        ...options,
+        headers
       });
+    };
+    const capWidget = document.createElement('cap-widget');
+    capWidget.setAttribute('data-cap-api-endpoint', `${serverUrl}/api/`);
+    capWidget.setAttribute('theme', theme);
 
-      capWidget.addEventListener('error', (e: Event) => {
-        const customEvent = e as CustomEvent<CustomEventDetail>;
-        const err = customEvent.detail?.message ||
-                   (typeof customEvent.detail === 'string' ? customEvent.detail : 'Unknown error');
-        setError(err);
-        setIsVerified(false);
-        onError(err);
-      });
+    // ✅ Use correct event name
+    capWidget.addEventListener('solve', (e: Event) => {
+      const customEvent = e as CustomEvent<CustomEventDetail>;
+      setIsVerified(true);
+      setError(null);
+      onVerify(customEvent.detail);
+    });
 
-      widgetRef.current.appendChild(capWidget);
+    capWidget.addEventListener('error', (e: Event) => {
+      const customEvent = e as CustomEvent<CustomEventDetail>;
+      const err = customEvent.detail?.message ||
+                 (typeof customEvent.detail === 'string' ? customEvent.detail : 'Unknown error');
+      setError(err);
+      setIsVerified(false);
+      onError(err);
+    });
 
-      // Inject style to hide the Cap link
-      setTimeout(() => {
-        if (capWidget.shadowRoot) {
-          const style = document.createElement('style');
-          style.textContent = `.credits { display: none !important; }`;
-          capWidget.shadowRoot.appendChild(style);
-        }
-      }, 0);
-    }
-  }, [serverUrl, theme, onVerify, onError, isInitialized]);
+    widgetRef.current.appendChild(capWidget);
+    setIsInitialized(true);
+
+    // Inject style to hide the Cap link
+    setTimeout(() => {
+      if (capWidget.shadowRoot) {
+        const style = document.createElement('style');
+        style.textContent = `.credits { display: none !important; }`;
+        capWidget.shadowRoot.appendChild(style);
+      }
+    }, 0);
+  }, [serverUrl, theme, onVerify, onError]);
 
   useEffect(() => {
     // Validate server URL
@@ -114,16 +113,23 @@ const CapjsWidget = ({
       };
       document.head.appendChild(script);
     } else {
-      setTimeout(() => renderWidget(), 0);
+      // Only render if not already initialized
+      if (!isInitialized) {
+        setTimeout(() => renderWidget(), 0);
+      }
     }
-  }, [renderWidget, serverUrl]);
+  }, [renderWidget, serverUrl, isInitialized]);
 
   const resetWidget = () => {
     setIsVerified(false);
     setError(null);
+    setIsInitialized(false); // Reset initialization state to allow re-rendering
     if (widgetRef.current) {
       widgetRef.current.innerHTML = '';
-      renderWidget();
+      // Small delay to ensure state is reset and DOM is cleared before re-rendering
+      setTimeout(() => {
+        renderWidget();
+      }, 50);
     }
   };
 

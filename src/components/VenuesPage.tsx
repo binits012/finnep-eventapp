@@ -8,6 +8,7 @@ import { FaMapMarkerAlt, FaSearch, FaFilter, FaCalendarAlt, FaStar, FaGlobe, FaF
 import { useData } from '@/contexts/DataContext';
 import { Event } from '@/types/event';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface VenueData {
   id: string;
@@ -87,6 +88,7 @@ interface Venue {
 export default function VenuesPage() {
   const { venuesData, venuesLoading, venuesError } = useData();
   const { t, isLoading: translationsLoading } = useTranslation();
+  const prefersReducedMotion = useReducedMotion();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
@@ -233,9 +235,9 @@ export default function VenuesPage() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center text-white">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+              animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+              transition={prefersReducedMotion ? {} : { duration: 0.6 }}
             >
               <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
                 {t('venues.discoverVenues') || 'Discover Venues'}
@@ -247,20 +249,23 @@ export default function VenuesPage() {
 
             {/* Compact Search Bar */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+              animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+              transition={prefersReducedMotion ? {} : { duration: 0.6, delay: 0.1 }}
               className="relative max-w-xl mx-auto"
             >
               <div className="relative">
+                <label htmlFor="venues-search" className="sr-only">{t('venues.searchPlaceholder') || 'Search venues'}</label>
                 <input
-                  type="text"
+                  id="venues-search"
+                  type="search"
                   placeholder={t('venues.searchPlaceholder') || 'Search venues...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full py-3 px-5 pl-12 rounded-xl text-gray-800 bg-white/95 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white shadow-lg text-base placeholder-gray-500"
+                  aria-label={t('venues.searchPlaceholder') || 'Search venues by name, address, or city'}
                 />
-                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" aria-hidden="true" />
               </div>
             </motion.div>
           </div>
@@ -272,9 +277,9 @@ export default function VenuesPage() {
         <div className="container mx-auto px-4 relative z-10">
           {/* Compact Section Header */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+            transition={prefersReducedMotion ? {} : { duration: 0.6 }}
             viewport={{ once: true }}
             className="text-center mb-8"
           >
@@ -295,9 +300,9 @@ export default function VenuesPage() {
 
           {/* Enhanced Filter Section */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+            whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+            transition={prefersReducedMotion ? {} : { duration: 0.6, delay: 0.1 }}
             viewport={{ once: true }}
             className="mb-8"
           >
@@ -306,8 +311,11 @@ export default function VenuesPage() {
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className="group flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 transition-all duration-300 hover:shadow-lg"
+                  aria-label={showFilters ? 'Hide filters' : 'Show filters'}
+                  aria-expanded={showFilters}
+                  aria-controls="venue-filters"
                 >
-                  <FaFilter className="text-slate-600 dark:text-slate-400 group-hover:rotate-12 transition-transform duration-300" />
+                  <FaFilter className="text-slate-600 dark:text-slate-400 group-hover:rotate-12 transition-transform duration-300" aria-hidden="true" />
                   <span className="font-medium text-slate-600 dark:text-slate-400">{t('venues.filters') || 'Filters'}</span>
                 </button>
 
@@ -318,6 +326,7 @@ export default function VenuesPage() {
                     <button
                       onClick={() => setSelectedCountry("")}
                       className="text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                      aria-label={`Clear country filter: ${selectedCountry}`}
                     >
                       ×
                     </button>
@@ -329,14 +338,17 @@ export default function VenuesPage() {
             {/* Enhanced Filters */}
             {showFilters && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
+                id="venue-filters"
+                initial={prefersReducedMotion ? false : { opacity: 0, height: 0 }}
+                animate={prefersReducedMotion ? {} : { opacity: 1, height: 'auto' }}
+                exit={prefersReducedMotion ? {} : { opacity: 0, height: 0 }}
+                transition={prefersReducedMotion ? {} : { duration: 0.3 }}
                 className="mt-4 p-6 bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800 dark:to-gray-900 rounded-2xl border border-slate-200 dark:border-slate-700"
+                role="region"
+                aria-label="Venue filters"
               >
                 <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">{t('venues.filterByCountry') || 'Filter by Country'}</h3>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3" role="group" aria-label="Country filter options">
                   <button
                     onClick={() => setSelectedCountry("")}
                     className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
@@ -344,6 +356,7 @@ export default function VenuesPage() {
                         ? "bg-gradient-to-r from-slate-600 to-slate-800 text-white shadow-lg transform scale-105"
                         : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-md"
                     }`}
+                    aria-pressed={selectedCountry === ""}
                   >
                     {t('venues.allCountries') || 'All Countries'}
                   </button>
@@ -356,6 +369,7 @@ export default function VenuesPage() {
                           ? "bg-gradient-to-r from-slate-600 to-slate-800 text-white shadow-lg transform scale-105"
                           : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-md"
                       }`}
+                      aria-pressed={selectedCountry === country}
                     >
                       {country}
                     </button>
@@ -368,9 +382,9 @@ export default function VenuesPage() {
           {/* Enhanced Venues Grid */}
           {filteredVenues.length === 0 ? (
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
+              initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
+              animate={prefersReducedMotion ? {} : { opacity: 1, scale: 1 }}
+              transition={prefersReducedMotion ? {} : { duration: 0.5 }}
               className="text-center py-20"
             >
               <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-slate-100 to-gray-100 dark:from-slate-800 dark:to-gray-800 rounded-full flex items-center justify-center">
@@ -386,11 +400,11 @@ export default function VenuesPage() {
               {filteredVenues.map((venue, index) => (
                 <motion.div
                   key={venue._id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 30 }}
+                  whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+                  transition={prefersReducedMotion ? {} : { duration: 0.6, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                  whileHover={{ y: -8 }}
+                  whileHover={prefersReducedMotion ? {} : { y: -8 }}
                   className="group"
                 >
                   <div className="relative bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700">
@@ -399,12 +413,12 @@ export default function VenuesPage() {
                       {venue.venueImage ? (
                         <Image
                           src={venue.venueImage}
-                          alt={venue.venueName}
+                          alt={`Photo of ${venue.venueName} venue`}
                           fill
                           className="object-cover group-hover:scale-110 transition-transform duration-700"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800">
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800" aria-hidden="true">
                           <FaMapMarkerAlt className="text-5xl text-white" />
                         </div>
                       )}
@@ -504,8 +518,9 @@ export default function VenuesPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 transition-all duration-200 text-sm font-medium border border-gray-200 dark:border-gray-600 hover:border-slate-300 dark:hover:border-slate-500 hover:scale-105 hover:shadow-md"
+                                aria-label={`Visit ${venue.venueName} website`}
                               >
-                                <FaGlobe className="text-slate-500 text-xs" />
+                                <FaGlobe className="text-slate-500 text-xs" aria-hidden="true" />
                                 {t('venues.website') || 'Website'}
                               </a>
                             )}
@@ -517,8 +532,9 @@ export default function VenuesPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900 transition-all duration-200 hover:scale-105 hover:shadow-md text-sm font-medium border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500"
+                                aria-label={`Visit ${venue.venueName} on Facebook`}
                               >
-                                <FaFacebook className="text-blue-600 text-xs" />
+                                <FaFacebook className="text-blue-600 text-xs" aria-hidden="true" />
                                 {t('venues.facebook') || 'Facebook'}
                               </a>
                             )}
@@ -529,8 +545,9 @@ export default function VenuesPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900 transition-all duration-200 hover:scale-105 hover:shadow-md text-sm font-medium border border-gray-200 dark:border-gray-600 hover:border-sky-300 dark:hover:border-sky-500"
+                                aria-label={`Visit ${venue.venueName} on Twitter`}
                               >
-                                <FaTwitter className="text-sky-500 text-xs" />
+                                <FaTwitter className="text-sky-500 text-xs" aria-hidden="true" />
                                 {t('venues.twitter') || 'Twitter'}
                               </a>
                             )}
@@ -541,8 +558,9 @@ export default function VenuesPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-pink-50 dark:hover:bg-pink-900 transition-all duration-200 hover:scale-105 hover:shadow-md text-sm font-medium border border-gray-200 dark:border-gray-600 hover:border-pink-300 dark:hover:border-pink-500"
+                                aria-label={`Visit ${venue.venueName} on Instagram`}
                               >
-                                <FaInstagram className="text-pink-500 text-xs" />
+                                <FaInstagram className="text-pink-500 text-xs" aria-hidden="true" />
                                 {t('venues.instagram') || 'Instagram'}
                               </a>
                             )}
@@ -553,8 +571,9 @@ export default function VenuesPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900 transition-all duration-200 hover:scale-105 hover:shadow-md text-sm font-medium border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500"
+                                aria-label={`Visit ${venue.venueName} on LinkedIn`}
                               >
-                                <FaLinkedin className="text-blue-700 text-xs" />
+                                <FaLinkedin className="text-blue-700 text-xs" aria-hidden="true" />
                                 {t('venues.linkedin') || 'LinkedIn'}
                               </a>
                             )}

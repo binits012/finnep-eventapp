@@ -321,7 +321,9 @@
     "goBack": "Go Back",
     "totalPaid": "Total Paid",
     "ticketConfirmed": "Your ticket is confirmed",
-    "showAtVenue": "Show this ticket at the venue entrance"
+    "showAtVenue": "Show this ticket at the venue entrance",
+    "currency": "Currency",
+    "officialTicketConfirmation": "This is your official ticket and order confirmation"
   },
   "merchant": {
     "title": "Join Our Platform",
@@ -564,6 +566,8 @@
     "yourInformation": "Your Information",
     "fullName": "Full Name",
     "email": "Email",
+    "confirmEmail": "Confirm Email",
+    "emailsDoNotMatch": "Emails do not match",
     "captcha": "CAPTCHA",
     "sendOTP": "Send OTP",
     "verifyEmail": "Verify Your Email",

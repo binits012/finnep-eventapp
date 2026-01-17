@@ -321,7 +321,9 @@
     "goBack": "Gå Tilbake",
     "totalPaid": "Totalt Betalt",
     "ticketConfirmed": "Billetten din er bekreftet",
-    "showAtVenue": "Vis denne billetten ved inngangen til stedet"
+    "showAtVenue": "Vis denne billetten ved inngangen til stedet",
+    "currency": "Valuta",
+    "officialTicketConfirmation": "Dette er din offisielle billett og ordrebekreftelse"
   },
   "merchant": {
     "title": "Bli med i Vår Plattform",
@@ -564,6 +566,8 @@
     "yourInformation": "Din Informasjon",
     "fullName": "Fullt Navn",
     "email": "E-post",
+    "confirmEmail": "Bekreft E-post",
+    "emailsDoNotMatch": "E-poster samsvarer ikke",
     "captcha": "CAPTCHA",
     "sendOTP": "Send OTP",
     "verifyEmail": "Bekreft Din E-post",

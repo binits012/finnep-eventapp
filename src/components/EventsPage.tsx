@@ -149,14 +149,17 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
 
             {/* Search Bar */}
             <div className="relative max-w-lg mx-auto">
+              <label htmlFor="events-search" className="sr-only">{t('events.searchPlaceholder') || 'Search events'}</label>
               <input
-                type="text"
+                id="events-search"
+                type="search"
                 placeholder={t('events.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full py-3 px-4 pl-12 rounded-lg text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                aria-label={t('events.searchPlaceholder') || 'Search events by title, description, or city'}
               />
-              <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" aria-hidden="true" />
             </div>
           </div>
         </div>
@@ -180,6 +183,7 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                   <button
                     onClick={() => setSelectedVenue("")}
                     className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    aria-label={`Clear venue filter: ${selectedVenue}`}
                   >
                     {t('events.clearVenueFilter')}
                   </button>
@@ -191,6 +195,7 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                   <button
                     onClick={() => setSelectedMerchant("")}
                     className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    aria-label={`Clear organizer filter: ${selectedMerchant}`}
                   >
                     {t('events.clearOrganizerFilter')}
                   </button>
@@ -202,6 +207,7 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                   <button
                     onClick={() => setSelectedCategory("")}
                     className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    aria-label={`Clear category filter: ${selectedCategory}`}
                   >
                     {t('events.clearCategoryFilter')}
                   </button>
@@ -218,19 +224,25 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                 onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center space-x-2 py-2 px-4 rounded-lg shadow"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                aria-label={showFilters ? 'Hide filters' : 'Show filters'}
+                aria-expanded={showFilters}
+                aria-controls="mobile-filters"
               >
-                <FaFilter />
+                <FaFilter aria-hidden="true" />
                 <span>{t('events.filters')}</span>
               </button>
             </div>
 
             {/* Desktop Filters */}
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-4" role="group" aria-label="Event filters">
+              <label htmlFor="filter-country" className="sr-only">{t('events.country') || 'Filter by country'}</label>
               <select
+                id="filter-country"
                 value={selectedCountry}
                 onChange={(e) => setSelectedCountry(e.target.value)}
                 className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                aria-label={t('events.country') || 'Filter by country'}
               >
                 <option value="">{t('events.allCountries')}</option>
                 {countries.map((country) => (
@@ -238,11 +250,14 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                 ))}
               </select>
 
+              <label htmlFor="filter-venue" className="sr-only">{t('events.venue') || 'Filter by venue'}</label>
               <select
+                id="filter-venue"
                 value={selectedVenue}
                 onChange={(e) => setSelectedVenue(e.target.value)}
                 className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                aria-label={t('events.venue') || 'Filter by venue'}
               >
                 <option value="">{t('events.allVenues')}</option>
                 {venues.map((venue) => (
@@ -250,11 +265,14 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                 ))}
               </select>
 
+              <label htmlFor="filter-merchant" className="sr-only">{t('events.organizer') || 'Filter by organizer'}</label>
               <select
+                id="filter-merchant"
                 value={selectedMerchant}
                 onChange={(e) => setSelectedMerchant(e.target.value)}
                 className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                aria-label={t('events.organizer') || 'Filter by organizer'}
               >
                 <option value="">{t('events.allOrganizers')}</option>
                 {merchants.map((merchant) => (
@@ -262,11 +280,14 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
                 ))}
               </select>
 
+              <label htmlFor="filter-category" className="sr-only">{t('events.category') || 'Filter by category'}</label>
               <select
+                id="filter-category"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
+                aria-label={t('events.category') || 'Filter by category'}
               >
                 <option value="">{t('events.allCategories')}</option>
                 {categories.map((category) => (
@@ -278,10 +299,11 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
 
           {/* Mobile Filters */}
           {showFilters && (
-            <div className="md:hidden mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div id="mobile-filters" className="md:hidden mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow" role="region" aria-label="Event filters">
               <div className="mb-4">
-                <label className="block mb-2 text-sm font-medium">{t('events.country')}</label>
+                <label htmlFor="mobile-filter-country" className="block mb-2 text-sm font-medium">{t('events.country')}</label>
                 <select
+                  id="mobile-filter-country"
                   value={selectedCountry}
                   onChange={(e) => setSelectedCountry(e.target.value)}
                   className="w-full rounded-lg py-2 px-4"
@@ -295,8 +317,9 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
               </div>
 
               <div className="mb-4">
-                <label className="block mb-2 text-sm font-medium">{t('events.venue')}</label>
+                <label htmlFor="mobile-filter-venue" className="block mb-2 text-sm font-medium">{t('events.venue')}</label>
                 <select
+                  id="mobile-filter-venue"
                   value={selectedVenue}
                   onChange={(e) => setSelectedVenue(e.target.value)}
                   className="w-full rounded-lg py-2 px-4"
@@ -310,8 +333,9 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
               </div>
 
               <div className="mb-4">
-                <label className="block mb-2 text-sm font-medium">{t('events.organizer')}</label>
+                <label htmlFor="mobile-filter-merchant" className="block mb-2 text-sm font-medium">{t('events.organizer')}</label>
                 <select
+                  id="mobile-filter-merchant"
                   value={selectedMerchant}
                   onChange={(e) => setSelectedMerchant(e.target.value)}
                   className="w-full rounded-lg py-2 px-4"
@@ -325,8 +349,9 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
               </div>
 
               <div className="mb-4">
-                <label className="block mb-2 text-sm font-medium">{t('events.category')}</label>
+                <label htmlFor="mobile-filter-category" className="block mb-2 text-sm font-medium">{t('events.category')}</label>
                 <select
+                  id="mobile-filter-category"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full rounded-lg py-2 px-4"

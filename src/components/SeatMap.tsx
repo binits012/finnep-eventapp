@@ -797,7 +797,7 @@ const SeatMap: React.FC<SeatMapProps> = ({
           }}
           aria-label="Reset view"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
@@ -821,7 +821,7 @@ const SeatMap: React.FC<SeatMapProps> = ({
           }}
           aria-label="Zoom in"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </button>
@@ -845,7 +845,7 @@ const SeatMap: React.FC<SeatMapProps> = ({
           }}
           aria-label="Zoom out"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
           </svg>
         </button>
@@ -885,12 +885,19 @@ const SeatMap: React.FC<SeatMapProps> = ({
         </div>
       </div>
 
+      {/* Live region for seat selection announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {selectedSeats.length > 0 && `${selectedSeats.length} seat${selectedSeats.length !== 1 ? 's' : ''} selected`}
+      </div>
+
       {/* SVG Container */}
       <svg
         ref={svgRef}
         viewBox={getViewBox()}
         className="w-full h-full"
         style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        role="img"
+        aria-label={`Seat map with ${seats.length} seats. ${selectedSeats.length} seat${selectedSeats.length !== 1 ? 's' : ''} selected.`}
         onClick={(e) => {
           // Deselect section when clicking on empty space (not on a section or seat)
           if (e.target === svgRef.current || (e.target as Element).tagName === 'svg' || (e.target as Element).tagName === 'g') {
@@ -1056,6 +1063,17 @@ const SeatMap: React.FC<SeatMapProps> = ({
             const isSold = seat.status === 'sold' || isUnavailable;
             const isReserved = seat.status === 'reserved';
             const isWheelchair = seat.wheelchairAccessible || seat.tags?.includes('wheelchair');
+            const seatLabel = seat.row && seat.seat
+              ? `Seat ${seat.row}-${seat.seat} in ${seat.section || 'section'}`
+              : `Seat ${seat.placeId} in ${seat.section || 'section'}`;
+            const seatStatusLabel = isSold || isUnavailable
+              ? `${seatLabel}, sold, not available`
+              : isReserved
+              ? `${seatLabel}, reserved`
+              : isSelected
+              ? `${seatLabel}, selected${seat.price ? `, price ${seat.price.toFixed(2)}` : ''}`
+              : `${seatLabel}${seat.price ? `, price ${seat.price.toFixed(2)}` : ''}, click to select`;
+            const wheelchairLabel = isWheelchair ? ', wheelchair accessible' : '';
 
             return (
               <g key={seat.placeId}>
@@ -1067,6 +1085,11 @@ const SeatMap: React.FC<SeatMapProps> = ({
                   stroke={isSelected || isHovered ? '#ffffff' : (isWheelchair ? '#9333ea' : 'none')}
                   strokeWidth={isSelected || isHovered ? 2 : (isWheelchair ? 2 : 0)}
                   opacity={isSold || isReserved ? 0.5 : 1}
+                  role="button"
+                  tabIndex={readOnly || seat.status !== 'available' || isUnavailable ? -1 : 0}
+                  aria-label={`${seatStatusLabel}${wheelchairLabel}`}
+                  aria-pressed={isSelected}
+                  aria-disabled={readOnly || seat.status !== 'available' || isUnavailable}
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent event bubbling
                     if (!readOnly && seat.status === 'available' && !isUnavailable && onSeatClick) {
@@ -1082,6 +1105,25 @@ const SeatMap: React.FC<SeatMapProps> = ({
                       if (section && onSectionClick && selectedSection !== section.id) {
                         // Only set if not already selected to prevent bouncing
                         onSectionClick(section.id);
+                      }
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && !readOnly && seat.status === 'available' && !isUnavailable) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (onSeatClick) {
+                        onSeatClick(seat.placeId, seat);
+                      }
+                      if (seat.section) {
+                        const section = sections.find(s =>
+                          s.name === seat.section ||
+                          s.id === seat.section ||
+                          s.name?.toLowerCase() === seat.section?.toLowerCase()
+                        );
+                        if (section && onSectionClick && selectedSection !== section.id) {
+                          onSectionClick(section.id);
+                        }
                       }
                     }
                   }}
