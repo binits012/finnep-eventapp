@@ -27,6 +27,7 @@
     "dayjs": "^1.11.18",
     "framer-motion": "^12.23.22",
     "i18n-iso-countries": "^7.14.0",
+    "leaflet": "^1.9.4",
     "next": "15.5.7",
     "react": "19.1.2",
     "react-dom": "19.1.2",
