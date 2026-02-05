@@ -260,7 +260,7 @@ export function matchPlaceIdsWithPlaces(
     } else {
       // Use matched place but update placeId to encoded version and merge decoded available/tags
       // Extract placeId from matchedPlace to avoid overwriting the encoded placeId
-      const { placeId: _, ...matchedPlaceWithoutId } = matchedPlace as Record<string, unknown>;
+      const { placeId, ...matchedPlaceWithoutId } = matchedPlace as Record<string, unknown>;
 
       matchedPlaces.push({
         placeId: encodedPlaceId, // Use encoded placeId for consistency (MUST be encoded format to match sold array)

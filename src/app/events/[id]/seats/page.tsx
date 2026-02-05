@@ -122,7 +122,6 @@ interface CheckoutData {
   eventName: string;
   country?: string;
   placeIds?: string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   seatTickets?: Array<Record<string, any>>;
   sessionId?: string | null;
   fullName?: string;
@@ -165,13 +164,13 @@ const areAdjacentStrings = (seat1: string, seat2: string): boolean => {
 
 export default function SeatSelectionPage() {
   // Get locale from localStorage, default to 'en-US'
-  const [locale, setLocale] = useState<string>('en-US');
+  const [_locale, _setLocale] = useState<string>('en-US');
 
   useEffect(() => {
     // Get locale from localStorage on mount
     if (typeof window !== 'undefined') {
       const storedLocale = localStorage.getItem('locale') || 'en-US';
-      setLocale(storedLocale);
+      _setLocale(storedLocale);
     }
   }, []);
   const params = useParams();
@@ -230,7 +229,7 @@ export default function SeatSelectionPage() {
   // Map of placeId -> ticketId for each selected seat
   const [seatTicketMap, setSeatTicketMap] = useState<Record<string, string>>({});
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const [showSeats, setShowSeats] = useState(true);
+  const [_showSeats, _setShowSeats] = useState(true);
   const [ticketTypes, setTicketTypes] = useState<TicketInfo[]>([]);
   const [showTicketSelector, setShowTicketSelector] = useState(false);
   const [pendingSeat, setPendingSeat] = useState<{ placeId: string; seat: Seat } | null>(null);
@@ -244,7 +243,7 @@ export default function SeatSelectionPage() {
 
   // OTP state
   const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [_otpSent, _setOtpSent] = useState(false);
   const [otpResendCooldown, setOtpResendCooldown] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -315,7 +314,6 @@ export default function SeatSelectionPage() {
       const response = await seatAPI.getEventSeats(eventId);
 
       // Get pricingModel from response if not already set from event
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const responseData = response.data as Record<string, any>;
       if (responseData?.venue?.pricingModel) {
         setPricingModel(responseData.venue.pricingModel);
@@ -483,7 +481,7 @@ export default function SeatSelectionPage() {
   // Handle section click - zoom to section and show seats
   const handleSectionClick = useCallback((sectionId: string | null) => {
     setSelectedSection(sectionId);
-    setShowSeats(sectionId !== null);
+    _setShowSeats(sectionId !== null);
   }, []);
 
   // Check if two seats are physically adjacent to each other (ignoring status)
@@ -856,7 +854,7 @@ export default function SeatSelectionPage() {
         placeIds: selectedSeats
       });
 
-      setOtpSent(true);
+      _setOtpSent(true);
       setStep('otp');
       const newSessionId = generateUUID();
       setSessionId(newSessionId);
@@ -1094,7 +1092,7 @@ export default function SeatSelectionPage() {
     });
 
     return result;
-  }, [selectedSeats, seatTicketMap, ticketTypes, email, eventId, eventTitle, totalPrice, sessionId, fullName, merchantId, externalMerchantId, pricingModel, seatData, eventCountry]);
+  }, [selectedSeats, seatTicketMap, ticketTypes, email, eventId, eventTitle, totalPrice, sessionId, fullName, merchantId, externalMerchantId, pricingModel, seatData, eventCountry, confirmEmail, pricingConfig]);
 
   // Show success page if payment succeeded
   if (successTicketData) {
@@ -1789,7 +1787,6 @@ export default function SeatSelectionPage() {
                 const serviceFee = ticket.serviceFee || 0;
                 const serviceTaxPercent = ticket.serviceTax || 0;
                 const serviceTax = serviceTaxPercent / 100;
-                const _orderFee = ticket.orderFee || 0;
 
                 // Calculate price breakdown
                 const entertainmentTaxAmount = basePrice * entertainmentTax;
@@ -2334,7 +2331,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       paymentProvider: paymentProvider,
       metadata
     };
-  }, [checkoutData, summaryTotals, pricingModel, seatPricingBreakdown, ticketTypes, nonce, totalPrice, marketingConsent, paymentProvider]);
+  }, [checkoutData, summaryTotals, pricingModel, seatPricingBreakdown, ticketTypes, nonce, totalPrice, marketingConsent, paymentProvider, perUnitSubtotal, perUnitVat]);
 
   const createPaymentIntent = async () => {
     try {

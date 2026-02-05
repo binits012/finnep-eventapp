@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaCalendarAlt, FaTicketAlt, FaUser, FaCreditCard, FaLock, FaClock } from 'react-icons/fa';
@@ -908,12 +909,12 @@ function CheckoutContent() {
           )}
 
           {!isPaymentFailure && (
-            <a
+            <Link
               href="/"
               className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors mt-4"
             >
               {t('checkout.backToHome') || 'Back to Home'}
-            </a>
+            </Link>
           )}
         </div>
       </div>
