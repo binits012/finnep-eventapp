@@ -62,7 +62,7 @@ export default function SeatSelectionView({
   currency = 'EUR',
   onComplete
 }: SeatSelectionViewProps) {
-  const { t: _t } = useTranslation();
+  useTranslation(); // Translation hook for locale context
   const [step, setStep] = useState<Step>('seats');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export default function SeatSelectionView({
   } | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const [showSeats, setShowSeats] = useState(true); // Show seats by default
+  const [showSeats, setShowSeats] = useState(false); // Hide seats by default
 
   // User info state
   const [fullName, setFullName] = useState('');
@@ -89,7 +89,7 @@ export default function SeatSelectionView({
 
   // OTP state
   const [otp, setOtp] = useState('');
-  const [_otpSent, setOtpSent] = useState(false);
+  const [, setOtpSent] = useState(false);
   const [otpResendCooldown, setOtpResendCooldown] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -119,7 +119,6 @@ export default function SeatSelectionView({
 
       // Build seats array with status
       const soldSet = new Set(sold);
-      const _reservedSet = new Set(reserved);
 
       const seats: Seat[] = matchedPlaces.map((place, idx) => {
         const placeId = place.placeId;
@@ -446,7 +445,7 @@ export default function SeatSelectionView({
                       seats={seatData.seats.filter(s => !selectedSection || s.section === selectedSection)}
                       selectedSeats={selectedSeats}
                       onSeatClick={handleSeatClick}
-                      showSeats={true}
+                      showSeats={showSeats}
                       readOnly={false}
                       viewMode={selectedSection ? 'section' : 'full'}
                       selectedSection={selectedSection}

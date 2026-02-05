@@ -254,7 +254,7 @@ export const useSeatReservation = (eventId: string) => {
         const elapsed = Date.now() - data.timestamp;
         const remaining = RESERVATION_TTL - elapsed;
         return Math.max(0, remaining);
-      } catch (_error) {
+      } catch {
         return 0;
       }
     }

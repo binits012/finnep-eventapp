@@ -54,13 +54,13 @@ export default function TicketLoginModal({ isOpen, onClose }: TicketLoginModalPr
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleClose();
+        onClose();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (resendTimer > 0) {

@@ -26,10 +26,10 @@ export default function Footer() {
               <Link href="/">
                 <div className="flex justify-center sm:justify-start">
                   <Image
-                    src="/logo.png"
-                    alt="Finnep Logo"
+                    src="/okazzo_l1.png"
+                    alt="Okazzo Logo"
                     width={120}
-                    height={40}
+                    height={80}
                     className="h-8 w-auto object-contain"
                   />
                 </div>
@@ -139,10 +139,10 @@ export default function Footer() {
             <Link href="/">
               <div className="flex items-center">
                 <Image
-                  src="/logo.png"
-                  alt="Finnep Logo"
-                  width={140}
-                  height={40}
+                  src="/okazzo_l1.png"
+                  alt="Okazzo Logo"
+                  width={120}
+                  height={80}
                   className="h-8 w-auto object-contain"
                 />
               </div>

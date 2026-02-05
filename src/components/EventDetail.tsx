@@ -272,7 +272,6 @@ export default function EventDetail({ event }: { event: Event }) {
     const { t, locale } = useTranslation();
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
     const [isLeafletReady, setIsLeafletReady] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [markerIcon, setMarkerIcon] = useState<L.Icon | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [showAllImages, setShowAllImages] = useState(false);
@@ -1177,7 +1176,9 @@ export default function EventDetail({ event }: { event: Event }) {
                             perUnitVat,
                             total,
                             // Seat selection
-                            placeIds: placeIds || undefined
+                            placeIds: placeIds || undefined,
+                            // Payment provider - Paytrail availability will be checked by backend
+                            paytrailEnabled: (event?.merchant as { paytrailEnabled?: boolean })?.paytrailEnabled || false
                         };
 
                         // Encode to base64

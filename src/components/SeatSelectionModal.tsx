@@ -37,7 +37,7 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
   quantity,
   currency = 'EUR'
 }) => {
-  const { t: _t } = useTranslation();
+  useTranslation(); // Translation hook for locale context
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -90,7 +90,6 @@ const SeatSelectionModal: React.FC<SeatSelectionModalProps> = ({
     isReserving,
     addSeat,
     removeSeat,
-    clearReservations: _clearReservations,
     getRemainingTime
   } = useSeatReservation(eventId);
 

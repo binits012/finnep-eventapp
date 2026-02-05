@@ -32,7 +32,6 @@ export function decodePlaceId(placeId: string): DecodedPlaceId | null {
 
       // New format with available and tags: VENUE_PREFIX + SECTION_B64 + "|" + TIER_CODE + "|" + POSITION_CODE + "|" + AVAILABLE_FLAG + "|" + TAGS_CODE
       if (parts.length === 5) {
-        const venuePrefix = parts[0].substring(0, 4);
         const sectionB64 = parts[0].substring(4);
         const tierCode = parts[1];
         const positionCode = parts[2];
@@ -72,7 +71,6 @@ export function decodePlaceId(placeId: string): DecodedPlaceId | null {
       }
       // Legacy format: VENUE_PREFIX + SECTION_B64 + "|" + TIER_CODE + "|" + POSITION_CODE
       else if (parts.length === 3) {
-        const venuePrefix = parts[0].substring(0, 4);
         const sectionB64 = parts[0].substring(4);
         const tierCode = parts[1];
         const positionCode = parts[2];
@@ -104,7 +102,6 @@ export function decodePlaceId(placeId: string): DecodedPlaceId | null {
       if (placeId.length < 12) {
         return null;
       }
-      const venuePrefix = placeId.substring(0, 4);
       const sectionChar = placeId.substring(4, 5);
       const tierCode = placeId.substring(5, 6);
       const positionCode = placeId.substring(6);
@@ -200,7 +197,7 @@ export function matchPlaceIdsWithPlaces(
     seat?: string | number | null;
     x?: number | null;
     y?: number | null;
-    [key: string]: any;
+    [key: string]: unknown;
   }>
 ): Array<{
   placeId: string;
@@ -209,7 +206,7 @@ export function matchPlaceIdsWithPlaces(
   row: string | null;
   seat: string | null;
   section: string | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }> {
   const matchedPlaces: Array<{
     placeId: string;
@@ -218,14 +215,14 @@ export function matchPlaceIdsWithPlaces(
     row: string | null;
     seat: string | null;
     section: string | null;
-    [key: string]: any;
+    [key: string]: unknown;
   }> = [];
 
   for (const encodedPlaceId of encodedPlaceIds) {
     // Decode the placeId
     const decoded = decodePlaceId(encodedPlaceId);
 
-    let matchedPlace: any = null;
+    let matchedPlace: typeof places[0] | null = null;
 
     if (decoded) {
       // Try to find matching place in venue manifest by section + row + seat
@@ -248,7 +245,7 @@ export function matchPlaceIdsWithPlaces(
 
     // If no match found, use decoded coordinates
     if (!matchedPlace) {
-      matchedPlace = {
+      matchedPlaces.push({
         placeId: encodedPlaceId,
         section: decoded?.section || null,
         row: decoded?.row?.toString() || null,
@@ -259,20 +256,27 @@ export function matchPlaceIdsWithPlaces(
         available: decoded?.available !== undefined ? decoded.available : true,
         tags: decoded?.tags || [],
         wheelchairAccessible: decoded?.tags?.includes('wheelchair') || false
-      };
+      });
     } else {
       // Use matched place but update placeId to encoded version and merge decoded available/tags
-      matchedPlace = {
-        ...matchedPlace,
-        placeId: encodedPlaceId, // Use encoded placeId for consistency
+      // Extract placeId from matchedPlace to avoid overwriting the encoded placeId
+      const { placeId: _, ...matchedPlaceWithoutId } = matchedPlace as Record<string, unknown>;
+
+      matchedPlaces.push({
+        placeId: encodedPlaceId, // Use encoded placeId for consistency (MUST be encoded format to match sold array)
+        x: matchedPlace.x ?? null,
+        y: matchedPlace.y ?? null,
+        row: typeof matchedPlace.row === 'number' ? matchedPlace.row.toString() : matchedPlace.row ?? null,
+        seat: typeof matchedPlace.seat === 'number' ? matchedPlace.seat.toString() : matchedPlace.seat ?? null,
+        section: matchedPlace.section ?? null,
         // Override with decoded values if available (decoded values are authoritative)
         available: decoded?.available !== undefined ? decoded.available : (matchedPlace.available !== undefined ? matchedPlace.available : true),
-        tags: decoded?.tags || matchedPlace.tags || [],
-        wheelchairAccessible: decoded?.tags?.includes('wheelchair') || matchedPlace.wheelchairAccessible || false
-      };
+        tags: decoded?.tags || (matchedPlace as { tags?: string[] }).tags || [],
+        wheelchairAccessible: decoded?.tags?.includes('wheelchair') || (matchedPlace as { wheelchairAccessible?: boolean }).wheelchairAccessible || false,
+        // Spread any additional properties (excluding placeId to preserve encoded format)
+        ...matchedPlaceWithoutId
+      });
     }
-
-    matchedPlaces.push(matchedPlace);
   }
 
   return matchedPlaces;

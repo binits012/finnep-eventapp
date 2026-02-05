@@ -106,9 +106,42 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
       // Use provided ticket data directly
       setTicketData(propTicketData);
       setLoading(false);
-    }  else {
-      setError(t('success.ticketNotFound'));
-      setLoading(false);
+    } else {
+      // Check for Paytrail ticket data in sessionStorage
+      try {
+        const paytrailTicketData = sessionStorage.getItem('paytrail_ticket_data');
+        console.log('Success page - checking sessionStorage:', {
+          hasData: !!paytrailTicketData,
+          dataLength: paytrailTicketData?.length
+        });
+
+        if (paytrailTicketData) {
+          try {
+            const ticket = JSON.parse(paytrailTicketData);
+            console.log('Success page - parsed ticket:', {
+              ticketId: ticket._id,
+              hasTicketInfo: !!ticket.ticketInfo,
+              ticketInfoKeys: ticket.ticketInfo ? Object.keys(ticket.ticketInfo) : []
+            });
+            setTicketData(ticket);
+            setLoading(false);
+            // Clear sessionStorage after use
+            sessionStorage.removeItem('paytrail_ticket_data');
+          } catch (err) {
+            console.error('Error parsing Paytrail ticket data:', err);
+            setError(t('success.ticketNotFound'));
+            setLoading(false);
+          }
+        } else {
+          console.warn('Success page - No Paytrail ticket data in sessionStorage');
+          setError(t('success.ticketNotFound'));
+          setLoading(false);
+        }
+      } catch (storageError) {
+        console.error('Error accessing sessionStorage:', storageError);
+        setError(t('success.ticketNotFound'));
+        setLoading(false);
+      }
     }
   }, [propTicketData, t]);
 
@@ -187,13 +220,47 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
           </div>
         `;
       } else if (ticketInfo.placeIds && Array.isArray(ticketInfo.placeIds) && ticketInfo.placeIds.length > 0) {
+        // Decode placeIds to human-readable format
+        const decodedSeats = ticketInfo.placeIds.map((placeId: string) => {
+          try {
+            // PlaceId format: SEAT_NUMBER + BASE64_SECTION | ROW | HASH | TIER
+            // Example: 18C7UGVybWFudG8|1|2RSZAD34V3|1
+            const parts = placeId.split('|');
+            if (parts.length >= 2) {
+              const firstPart = parts[0];
+              const row = parts[1];
+
+              // Try to extract seat number and section from first part
+              const match = firstPart.match(/^(\d+)([A-Za-z0-9+/=]+)$/);
+              if (match) {
+                const seatNum = match[1];
+                const encodedSection = match[2];
+
+                try {
+                  const decoded = atob(encodedSection);
+                  const section = decoded.replace(/[^\x20-\x7E]/g, '').trim();
+                  if (section) {
+                    return 'Section: ' + section + ', Row: ' + row + ', Seat: ' + seatNum;
+                  }
+                } catch {
+                  // Base64 decode failed
+                }
+              }
+              return 'Row: ' + row + ', Seat: ' + firstPart;
+            }
+          } catch {
+            // Decoding failed
+          }
+          return 'Seat: ' + (placeId.length > 20 ? placeId.substring(0, 20) + '...' : placeId);
+        });
+
         seatInfoHTML = `
           <div class="order-section">
             <h3>${t('success.selectedSeats') || 'Selected Seats'}</h3>
             <div class="seat-list">
-              ${ticketInfo.placeIds.map((placeId: string, index: number) => `
+              ${decodedSeats.map((seatDisplay: string, index: number) => `
                 <div class="seat-item">
-                  ${index + 1}. ${t('seatSelection.seat') || 'Seat'} ID: ${placeId}
+                  ${index + 1}. ${seatDisplay}
                 </div>
               `).join('')}
             </div>
@@ -627,6 +694,31 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                     </div>
                   );
                 } else if (placeIds && Array.isArray(placeIds) && placeIds.length > 0) {
+                  // Decode placeId to human-readable format
+                  const decodeSeatDisplay = (placeId: string): string => {
+                    try {
+                      const parts = placeId.split('|');
+                      if (parts.length >= 2) {
+                        const firstPart = parts[0];
+                        const row = parts[1];
+                        const match = firstPart.match(/^(\d+)([A-Za-z0-9+/=]+)$/);
+                        if (match) {
+                          const seatNum = match[1];
+                          const encodedSection = match[2];
+                          try {
+                            const decoded = atob(encodedSection);
+                            const section = decoded.replace(/[^\x20-\x7E]/g, '').trim();
+                            if (section) {
+                              return `Section: ${section}, Row: ${row}, Seat: ${seatNum}`;
+                            }
+                          } catch { /* ignore */ }
+                        }
+                        return `Row: ${row}, Seat: ${firstPart}`;
+                      }
+                    } catch { /* ignore */ }
+                    return `Seat: ${placeId.length > 20 ? placeId.substring(0, 20) + '...' : placeId}`;
+                  };
+
                   return (
                     <div className="mb-6 p-4 rounded-lg" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: '1px' }}>
                       <h3 className="font-semibold mb-3">{t('success.selectedSeats') || 'Selected Seats'}</h3>
@@ -634,7 +726,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                         {placeIds.map((placeId: string, index: number) => (
                           <div key={index} className="flex justify-between">
                             <span className="opacity-70">{index + 1}.</span>
-                            <span className="flex-1 ml-2">Seat ID: {placeId}</span>
+                            <span className="flex-1 ml-2">{decodeSeatDisplay(placeId)}</span>
                           </div>
                         ))}
                       </div>

@@ -6,7 +6,7 @@ import { seatAPI } from '@/services/apiClient';
 import SeatMap from '@/components/SeatMap';
 import CapjsWidget from '@/components/CapjsWidget';
 import api from '@/services/apiClient';
-import { matchPlaceIdsWithPlaces, decodePlaceId } from '@/utils/placeIdDecoder';
+import { decodePlaceId } from '@/utils/placeIdDecoder';
 import { useTranslation } from '@/hooks/useTranslation';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
@@ -186,6 +186,7 @@ export default function SeatSelectionPage() {
   const [eventCountry, setEventCountry] = useState<string>('Finland'); // Store event country, default to Finland
   const [merchantId, setMerchantId] = useState<string>('');
   const [externalMerchantId, setExternalMerchantId] = useState<string>('');
+  const [paytrailEnabled, setPaytrailEnabled] = useState<boolean>(false);
 
   // Seat selection state
   const [seatData, setSeatData] = useState<{
@@ -288,6 +289,7 @@ export default function SeatSelectionPage() {
         merchant?: {
           _id?: string;
           merchantId?: string;
+          paytrailEnabled?: boolean;
         };
       } };
       const event = eventResponse.event;
@@ -298,6 +300,7 @@ export default function SeatSelectionPage() {
       // Store merchant IDs
       setMerchantId(event.merchantId || event.merchant?._id || event.merchant?.merchantId || '');
       setExternalMerchantId(event.externalMerchantId || '');
+      setPaytrailEnabled(event.merchant?.paytrailEnabled || false);
 
       // Store pricing model
       const model = event.venue?.pricingModel || 'ticket_info';
@@ -323,30 +326,39 @@ export default function SeatSelectionPage() {
         setPricingConfig(responseData.pricingConfig);
       }
 
-      // Get encoded placeIds and places array from response
-      const { placeIds = [], sold = [], reserved = [], pricingZones = [], places = [] } = responseData;
+      // Decode everything from placeIds array - no need for places array!
+      // placeIds encodes: section, row, seat, x, y, tierCode, available, tags
+      const { placeIds = [], sold = [], reserved = [], pricingZones = [] } = responseData;
 
-      // Decode and match encoded placeIds with places array
-      const matchedPlaces = matchPlaceIdsWithPlaces(placeIds, places);
+      console.log('[loadEventAndSeatData] Seat data received:', {
+        placeIdsCount: placeIds.length,
+        soldCount: sold.length,
+        reservedCount: reserved.length
+      });
 
-      // Build seats array with status
       const soldSet = new Set(sold);
       const reservedSet = new Set(reserved);
 
-      const seats: Seat[] = matchedPlaces.map((place, index) => {
-        const placeId = place.placeId;
-        let status: 'available' | 'sold' | 'reserved' = 'available';
+      // Decode each placeId to extract all seat data
+      const seats: Seat[] = placeIds.map((placeId: string, index: number) => {
+        const decoded = decodePlaceId(placeId);
 
-        // Check if seat is unavailable (available === false) - mark as sold
-        if (place.available === false) {
+        if (!decoded) {
+          console.error('[loadEventAndSeatData] Failed to decode placeId:', placeId);
+          return null;
+        }
+
+        // Determine status from decoded available flag and sold/reserved arrays
+        let status: 'available' | 'sold' | 'reserved' = 'available';
+        if (decoded.available === false) {
           status = 'sold';
         } else if (soldSet.has(placeId)) {
           status = 'sold';
         } else if (reservedSet.has(placeId)) {
-          status = 'reserved'; // Reserved seats are occupied and not available for selection
+          status = 'reserved';
         }
 
-        // Get price from pricingZones (fallback)
+        // Get price from pricingZones (fallback for ticket_info model)
         let price: number | null = null;
         for (const zone of pricingZones) {
           if (index >= zone.start && index <= zone.end) {
@@ -355,58 +367,30 @@ export default function SeatSelectionPage() {
           }
         }
 
-        // If pricingModel is 'pricing_configuration', extract pricing from place object
         const seatData: Seat = {
           placeId,
-          x: place.x || null,
-          y: place.y || null,
-          row: place.row || null,
-          seat: place.seat || null,
-          section: place.section || null,
+          x: decoded.x || null,
+          y: decoded.y || null,
+          row: decoded.row ? String(decoded.row) : null,
+          seat: decoded.seat ? String(decoded.seat) : null,
+          section: decoded.section || null,
           price,
           status,
-          available: typeof place.available === 'boolean' ? place.available : true,
-          wheelchairAccessible: Boolean(place.wheelchairAccessible) || (Array.isArray(place.tags) && place.tags.includes('wheelchair')) || false,
-          tags: Array.isArray(place.tags) ? place.tags : []
+          available: decoded.available !== undefined ? decoded.available : true,
+          wheelchairAccessible: Array.isArray(decoded.tags) && decoded.tags.includes('wheelchair'),
+          tags: Array.isArray(decoded.tags) ? decoded.tags : []
         };
 
-        // Extract pricing fields from enriched manifest (when pricingModel === 'pricing_configuration')
-        if (pricingModel === 'pricing_configuration') {
-          let pricing = place.pricing as {
-            basePrice?: number;
-            tax?: number;
-            serviceFee?: number;
-            serviceTax?: number;
-            orderFee?: number;
-            currency?: string;
-          } | undefined;
-
-          // If pricing is not directly available on place, decode from placeId using pricingConfig
-          if (!pricing && pricingConfig && placeId) {
-            const decoded = decodePlaceId(placeId);
-            if (decoded && decoded.tierCode && pricingConfig.tiers) {
-              const tier = pricingConfig.tiers.find(t => t.id === decoded.tierCode);
-              if (tier) {
-                pricing = {
-                  basePrice: tier.basePrice,
-                  tax: tier.tax,
-                  serviceFee: tier.serviceFee,
-                  serviceTax: tier.serviceTax,
-                  orderFee: pricingConfig.orderFee || 0,
-                  currency: pricingConfig.currency || currency
-                };
-              }
-            }
-          }
-
-          // Apply pricing data if available
-          if (pricing) {
-            seatData.basePrice = pricing.basePrice || 0;
-            seatData.tax = pricing.tax || 0;
-            seatData.serviceFee = pricing.serviceFee || 0;
-            seatData.serviceTax = pricing.serviceTax || 0;
-            seatData.orderFee = pricing.orderFee || 0;
-            seatData.currency = pricing.currency || currency;
+        // Extract pricing from tierCode if pricingModel is 'pricing_configuration'
+        if (pricingModel === 'pricing_configuration' && pricingConfig && decoded.tierCode) {
+          const tier = pricingConfig.tiers.find(t => t.id === decoded.tierCode);
+          if (tier) {
+            seatData.basePrice = tier.basePrice;
+            seatData.tax = tier.tax;
+            seatData.serviceFee = tier.serviceFee;
+            seatData.serviceTax = tier.serviceTax;
+            seatData.orderFee = pricingConfig.orderFee || 0;
+            seatData.currency = pricingConfig.currency || currency;
 
             // Calculate total price from pricing fields
             const basePrice = seatData.basePrice || 0;
@@ -416,11 +400,17 @@ export default function SeatSelectionPage() {
 
             // Per seat: basePrice + (basePrice * tax) + serviceFee + (serviceFee * serviceTax)
             seatData.price = basePrice + (basePrice * taxPercent) + serviceFee + (serviceFee * serviceTaxPercent);
+          } else {
+            console.warn('[loadEventAndSeatData] Tier not found for placeId:', {
+              placeId,
+              tierCode: decoded.tierCode,
+              availableTiers: pricingConfig.tiers.map(t => t.id)
+            });
           }
         }
 
         return seatData;
-      });
+      }).filter((seat: Seat | null): seat is Seat => seat !== null);
 
 
       // Merge sections from response with venue.sections to get spacingConfig and polygon data
@@ -467,6 +457,15 @@ export default function SeatSelectionPage() {
         reserved,
         pricingZones
       });
+
+      const soldSeatsCount = seats.filter(s => s.status === 'sold').length;
+      console.log('[loadEventAndSeatData] Final seat data:', {
+        totalSeats: seats.length,
+        soldSeatsCount,
+        expectedSoldCount: sold.length,
+        reservedSeatsCount: seats.filter(s => s.status === 'reserved').length
+      });
+
       setLoading(false);
     } catch (err: unknown) {
       const error = err as Error & { response?: { data?: { message?: string }; status?: number } };
@@ -916,11 +915,30 @@ export default function SeatSelectionPage() {
 
   // Build checkout data for payment
   const getCheckoutData = useCallback(() => {
+    console.log('[getCheckoutData] Building checkout data:', {
+      selectedSeats,
+      selectedSeatsLength: selectedSeats.length,
+      pricingModel,
+      hasSeatData: !!seatData
+    });
+
     // If pricingModel is 'pricing_configuration', use seat pricing
     if (pricingModel === 'pricing_configuration' && seatData) {
       // Build seat-ticket mapping with individual pricing for each seat
       const seatTickets = selectedSeats.map(placeId => {
         const seat = seatData.seats.find(s => s.placeId === placeId);
+
+        console.log('[getCheckoutData] Building seatTicket for placeId:', {
+          placeId,
+          foundSeat: !!seat,
+          seatBasePrice: seat?.basePrice,
+          seatPrice: seat?.price,
+          seatTax: seat?.tax,
+          seatServiceFee: seat?.serviceFee,
+          hasPricingConfig: !!pricingConfig,
+          pricingModel
+        });
+
         // Build ticketName with section, row, and seat information (with colons)
         const section = seat?.section || '';
         const row = seat?.row ? extractNumericPart(seat.row) : '';
@@ -990,6 +1008,12 @@ export default function SeatSelectionPage() {
         sessionId: sessionId,
         fullName: fullName
       };
+
+      console.log('[getCheckoutData] pricing_configuration result:', {
+        placeIds: selectedSeats,
+        placeIdsLength: selectedSeats.length,
+        seatTicketsLength: seatTickets.length
+      });
     }
 
     // Otherwise, use ticket pricing
@@ -1035,7 +1059,7 @@ export default function SeatSelectionPage() {
     const firstTicketId = seatTickets[0]?.ticketId;
     const firstTicket = ticketTypes.find(t => t._id === firstTicketId);
 
-    return {
+    const result = {
       email,
       confirmEmail,
       quantity: selectedSeats.length,
@@ -1061,6 +1085,15 @@ export default function SeatSelectionPage() {
       sessionId: sessionId,
       fullName: fullName
     };
+
+    console.log('[getCheckoutData] ticket_info result:', {
+      placeIds: selectedSeats,
+      placeIdsLength: selectedSeats.length,
+      seatTicketsLength: seatTickets.length,
+      resultPlaceIds: result.placeIds
+    });
+
+    return result;
   }, [selectedSeats, seatTicketMap, ticketTypes, email, eventId, eventTitle, totalPrice, sessionId, fullName, merchantId, externalMerchantId, pricingModel, seatData, eventCountry]);
 
   // Show success page if payment succeeded
@@ -1723,6 +1756,7 @@ export default function SeatSelectionPage() {
                 selectedSeats={selectedSeats}
                 seatData={seatData}
                 pricingModel={pricingModel}
+                paytrailEnabled={paytrailEnabled}
                 onBack={() => setStep('otp')}
                 onSuccess={(ticketData) => setSuccessTicketData(ticketData)}
                 onError={(err) => setError(err)}
@@ -1842,12 +1876,13 @@ interface PaymentFormProps {
     seats: Seat[];
   } | null;
   pricingModel?: 'ticket_info' | 'pricing_configuration' | null;
+  paytrailEnabled: boolean;
   onBack: () => void;
   onSuccess: (ticketData: Record<string, unknown>) => void;
   onError: (error: string) => void;
 }
 
-function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, selectedSeats, seatData, pricingModel, onBack, onSuccess, onError }: PaymentFormProps) {
+function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, selectedSeats, seatData, pricingModel, paytrailEnabled, onBack, onSuccess, onError }: PaymentFormProps) {
   const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
@@ -1856,6 +1891,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
   const [cardComplete, setCardComplete] = useState(false);
   const [themeColors, setThemeColors] = useState({ textColor: '#000', placeholderColor: '#999', iconColor: '#666' });
   const [marketingConsent, setMarketingConsent] = useState(false);
+  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'paytrail'>('stripe');
   // Generate nonce once when component mounts to prevent duplicate submissions
   const [nonce] = useState(() => {
     // Generate a cryptographically secure random nonce
@@ -2295,9 +2331,10 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
     return {
       amount: Math.round(totalPrice * 100), // Convert to cents
       currency: getCurrencyCode(checkoutData.country || 'Finland').toLowerCase() || 'eur',
+      paymentProvider: paymentProvider,
       metadata
     };
-  }, [checkoutData, summaryTotals, pricingModel, seatPricingBreakdown, ticketTypes, nonce, totalPrice, marketingConsent]);
+  }, [checkoutData, summaryTotals, pricingModel, seatPricingBreakdown, ticketTypes, nonce, totalPrice, marketingConsent, paymentProvider]);
 
   const createPaymentIntent = async () => {
     try {
@@ -2377,9 +2414,89 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
     return await successResponse.json();
   }, [checkoutData, marketingConsent, nonce]);
 
+  const handlePaytrailPayment = async () => {
+    setLoading(true);
+    setError(null);
+    onError('');
+
+    try {
+      const payload = createPaymentIntentPayload();
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/front'}/create-paytrail-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to create Paytrail payment');
+      }
+
+      const paytrailResponse = await response.json();
+
+      // Redirect to Paytrail payment page
+      if (paytrailResponse.paymentUrl) {
+        // Store checkout data for when user returns from Paytrail
+        if (typeof window !== 'undefined') {
+          // Store full checkout data with calculated total
+          const checkoutDataWithTotal = {
+            ...checkoutData,
+            totalPrice: totalPrice,
+            marketingConsent: marketingConsent,
+          };
+
+          console.log('[handlePaytrailPayment] Storing checkout data:', {
+            placeIds: checkoutData.placeIds,
+            placeIdsLength: checkoutData.placeIds?.length || 0,
+            seatTickets: checkoutData.seatTickets,
+            seatTicketsLength: checkoutData.seatTickets?.length || 0,
+            eventId: checkoutData.eventId
+          });
+
+          sessionStorage.setItem('paytrail_original_checkout_data', JSON.stringify(checkoutDataWithTotal));
+
+          // Also save minimal data for verification
+          sessionStorage.setItem('paytrail_checkout_data', JSON.stringify({
+            eventId: checkoutData.eventId,
+            email: checkoutData.email,
+            customerName: checkoutData.fullName || checkoutData.email.split('@')[0],
+            quantity: checkoutData.quantity,
+            ticketTypeId: checkoutData.ticketId,
+            seats: checkoutData.placeIds || [],
+            placeIds: checkoutData.placeIds || [], // Explicitly include placeIds
+            seatTickets: checkoutData.seatTickets || [],
+            amount: Math.round(totalPrice * 100), // cents
+            currency: getCurrencyCode(checkoutData.country || 'Finland').toUpperCase() || 'EUR',
+            transactionId: paytrailResponse.transactionId,
+            stamp: paytrailResponse.stamp,
+          }));
+        }
+        window.location.href = paytrailResponse.paymentUrl;
+        return;
+      }
+      throw new Error('Paytrail payment URL not received');
+    } catch (err) {
+      let errorMessage = 'Failed to initiate Paytrail payment';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+      onError(errorMessage);
+      console.error('Paytrail payment error:', err);
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    // Handle Paytrail payment
+    if (paymentProvider === 'paytrail') {
+      await handlePaytrailPayment();
+      return;
+    }
+
+    // Handle Stripe payment
     if (!stripe || !elements) return;
 
     setLoading(true);
@@ -2647,8 +2764,53 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
             {t('checkout.paymentDetails') || 'Payment Details'}
           </h4>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">{t('checkout.cardNumber') || 'Card Number'}</label>
+          {/* Payment Provider Selection */}
+          {paytrailEnabled && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">{t('checkout.paymentMethod') || 'Payment Method'}</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentProvider('stripe')}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    paymentProvider === 'stripe'
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-center">
+                    <FaCreditCard className="mr-2" />
+                    <span className="text-sm font-medium">Card</span>
+                  </div>
+                  <div className="text-xs opacity-70 mt-1">Stripe</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentProvider('paytrail')}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    paymentProvider === 'paytrail'
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-center">
+                    <FaCreditCard className="mr-2" />
+                    <span className="text-sm font-medium">Bank/Mobile</span>
+                  </div>
+                  <div className="text-xs opacity-70 mt-1">Paytrail</div>
+                </button>
+              </div>
+              {paymentProvider === 'paytrail' && (
+                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
+                  {t('checkout.paytrailNote') || 'You will be redirected to Paytrail to complete your payment using Finnish bank or mobile payment methods.'}
+                </div>
+              )}
+            </div>
+          )}
+
+          {paymentProvider === 'stripe' && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">{t('checkout.cardNumber') || 'Card Number'}</label>
             <div className="p-3 border rounded-lg bg-transparent" style={{ borderColor: 'var(--border)' }}>
               <CardElement
                 options={{
@@ -2676,12 +2838,13 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
                 onChange={handleCardChange}
               />
             </div>
-          </div>
 
-          <div className="flex items-center text-xs mb-3" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
-            <FaLock className="mr-1.5" />
-            <span>{t('checkout.securePaymentText') || 'Your payment information is secure and encrypted'}</span>
+            <div className="flex items-center text-xs mb-3" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
+              <FaLock className="mr-1.5" />
+              <span>{t('checkout.securePaymentText') || 'Your payment information is secure and encrypted'}</span>
+            </div>
           </div>
+          )}
 
           {error && (
             <div className="text-red-600 text-xs mb-3 p-3 rounded-lg bg-red-50 border border-red-200" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
@@ -2718,16 +2881,18 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
             </button>
             <button
               type="submit"
-              disabled={!stripe || loading || !cardComplete}
+              disabled={loading || (paymentProvider === 'stripe' && (!stripe || !cardComplete))}
               className={`flex-1 px-3 py-1.5 rounded-lg font-medium text-sm text-white transition-colors ${
-                !stripe || loading || !cardComplete
+                loading || (paymentProvider === 'stripe' && (!stripe || !cardComplete))
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-indigo-600 hover:bg-indigo-700'
               }`}
             >
               {loading
                 ? (t('checkout.processing') || 'Processing...')
-                : `${t('checkout.completePurchase') || 'Complete Purchase'} ${formatCurrency(totalPrice)} ${getCurrencySymbol(checkoutData.country || 'Finland')}`
+                : paymentProvider === 'paytrail'
+                  ? `${t('checkout.continueToPaytrail') || 'Continue to Paytrail'} - ${formatCurrency(totalPrice)} ${getCurrencySymbol(checkoutData.country || 'Finland')}`
+                  : `${t('checkout.completePurchase') || 'Complete Purchase'} ${formatCurrency(totalPrice)} ${getCurrencySymbol(checkoutData.country || 'Finland')}`
               }
             </button>
           </div>

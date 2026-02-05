@@ -31,7 +31,7 @@ export default function EventPage() {
 
         const eventPromise = api.get(`/event/${eventId}`) as Promise<{ event: Event }>;
 
-        const response = await Promise.race([eventPromise, timeoutPromise]) as { event: Event }; 
+        const response = await Promise.race([eventPromise, timeoutPromise]) as { event: Event };
 
         // Extract the event data from the response
         const eventData = response.event;
@@ -85,20 +85,13 @@ export default function EventPage() {
 
       const ogType = document.querySelector('meta[property="og:type"]');
       if (ogType) {
-        ogType.setAttribute('content', 'event');
-      }
-
-      // Add tags to Open Graph
-      if (event.tags && Array.isArray(event.tags) && event.tags.length > 0) {
-        const ogTags = document.querySelector('meta[property="og:article:tag"]');
-        if (ogTags) {
-          ogTags.setAttribute('content', event.tags.join(', '));
-        } else {
-          const meta = document.createElement('meta');
-          meta.setAttribute('property', 'og:article:tag');
-          meta.setAttribute('content', event.tags.join(', '));
-          document.head.appendChild(meta);
-        }
+        ogType.setAttribute('content', 'website');
+      } else {
+        // Create og:type if it doesn't exist
+        const meta = document.createElement('meta');
+        meta.setAttribute('property', 'og:type');
+        meta.setAttribute('content', 'website');
+        document.head.appendChild(meta);
       }
 
       // Update Twitter Card tags
@@ -121,39 +114,6 @@ export default function EventPage() {
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) {
         canonical.setAttribute('href', `${hostname}/events/${eventId}`);
-      }
-
-      // Add event-specific meta tags
-      if (event.eventDate) {
-        const eventStartTime = document.querySelector('meta[property="event:start_time"]');
-        if (eventStartTime) {
-          eventStartTime.setAttribute('content', new Date(event.eventDate).toISOString());
-        } else {
-          const meta = document.createElement('meta');
-          meta.setAttribute('property', 'event:start_time');
-          meta.setAttribute('content', new Date(event.eventDate).toISOString());
-          document.head.appendChild(meta);
-        }
-      }
-
-      const eventLocation = document.querySelector('meta[property="event:location"]');
-      if (eventLocation) {
-        eventLocation.setAttribute('content', event.eventLocationAddress || '');
-      } else {
-        const meta = document.createElement('meta');
-        meta.setAttribute('property', 'event:location');
-        meta.setAttribute('content', event.eventLocationAddress || '');
-        document.head.appendChild(meta);
-      }
-
-      const eventVenue = document.querySelector('meta[property="event:venue"]');
-      if (eventVenue) {
-        eventVenue.setAttribute('content', event.venueInfo?.name || event.venue?.name || '');
-      } else {
-        const meta = document.createElement('meta');
-        meta.setAttribute('property', 'event:venue');
-        meta.setAttribute('content', event.venueInfo?.name || event.venue?.name || '');
-        document.head.appendChild(meta);
       }
     }
   }, [event, eventId]);
@@ -179,28 +139,31 @@ export default function EventPage() {
               Event Not Found
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-8">
-              The event you are looking for could not be found. It might have been removed or the link is incorrect.
+              {error || "The event you're looking for doesn't exist or has been removed."}
             </p>
           </div>
-
-          <div className="space-y-4">
-            <Link
-              href="/events"
-              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200"
-            >
-              Browse All Events
-            </Link>
-          </div>
+          <Link
+            href="/events"
+            className="inline-block px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors duration-200 shadow-lg hover:shadow-xl"
+          >
+            Browse All Events
+          </Link>
         </div>
       </div>
     );
   }
 
-
+  // Generate structured data for the event
   const structuredData = event ? generateStructuredData({
     type: 'Event',
-    data: event as unknown as Record<string, unknown>,
-    merchantData: event.merchant as unknown as Record<string, unknown>,
+    data: {
+      name: event.eventTitle || 'Event',
+      description: event.eventDescription || '',
+      url: typeof window !== 'undefined' ? window.location.href : '',
+      image: event.eventPromotionPhoto || '',
+      startDate: event.eventDate || new Date().toISOString(),
+      location: event.venue?.address || event.venue?.name || '',
+    },
   }) : null;
 
   return (
@@ -210,12 +173,13 @@ export default function EventPage() {
         <Script
           id="event-structured-data"
           type="application/ld+json"
-          strategy="afterInteractive"
-        >
-          {JSON.stringify(structuredData)}
-        </Script>
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData),
+          }}
+        />
       )}
 
+      {/* Event Detail Component */}
       <EventDetail event={event} />
     </>
   );

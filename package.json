@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
+    "export": "next build",
     "start": "next start",
     "lint": "eslint",
     "upload-translations": "node scripts/upload-translations.mjs",

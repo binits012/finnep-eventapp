@@ -98,9 +98,9 @@ export default function Header() {
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
               <Image
-                src="/logo.png"
-                alt="Finnep Logo"
-                width={100}
+                src="/okazzo_l1.png"
+                alt="Okazzo Logo"
+                width={120}
                 height={80}
                 priority
                 className="h-8 sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-none"
