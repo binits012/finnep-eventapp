@@ -802,8 +802,62 @@ function CheckoutContent() {
       };
 
       verifyPaytrailPayment();
-    } else if (payment === 'paytrail' && status === 'fail') {
-      setError(t('payment.failed') || 'Payment failed');
+    } else if (payment === 'paytrail' && (status === 'fail' || status === 'cancel')) {
+      hasStartedVerification.current = true;
+      setVerifyingPaytrail(true);
+
+      const handlePaymentFailure = async () => {
+        try {
+          // Get checkout data from sessionStorage
+          const storedCheckoutData = typeof window !== 'undefined'
+            ? sessionStorage.getItem('paytrail_checkout_data')
+            : null;
+
+          const checkoutDataForFailure = storedCheckoutData
+            ? JSON.parse(storedCheckoutData)
+            : checkoutData;
+
+          if (checkoutDataForFailure) {
+            // Call backend to release reservations and clean up
+            await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/front'}/handle-paytrail-payment-failure`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  stamp,
+                  transactionId,
+                  status,
+                  eventId: checkoutDataForFailure.eventId,
+                  placeIds: checkoutDataForFailure.placeIds || [],
+                  sessionId: checkoutDataForFailure.sessionId,
+                  email: checkoutDataForFailure.email
+                })
+              }
+            );
+
+            // Clear checkout data from sessionStorage
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('paytrail_checkout_data');
+              sessionStorage.removeItem('paytrail_original_checkout_data');
+            }
+          }
+
+          // Set appropriate error message
+          if (status === 'cancel') {
+            setError(t('payment.cancelled') || 'Payment was cancelled. Your seats have been released.');
+          } else {
+            setError(t('payment.failed') || 'Payment failed. Your seats have been released. Please try again.');
+          }
+        } catch (err) {
+          console.error('Error handling payment failure:', err);
+          setError(t('payment.failed') || 'Payment failed. Please try again.');
+        } finally {
+          setVerifyingPaytrail(false);
+        }
+      };
+
+      handlePaymentFailure();
     }
   }, [search, checkoutData, t]);
 
@@ -815,11 +869,52 @@ function CheckoutContent() {
   }
 
   if (error) {
+    const eventId = checkoutData?.eventId || search.get('eventId');
+    const paymentStatus = search.get('checkout-status') || search.get('status');
+    const isPaymentFailure = search.get('payment') === 'paytrail' &&
+                            (paymentStatus === 'fail' || paymentStatus === 'cancel');
+
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">{t('checkout.error')}</h1>
-          <p className="text-red-600">{error}</p>
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="mb-6">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/20 mb-4">
+              <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text)' }}>
+              {isPaymentFailure
+                ? (paymentStatus === 'cancel'
+                    ? t('payment.cancelled') || 'Payment Cancelled'
+                    : t('payment.failed') || 'Payment Failed')
+                : t('checkout.error') || 'Error'}
+            </h1>
+            <p className="text-red-600 dark:text-red-400 mb-6">{error}</p>
+          </div>
+
+          {isPaymentFailure && eventId && (
+            <div className="space-y-4">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {t('payment.failure.message') || 'Your seat reservations have been released. You can try again to complete your purchase.'}
+              </p>
+              <a
+                href={`/events/${eventId}/seats`}
+                className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              >
+                {t('payment.retry') || 'Try Again'}
+              </a>
+            </div>
+          )}
+
+          {!isPaymentFailure && (
+            <a
+              href="/"
+              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors mt-4"
+            >
+              {t('checkout.backToHome') || 'Back to Home'}
+            </a>
+          )}
         </div>
       </div>
     );
