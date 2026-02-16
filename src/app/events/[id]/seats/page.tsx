@@ -11,7 +11,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { FaCreditCard, FaLock } from 'react-icons/fa';
+import { FaCreditCard, FaLock, FaClock } from 'react-icons/fa';
 import { getCurrencySymbol, getCurrencyCode } from '@/utils/currency';
 import SuccessPage from '@/app/success/page';
 
@@ -484,53 +484,51 @@ export default function SeatSelectionPage() {
     _setShowSeats(sectionId !== null);
   }, []);
 
-  // Check if two seats are physically adjacent to each other (ignoring status)
-  // This checks the physical layout, not availability
-  // Check if two seats are physically adjacent using multiple criteria
+  // Check if two seats are physically adjacent/nearby (ignoring status)
+  // Same section; same row adjacent, or cross-row (e.g. second row) when same/adjacent column or within reasonable distance
   const areSeatsPhysicallyAdjacent = useCallback((seat1: Seat, seat2: Seat): boolean => {
     // Must be in same section
     if (seat1.section !== seat2.section) return false;
 
     // Priority 1: Same row adjacency (most reliable)
     if (seat1.row === seat2.row && seat1.row && seat2.row) {
-      // Try numeric seat comparison first
       const seat1Num = extractNumericSeat(seat1.seat);
       const seat2Num = extractNumericSeat(seat2.seat);
 
       if (seat1Num !== null && seat2Num !== null) {
-        // Adjacent if seat numbers differ by exactly 1
         return Math.abs(seat1Num - seat2Num) === 1;
       }
 
-      // Fallback: alphabetical comparison for non-numeric seats
       if (seat1.seat && seat2.seat) {
         return areAdjacentStrings(seat1.seat, seat2.seat);
       }
     }
 
-    // Priority 2: STRICT cross-row adjacency (only immediately adjacent rows)
-    // This prevents "jumping" over rows and creating stranded seats
+    // Priority 2: Cross-row – allow second row (or a few rows) and same/adjacent column
     if (seat1.row !== seat2.row &&
-        seat1.section === seat2.section &&
         seat1.x !== null && seat1.y !== null &&
         seat2.x !== null && seat2.y !== null) {
 
-      // Only allow adjacency between immediately adjacent rows
       const row1 = extractNumericSeat(seat1.row);
       const row2 = extractNumericSeat(seat2.row);
+      const seat1Num = extractNumericSeat(seat1.seat);
+      const seat2Num = extractNumericSeat(seat2.seat);
 
-      if (row1 !== null && row2 !== null && Math.abs(row1 - row2) === 1) {
-        // Check if seats are in the same "column" (similar seat numbers)
-        const seat1Num = extractNumericSeat(seat1.seat);
-        const seat2Num = extractNumericSeat(seat2.seat);
+      const rowDiff = row1 !== null && row2 !== null ? Math.abs(row1 - row2) : null;
+      const seatDiff = seat1Num !== null && seat2Num !== null ? Math.abs(seat1Num - seat2Num) : null;
 
-        if (seat1Num !== null && seat2Num !== null && Math.abs(seat1Num - seat2Num) <= 1) {
-          const distance = Math.sqrt(
-            Math.pow(seat1.x - seat2.x, 2) + Math.pow(seat1.y - seat2.y, 2)
-          );
-          // Very strict threshold for cross-row connections
-          return distance <= 60;
-        }
+      const distance = Math.sqrt(
+        Math.pow(seat1.x - seat2.x, 2) + Math.pow(seat1.y - seat2.y, 2)
+      );
+
+      // Allow up to 3 rows apart, same or adjacent column (seat diff 0 or 1)
+      if (rowDiff !== null && rowDiff <= 3 && seatDiff !== null && seatDiff <= 1) {
+        return distance <= 350;
+      }
+
+      // Fallback: same section and within reasonable distance (e.g. "else where" in same block)
+      if (distance <= 350) {
+        return true;
       }
     }
 
@@ -1889,6 +1887,35 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
   const [themeColors, setThemeColors] = useState({ textColor: '#000', placeholderColor: '#999', iconColor: '#666' });
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'paytrail'>('stripe');
+   // Countdown timer state (10 minutes = 600 seconds)
+   const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes in seconds
+   const [timerExpired, setTimerExpired] = useState(false);
+
+   // Countdown timer effect
+   useEffect(() => {
+     if (timerExpired) return;
+
+     const interval = setInterval(() => {
+       setTimeRemaining((prev) => {
+         if (prev <= 1) {
+           setTimerExpired(true);
+
+           return 0;
+         }
+         return prev - 1;
+       });
+     }, 1000);
+
+     return () => clearInterval(interval);
+   }, [timerExpired]);
+
+   // Format time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Generate nonce once when component mounts to prevent duplicate submissions
   const [nonce] = useState(() => {
     // Generate a cryptographically secure random nonce
@@ -2554,6 +2581,53 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       <h3 className="text-lg font-semibold mb-4">{t('seatSelection.completePayment') || 'Complete Payment'}</h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+
+      <div className={`rounded-lg p-4 border-2 ${
+        timeRemaining < 120
+          ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+          : timeRemaining < 300
+          ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
+          : 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FaClock className={`text-lg ${
+              timeRemaining < 120
+                ? 'text-red-600 dark:text-red-400'
+                : timeRemaining < 300
+                ? 'text-yellow-600 dark:text-yellow-400'
+                : 'text-blue-600 dark:text-blue-400'
+            }`} />
+            <span className={`font-medium ${
+              timeRemaining < 120
+                ? 'text-red-700 dark:text-red-300'
+                : timeRemaining < 300
+                ? 'text-yellow-700 dark:text-yellow-300'
+                : 'text-blue-700 dark:text-blue-300'
+            }`}>
+              {timerExpired
+                ? (t('checkout.timerExpired') || 'Payment session expired')
+                : (t('checkout.timeRemaining') || 'Time remaining to complete payment')
+              }
+
+            </span>
+          </div>
+          <div className={`text-2xl font-bold font-mono ${
+            timeRemaining < 120
+              ? 'text-red-700 dark:text-red-300'
+              : timeRemaining < 300
+              ? 'text-yellow-700 dark:text-yellow-300'
+              : 'text-blue-700 dark:text-blue-300'
+          }`}>
+            {formatTime(timeRemaining)}
+          </div>
+        </div>
+        {timerExpired && (
+          <p className="text-sm mt-2 text-red-600 dark:text-red-400">
+            {t('checkout.timerExpiredMessage') || 'Please refresh the page to start a new payment session.'}
+          </p>
+        )}
+      </div>
         {/* Payer Information */}
         <div className="rounded-lg p-4 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
           <h4 className="font-semibold mb-3 text-sm">{t('checkout.customerInformation') || 'Customer Information'}</h4>
@@ -2755,7 +2829,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
         </div>
 
         {/* Payment Information */}
-        <div className="rounded-lg p-4 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
+        <div className="rounded-xl p-6 shadow" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }} aria-labelledby="payment-info-heading">
           <h4 className="font-semibold mb-3 text-sm flex items-center">
             <FaCreditCard className="mr-2 text-indigo-600" />
             {t('checkout.paymentDetails') || 'Payment Details'}
@@ -2769,38 +2843,41 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
                 <button
                   type="button"
                   onClick={() => setPaymentProvider('stripe')}
-                  className={`p-3 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 transition-colors ${
                     paymentProvider === 'stripe'
-                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-gray-900 dark:text-gray-100'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
                   }`}
                 >
                   <div className="flex items-center justify-center">
                     <FaCreditCard className="mr-2" />
-                    <span className="text-sm font-medium">Card</span>
+                    <span className="text-sm font-medium mb-1">Credit/Debit Card</span>
                   </div>
-                  <div className="text-xs opacity-70 mt-1">Stripe</div>
+                  <div className="text-xs opacity-70 mt-1">Powered byStripe</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentProvider('paytrail')}
-                  className={`p-3 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 transition-colors ${
                     paymentProvider === 'paytrail'
-                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-gray-900 dark:text-gray-100'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
                   }`}
                 >
                   <div className="flex items-center justify-center">
                     <FaCreditCard className="mr-2" />
-                    <span className="text-sm font-medium">Bank/Mobile</span>
+                    <span className="text-sm font-medium">Finnish Bank/Mobile</span>
                   </div>
                   <div className="text-xs opacity-70 mt-1">Paytrail</div>
                 </button>
               </div>
+              <br />
               {paymentProvider === 'paytrail' && (
-                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
-                  {t('checkout.paytrailNote') || 'You will be redirected to Paytrail to complete your payment using Finnish bank or mobile payment methods.'}
-                </div>
+               <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+               <div className="text-green-800 dark:text-green-300 text-sm">
+                 {t('checkout.paytrailNote') || 'You will be redirected to Paytrail to complete your payment using Finnish bank or mobile payment methods.'}
+               </div>
+             </div>
               )}
             </div>
           )}
@@ -2876,6 +2953,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
             >
               {t('common.back') || 'Back'}
             </button>
+            {!timerExpired && (
             <button
               type="submit"
               disabled={loading || (paymentProvider === 'stripe' && (!stripe || !cardComplete))}
@@ -2892,6 +2970,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
                   : `${t('checkout.completePurchase') || 'Complete Purchase'} ${formatCurrency(totalPrice)} ${getCurrencySymbol(checkoutData.country || 'Finland')}`
               }
             </button>
+            )}
           </div>
         </div>
       </form>

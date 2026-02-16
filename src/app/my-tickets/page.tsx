@@ -40,6 +40,11 @@ export default function MyTicketsPage() {
   const [downloadingTicketId, setDownloadingTicketId] = useState<string | null>(null);
   const [tokenExpiryWarning, setTokenExpiryWarning] = useState(false);
   const [downloadNotification, setDownloadNotification] = useState(false);
+  const [platformMarketingOptIn, setPlatformMarketingOptIn] = useState<boolean>(true);
+  const [platformConsentUpdating, setPlatformConsentUpdating] = useState(false);
+  const [consentFeedback, setConsentFeedback] = useState<'optedIn' | 'optedOut' | 'error' | null>(null);
+  const [consentFeedbackMessage, setConsentFeedbackMessage] = useState('');
+  const consentFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const expiryCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check token expiry (only on this page)
@@ -87,6 +92,9 @@ export default function MyTicketsPage() {
       if (expiryCheckIntervalRef.current) {
         clearInterval(expiryCheckIntervalRef.current);
       }
+      if (consentFeedbackTimeoutRef.current) {
+        clearTimeout(consentFeedbackTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -102,12 +110,15 @@ export default function MyTicketsPage() {
 
       try {
         setLoading(true);
-        const response = await api.get<{ success: boolean; data: Ticket[] }>('/guest/tickets', {
+        const response = await api.get<{ success: boolean; data: Ticket[]; platformMarketingOptIn?: boolean }>('/guest/tickets', {
           year: selectedYear
         });
 
         if (response.success) {
           setTickets(response.data || []);
+          if (typeof response.platformMarketingOptIn === 'boolean') {
+            setPlatformMarketingOptIn(response.platformMarketingOptIn);
+          }
           setError('');
         }
       } catch (err) {
@@ -127,6 +138,45 @@ export default function MyTicketsPage() {
       fetchTickets();
     }
   }, [selectedYear, showLoginModal, t]);
+
+  const handlePlatformMarketingToggle = async (checked: boolean) => {
+    if (consentFeedbackTimeoutRef.current) {
+      clearTimeout(consentFeedbackTimeoutRef.current);
+      consentFeedbackTimeoutRef.current = null;
+    }
+    setConsentFeedback(null);
+    setPlatformConsentUpdating(true);
+    try {
+      const response = await api.patch<{ success: boolean; platformMarketingOptIn?: boolean }>(
+        '/guest/platform-marketing-consent',
+        { platformMarketingOptIn: checked }
+      );
+      if (response.success && typeof response.platformMarketingOptIn === 'boolean') {
+        setPlatformMarketingOptIn(response.platformMarketingOptIn);
+        setConsentFeedback(response.platformMarketingOptIn ? 'optedIn' : 'optedOut');
+      } else {
+        setPlatformMarketingOptIn(checked);
+        setConsentFeedback(checked ? 'optedIn' : 'optedOut');
+      }
+      setConsentFeedbackMessage('');
+      consentFeedbackTimeoutRef.current = setTimeout(() => {
+        setConsentFeedback(null);
+        consentFeedbackTimeoutRef.current = null;
+      }, 5000);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      const message = axiosError.response?.data?.message || t('myTickets.errorUpdatingConsent');
+      setConsentFeedback('error');
+      setConsentFeedbackMessage(message);
+      consentFeedbackTimeoutRef.current = setTimeout(() => {
+        setConsentFeedback(null);
+        setConsentFeedbackMessage('');
+        consentFeedbackTimeoutRef.current = null;
+      }, 6000);
+    } finally {
+      setPlatformConsentUpdating(false);
+    }
+  };
 
   const handleDownload = async (ticketId: string) => {
     setDownloadingTicketId(ticketId);
@@ -281,6 +331,45 @@ export default function MyTicketsPage() {
               </div>
             </div>
           )}
+
+          {/* Platform marketing consent (opt-in/opt-out) */}
+          <div className="p-4 rounded-lg mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="font-medium">{t('myTickets.platformMarketingConsent')}</p>
+                <p className="text-sm opacity-70 mt-1">{t('myTickets.platformMarketingConsentDescription')}</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={platformMarketingOptIn}
+                  disabled={platformConsentUpdating}
+                  onChange={(e) => handlePlatformMarketingToggle(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <span className="ms-3 text-sm font-medium">
+                  {platformConsentUpdating ? t('myTickets.updating') : (platformMarketingOptIn ? t('myTickets.optedIn') : t('myTickets.optedOut'))}
+                </span>
+              </label>
+            </div>
+            {/* PATCH result feedback */}
+            {consentFeedback === 'optedIn' && (
+              <p className="mt-3 text-sm text-green-600 dark:text-green-400 font-medium" role="status">
+                {t('myTickets.consentUpdatedOptedIn')}
+              </p>
+            )}
+            {consentFeedback === 'optedOut' && (
+              <p className="mt-3 text-sm text-green-600 dark:text-green-400 font-medium" role="status">
+                {t('myTickets.consentUpdatedOptedOut')}
+              </p>
+            )}
+            {consentFeedback === 'error' && (
+              <p className="mt-3 text-sm text-red-600 dark:text-red-400 font-medium" role="alert">
+                {consentFeedbackMessage || t('myTickets.errorUpdatingConsent')}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Loading State */}

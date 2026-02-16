@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Finnep Events',
+    name: 'Okazzo Events',
     short_name: 'Finnep',
     description: 'Discover and book tickets for the best events in Finland and the Nordic region',
     start_url: '/',

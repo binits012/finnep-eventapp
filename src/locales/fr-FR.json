@@ -30,7 +30,7 @@
     },
     "help": {
       "title": "Manuel d'utilisation",
-      "subtitle": "Guide complet de l'application Finnep Event",
+      "subtitle": "Guide complet de l'application Okazzo Oy Event",
       "downloadPdf": "Télécharger la version PDF",
       "pdfNotAvailable": "La version PDF sera bientôt disponible. Utilisez la fonction d'impression de votre navigateur.",
       "backToTop": "Retour en haut",
@@ -53,7 +53,7 @@
       "subscribeText": "Abonnez-vous pour recevoir les derniers événements et offres.",
       "emailPlaceholder": "Entrez votre email",
       "subscribe": "S'abonner",
-      "copyright": "© {{year}} Finnep. Tous droits réservés.",
+      "copyright": "© {{year}} Okazzo Oy. Tous droits réservés.",
       "privacyPolicy": "Politique de confidentialité",
       "termsOfService": "Conditions d'utilisation",
       "srFacebook": "Facebook",
@@ -691,7 +691,15 @@
       "notAvailable": "N/A",
       "errorLoading": "Erreur de chargement",
       "errorDownloading": "Erreur de téléchargement",
-      "downloadInfo": "Les fichiers (QR et calendrier) seront téléchargés séparément."
+      "downloadInfo": "Les fichiers (QR et calendrier) seront téléchargés séparément.",
+      "platformMarketingConsent": "Actualités et offres de la plateforme",
+      "platformMarketingConsentDescription": "Recevez des actualités, conseils et offres de la plateforme. Vous pouvez modifier à tout moment.",
+      "optedIn": "Activé",
+      "optedOut": "Désactivé",
+      "updating": "Mise à jour...",
+      "errorUpdatingConsent": "Erreur lors de la mise à jour. Veuillez réessayer.",
+      "consentUpdatedOptedIn": "Vous êtes maintenant inscrit aux actualités et offres de la plateforme.",
+      "consentUpdatedOptedOut": "Vous êtes maintenant désinscrit des actualités et offres de la plateforme."
     },
     "ticketLogin": {
       "title": "Accéder à mes billets",

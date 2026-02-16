@@ -78,6 +78,10 @@ export interface Event {
       endDate?: string;
     };
     tags?: string[];
+    waitlistConfig?: {
+      pre_sale_enabled?: boolean;
+      sold_out_enabled?: boolean;
+    };
   }
 
   export interface TicketInfo {

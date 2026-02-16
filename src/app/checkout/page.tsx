@@ -155,6 +155,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           setTimerExpired(true);
+
           return 0;
         }
         return prev - 1;
@@ -243,6 +244,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
       marketingOptIn: checkoutData.marketingOptIn || false,
       // Seat selection
       placeIds: checkoutData.placeIds ? JSON.stringify(checkoutData.placeIds) : undefined,
+      locale: window.localStorage.getItem('locale') || 'en-US',
     }
   });
 
@@ -341,6 +343,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
           marketingOptIn: checkoutData.marketingOptIn || false,
           placeIds: checkoutData.placeIds || [],
           nonce: nonce, // Include nonce to prevent duplicate submissions
+          locale: window.localStorage.getItem('locale') || 'en-US',
         }
       })
     });
@@ -464,6 +467,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
                 ? (t('checkout.timerExpired') || 'Payment session expired')
                 : (t('checkout.timeRemaining') || 'Time remaining to complete payment')
               }
+
             </span>
           </div>
           <div className={`text-2xl font-bold font-mono ${
@@ -507,7 +511,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
         {/* Payment Method Selection */}
         {checkoutData.paytrailEnabled && (
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-3 text-gray-900 dark:text-gray-100">{t('checkout.paymentMethod') || 'Payment Method'}</label>
+            <label className="block text-sm font-medium mb-2">{t('checkout.paymentMethod') || 'Payment Method'}</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -610,6 +614,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
           >
 {t('common.back')}
           </button>
+          { !timerExpired && (
           <button
             type="submit"
             disabled={paymentProvider === 'stripe' && (!stripe || !cardComplete) || loading}
@@ -626,6 +631,7 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
                 : `${t('checkout.completePurchase')} ${total.toFixed(2)} ${' '} ${getCurrencySymbol(checkoutData.country || 'Finland')}`
             }
           </button>
+          )}
         </div>
       </section>
     </form>
@@ -771,7 +777,8 @@ function CheckoutContent() {
                 country: checkoutData.country || 'Finland',
                 fullName: checkoutData.fullName,
                 // Security: Include nonce to prevent duplicate submissions
-                nonce: checkoutData.nonce
+                nonce: checkoutData.nonce,
+                locale: window.localStorage.getItem('locale') || 'en-US'
               })
             }
           );

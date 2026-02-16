@@ -504,7 +504,7 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
               {t('home.viewDetails')}
             </span>
           </Link>
-          <div className="mt-3 flex items-center gap-4 text-xs opacity-80" style={{ color: 'var(--foreground)' }}>
+          <div className="px-3 sm:px-4 pb-3 sm:pb-4 mt-2 flex items-center gap-3 text-[11px] opacity-80" style={{ color: 'var(--foreground)' }}>
             {event.transportLink && (
               <a href={event.transportLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:opacity-100">
                 <FaExternalLinkAlt className="text-[10px]" />

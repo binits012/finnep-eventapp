@@ -30,7 +30,7 @@
   },
   "help": {
     "title": "Brukermanual",
-    "subtitle": "Komplett guide til bruk av Finnep Event App",
+    "subtitle": "Komplett guide til bruk av Okazzo Oy Event App",
     "downloadPdf": "Last ned PDF-versjon",
     "pdfNotAvailable": "PDF-versjonen blir tilgjengelig snart. Bruk utskriftsfunksjonen i nettleseren din for å lagre som PDF.",
     "backToTop": "Tilbake til toppen",
@@ -53,7 +53,7 @@
     "subscribeText": "Abonner for å få de siste arrangementene og tilbudene.",
     "emailPlaceholder": "Skriv inn din e-post",
     "subscribe": "Abonner",
-    "copyright": "© {{year}} Finnep. Alle rettigheter forbeholdes.",
+    "copyright": "© {{year}} Okazzo Oy. Alle rettigheter forbeholdes.",
     "privacyPolicy": "Personvernerklæring",
     "termsOfService": "Vilkår for Tjenesten",
     "srFacebook": "Facebook",
@@ -364,7 +364,7 @@
       "companyEmail": "firma@eksempel.com",
       "companyPhone": "+358445359448",
       "companyAddress": "Laajavuorenkuja 3d 36",
-      "businessCode": "2589566-4",
+      "businessCode": "3579764-6",
       "companyDescription": "Beskriv selskapet ditt og hva slags arrangementer du organiserer...",
       "username": "bruker@eksempel.com",
       "password": "Skriv inn et sterkt passord",
@@ -699,7 +699,15 @@
     "notAvailable": "Ikke Tilgjengelig",
     "errorLoading": "Feil ved lasting av billetter",
     "errorDownloading": "Feil ved nedlasting av billett",
-    "downloadInfo": "Billettfilene dine lastes ned separat: QR-kodebilde og kalenderarrangementfil."
+    "downloadInfo": "Billettfilene dine lastes ned separat: QR-kodebilde og kalenderarrangementfil.",
+    "platformMarketingConsent": "Plattformnyheter og tilbud",
+    "platformMarketingConsentDescription": "Motta nyheter, tips og tilbud fra plattformen. Du kan endre dette når som helst.",
+    "optedIn": "På",
+    "optedOut": "Av",
+    "updating": "Oppdaterer...",
+    "errorUpdatingConsent": "Kunne ikke oppdatere preferansen. Prøv igjen.",
+    "consentUpdatedOptedIn": "Du er nå registrert for plattformens nyheter og tilbud.",
+    "consentUpdatedOptedOut": "Du er nå avregistrert fra plattformens nyheter og tilbud."
   },
   "ticketLogin": {
     "title": "Få Tilgang til Dine Billetter",

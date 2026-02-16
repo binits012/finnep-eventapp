@@ -30,7 +30,7 @@
   },
   "help": {
     "title": "Käyttöopas",
-    "subtitle": "Täydellinen opas Finnep Event -sovelluksen käyttöön",
+    "subtitle": "Täydellinen opas Okazzo Oy Event -sovelluksen käyttöön",
     "downloadPdf": "Lataa PDF-versio",
     "pdfNotAvailable": "PDF-versio on saatavilla pian. Käytä selaimesi tulostustoimintoa tallentaaksesi PDF:nä.",
     "backToTop": "Takaisin ylös",
@@ -53,7 +53,7 @@
     "subscribeText": "Tilaa saadaksesi viimeisimmät tapahtumat ja tarjoukset.",
     "emailPlaceholder": "Anna sähköpostiosoitteesi",
     "subscribe": "Tilaa",
-    "copyright": "© {{year}} Finnep. Kaikki oikeudet pidätetään.",
+    "copyright": "© {{year}} Okazzo Oy. Kaikki oikeudet pidätetään.",
     "privacyPolicy": "Tietosuojakäytäntö",
     "termsOfService": "Palveluehdot",
     "srFacebook": "Facebook",
@@ -364,7 +364,7 @@
       "companyEmail": "yritys@esimerkki.com",
       "companyPhone": "+358445359448",
       "companyAddress": "Laajavuorenkuja 3d 36",
-      "businessCode": "2589566-4",
+      "businessCode": "3579764-6",
       "companyDescription": "Kuvaile yritystäsi ja millaisia tapahtumia järjestät...",
       "username": "kayttaja@esimerkki.com",
       "password": "Anna vahva salasana",
@@ -699,7 +699,15 @@
     "notAvailable": "Ei Saatavilla",
     "errorLoading": "Virhe lippujen lataamisessa",
     "errorDownloading": "Virhe lipun lataamisessa",
-    "downloadInfo": "Lipputiedostosi ladataan erikseen: QR-koodikuva ja kalenteritapahtumatiedosto."
+    "downloadInfo": "Lipputiedostosi ladataan erikseen: QR-koodikuva ja kalenteritapahtumatiedosto.",
+    "platformMarketingConsent": "Alustan uutiset ja tarjoukset",
+    "platformMarketingConsentDescription": "Vastaanota uutisia, vinkkejä ja tarjouksia alustalta. Voit muuttaa asetusta milloin tahansa.",
+    "optedIn": "Päällä",
+    "optedOut": "Pois",
+    "updating": "Päivitetään...",
+    "errorUpdatingConsent": "Asetuksen päivitys epäonnistui. Yritä uudelleen.",
+    "consentUpdatedOptedIn": "Olet nyt mukana alustan uutisissa ja tarjouksissa.",
+    "consentUpdatedOptedOut": "Olet nyt pois alustan uutisista ja tarjouksista."
   },
   "ticketLogin": {
     "title": "Pääsy Lippuihisi",

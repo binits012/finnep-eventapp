@@ -97,14 +97,11 @@ export default function Header() {
               whileHover={{ scale: 1.03 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
-              <Image
-                src="/okazzo_l1.png"
-                alt="Okazzo Logo"
-                width={120}
-                height={80}
-                priority
-                className="h-8 sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-none"
-              />
+              <img
+    src= {theme === 'dark' ? "/logo21100.png" : "/black_6100.svg"}
+    alt="Okazzo Logo"
+    className=" sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-none"
+  />
             </motion.div>
           </Link>
 

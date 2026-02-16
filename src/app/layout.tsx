@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = generateSEOMetadata({
-  title: "Finnep Events - Discover & Buy Tickets for the Best Events",
-  description: "Find and buy tickets for the best events in Finland and the Nordic region. Discover concerts, festivals, conferences, and more with Finnep Events.",
+  title: "Okazzo Events - Discover & Buy Tickets for the Best Events",
+  description: "Find and buy tickets for the best events in Finland and the Nordic region. Discover concerts, festivals, conferences, and more with Okazzo Events.",
   keywords: ["events", "tickets", "Finland", "Nordic", "concerts", "festivals", "conferences", "Helsinki", "booking"],
   image: '/logo.png',
   url: '/',
@@ -43,8 +43,8 @@ export default function RootLayout({
         <meta name="theme-color" content="#6366f1" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Finnep Events" />
-        <meta name="application-name" content="Finnep Events" />
+        <meta name="apple-mobile-web-app-title" content="Okazzo Events" />
+        <meta name="application-name" content="Okazzo Events" />
         <meta name="msapplication-TileColor" content="#6366f1" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
 
@@ -147,7 +147,7 @@ export default function RootLayout({
                 "@type": "Organization",
                 "@id": "https://eventapp.finnep.fi#organization",
                 "name": "Finnep",
-                "description": "Finnep Events - Your premier destination for events in Finland and the Nordic region",
+                "description": "Okazzo Events - Your premier destination for events in Finland and the Nordic region",
                 "url": "https://eventapp.finnep.fi",
                 "logo": "https://eventapp.finnep.fi/logo.png",
                 "sameAs": [
@@ -172,7 +172,7 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "WebSite",
                 "@id": "https://eventapp.finnep.fi#website",
-                "name": "Finnep Events",
+                "name": "Okazzo Events",
                 "description": "Discover and book tickets for the best events in Finland and the Nordic region",
                 "url": "https://eventapp.finnep.fi",
                 "potentialAction": {

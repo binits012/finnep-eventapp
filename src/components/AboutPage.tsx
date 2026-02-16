@@ -93,7 +93,7 @@ export default function AboutPage({ data }: AboutPageProps) {
                   <div className="absolute w-3 h-3 bg-indigo-600 rounded-full mt-1.5 -start-1.5"></div>
                   <time className="mb-1 text-sm opacity-70" style={{ color: 'var(--foreground)' }}>{formatEventDateLocale(settings.createdAt, undefined, locale)}</time>
                   <h3 className="text-base font-medium">Founded</h3>
-                  <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Yellow Bridge begins its journey to connect communities with memorable events.</p>
+                  <p className="opacity-80" style={{ color: 'var(--foreground)' }}>Okazzo Oy begins its journey to connect communities with memorable events.</p>
                 </li>
                 {settings?.aboutSection && (
                   <li className="mb-8 ms-4">

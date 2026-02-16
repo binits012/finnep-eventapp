@@ -92,6 +92,25 @@ function getTicketInfo(ticketData: TicketData | SimpleTicketData | null) {
   return isFullTicketData(ticketData) ? ticketData.ticketInfo : null;
 }
 
+/** Obfuscate email for display (PII protection). e.g. "user@example.com" → "us***@ex***.com" */
+function obfuscateEmail(email: string | null | undefined): string {
+  if (!email || typeof email !== 'string') return 'N/A';
+  const trimmed = email.trim();
+  if (!trimmed) return 'N/A';
+  const at = trimmed.indexOf('@');
+  if (at <= 0 || at === trimmed.length - 1) return '***@***';
+  const local = trimmed.slice(0, at);
+  const domain = trimmed.slice(at + 1);
+  const localMask = local.length <= 2 ? local[0] + '***' : local.slice(0, 2) + '***';
+  const dot = domain.indexOf('.');
+  const domainMask = dot <= 0
+    ? '***'
+    : domain.length <= 2
+      ? '***' + domain.slice(-1)
+      : domain.slice(0, 1) + '***' + (dot >= 0 ? domain.slice(dot) : '');
+  return `${localMask}@${domainMask}`;
+}
+
 export default function SuccessPage({ ticketData: propTicketData}: SuccessPageProps = {}) {
   const { t, locale } = useTranslation();
   const router = useRouter();
@@ -458,7 +477,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                 </div>
                 <div class="detail-row">
                   <span class="label">${t('success.email') || 'Email'}:</span>
-                  <span class="value">${ticketInfo.email || 'N/A'}</span>
+                  <span class="value">${obfuscateEmail(ticketInfo.email)}</span>
                 </div>
                 ${ticketInfo.fullName ? `
                 <div class="detail-row">
@@ -662,7 +681,7 @@ export default function SuccessPage({ ticketData: propTicketData}: SuccessPagePr
                   </div>
                   <div className="flex justify-between">
                     <span className="opacity-70">{t('success.email')}:</span>
-                    <span>{getTicketInfo(ticketData)?.email || 'N/A'}</span>
+                    <span>{obfuscateEmail(getTicketInfo(ticketData)?.email)}</span>
                   </div>
                   {getTicketInfo(ticketData)?.fullName && (
                     <div className="flex justify-between">

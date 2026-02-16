@@ -54,7 +54,7 @@ export default function EventPage() {
       const hostname = typeof window !== 'undefined' ? window.location.origin : '';
 
       // Update document title
-      document.title = `${event.eventTitle || 'Event'} | Finnep Events`;
+      document.title = `${event.eventTitle || 'Event'} | Okazzo Events`;
 
       // Update meta description
       const metaDescription = document.querySelector('meta[name="description"]');

@@ -30,7 +30,7 @@
   },
   "help": {
     "title": "User Manual",
-    "subtitle": "Complete guide to using Finnep Event App",
+    "subtitle": "Complete guide to using Okazzo Oy Event App",
     "downloadPdf": "Download PDF Version",
     "pdfNotAvailable": "PDF version will be available soon. Use the print function in your browser to save as PDF.",
     "backToTop": "Back to Top",
@@ -53,7 +53,7 @@
     "subscribeText": "Subscribe to get the latest events and offers.",
     "emailPlaceholder": "Enter your email",
     "subscribe": "Subscribe",
-    "copyright": "© {{year}} Finnep. All rights reserved.",
+    "copyright": "© {{year}} Okazzo Oy. All rights reserved.",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
     "srFacebook": "Facebook",
@@ -364,7 +364,7 @@
       "companyEmail": "company@example.com",
       "companyPhone": "+358445359448",
       "companyAddress": "Laajavuorenkuja 3d 36",
-      "businessCode": "2589566-4",
+      "businessCode": "3579764-6",
       "companyDescription": "Describe your company and what kind of events you organize...",
       "username": "user@example.com",
       "password": "Enter a strong password",
@@ -701,7 +701,15 @@
     "notAvailable": "N/A",
     "errorLoading": "Error loading tickets",
     "errorDownloading": "Error downloading ticket",
-    "downloadInfo": "Your ticket files will download separately: QR code image and calendar event file."
+    "downloadInfo": "Your ticket files will download separately: QR code image and calendar event file.",
+    "platformMarketingConsent": "Platform news and offers",
+    "platformMarketingConsentDescription": "Receive news, tips and offers from the platform. You can change this at any time.",
+    "optedIn": "On",
+    "optedOut": "Off",
+    "updating": "Updating...",
+    "errorUpdatingConsent": "Error updating preference. Please try again.",
+    "consentUpdatedOptedIn": "You're now opted in to platform news and offers.",
+    "consentUpdatedOptedOut": "You're now opted out from platform news and offers."
   },
   "ticketLogin": {
     "title": "Access Your Tickets",

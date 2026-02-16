@@ -30,7 +30,7 @@
     },
     "help": {
       "title": "Benutzerhandbuch",
-      "subtitle": "Vollständige Anleitung zur Finnep Event App",
+      "subtitle": "Vollständige Anleitung zur Okazzo Oy Event App",
       "downloadPdf": "PDF-Version herunterladen",
       "pdfNotAvailable": "Die PDF-Version ist bald verfügbar. Nutzen Sie die Druckfunktion Ihres Browsers.",
       "backToTop": "Nach oben",
@@ -53,7 +53,7 @@
       "subscribeText": "Abonniere unseren Newsletter für die neuesten Events.",
       "emailPlaceholder": "Deine E-Mail",
       "subscribe": "Abonnieren",
-      "copyright": "© {{year}} Finnep. Alle Rechte vorbehalten.",
+      "copyright": "© {{year}} Okazzo Oy. Alle Rechte vorbehalten.",
       "privacyPolicy": "Datenschutz",
       "termsOfService": "AGB",
       "srFacebook": "Facebook",
@@ -691,7 +691,15 @@
       "notAvailable": "n.v.",
       "errorLoading": "Fehler beim Laden",
       "errorDownloading": "Fehler beim Download",
-      "downloadInfo": "QR-Bild und Kalender-Datei werden separat geladen."
+      "downloadInfo": "QR-Bild und Kalender-Datei werden separat geladen.",
+      "platformMarketingConsent": "Plattform-News und Angebote",
+      "platformMarketingConsentDescription": "Erhalten Sie Neuigkeiten, Tipps und Angebote von der Plattform. Sie können dies jederzeit ändern.",
+      "optedIn": "An",
+      "optedOut": "Aus",
+      "updating": "Wird aktualisiert...",
+      "errorUpdatingConsent": "Einstellung konnte nicht aktualisiert werden. Bitte erneut versuchen.",
+      "consentUpdatedOptedIn": "Sie sind jetzt für Plattform-News und Angebote angemeldet.",
+      "consentUpdatedOptedOut": "Sie sind jetzt von Plattform-News und Angeboten abgemeldet."
     },
     "ticketLogin": {
       "title": "Tickets aufrufen",

@@ -37,7 +37,7 @@ export function generateMetadata(config: SEOConfig): Metadata {
   const fullImageUrl = image.startsWith('http') ? image : `${baseUrl}${image}`;
 
   const metadata: Metadata = {
-    title: `${title} | Finnep Events`,
+    title: `${title} | Okazzo Events`,
     description,
     keywords: keywords.join(', '),
     authors: author ? [{ name: author }] : undefined,
@@ -56,7 +56,7 @@ export function generateMetadata(config: SEOConfig): Metadata {
       title,
       description,
       url: fullUrl,
-      siteName: 'Finnep Events',
+      siteName: 'Okazzo Events',
       images: [
         {
           url: fullImageUrl,
@@ -117,8 +117,8 @@ export function generateStructuredData(config: {
     case 'Organization':
       return {
         ...baseStructuredData,
-        name: merchantData?.name || 'Finnep Events',
-        description: merchantData?.description || 'Finnep Events - Your premier destination for events in Finland and the Nordic region',
+        name: merchantData?.name || 'Okazzo Events',
+        description: merchantData?.description || 'Okazzo Events - Your premier destination for events in Finland and the Nordic region',
         url: merchantData?.website || baseUrl,
         logo: merchantData?.logo || `${baseUrl}/logo.png`,
         sameAs: [
@@ -197,7 +197,7 @@ export function generateStructuredData(config: {
     case 'WebSite':
       return {
         ...baseStructuredData,
-        name: 'Finnep Events',
+        name: 'Okazzo Events',
         description: 'Discover and book tickets for the best events in Finland and the Nordic region',
         url: baseUrl,
         potentialAction: {

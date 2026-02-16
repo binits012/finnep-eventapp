@@ -165,6 +165,44 @@ export const api = {
   }
 };
 
+/**
+ * Public waitlist join (no auth).
+ * Backend should proxy to event-merchant-service POST /merchant/:merchantId/event/:eventId/waitlist/join
+ */
+export const waitlistAPI = {
+  join: async (eventId: string, body: { email: string; type: 'pre_sale' | 'sold_out' }) => {
+    return api.post<unknown>(`/event/${eventId}/waitlist`, body);
+  }
+};
+
+/** Public survey (no auth). Backend should proxy to event-merchant-service. */
+export interface SurveyQuestion {
+  id: string;
+  type: 'text' | 'rating' | 'single_choice' | 'multiple_choice';
+  label: string;
+  required?: boolean;
+  options?: string[];
+}
+
+export interface SurveyPublic {
+  id: string;
+  name: string;
+  questions: SurveyQuestion[];
+  active: boolean;
+  merchantId?: string;
+}
+
+export const surveyAPI = {
+  /** merchantId required by backend; pass from query when opening survey link */
+  getSurvey: async (surveyId: string, merchantId?: string): Promise<SurveyPublic> => {
+    const params = merchantId ? { merchantId } : {};
+    return api.get<SurveyPublic>(`/survey/${surveyId}`, { params });
+  },
+  submitResponse: async (surveyId: string, body: { merchantId?: string; respondent_identifier?: string; responses: Record<string, unknown> }) => {
+    return api.post<unknown>(`/survey/${surveyId}/response`, body);
+  }
+};
+
 // Seat selection API methods
 // Note: These use /front/ endpoints for public access (no authentication required)
 // Session-based validation is handled via sessionId (UUID)

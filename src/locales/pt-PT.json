@@ -30,7 +30,7 @@
     },
     "help": {
       "title": "Manual do Utilizador",
-      "subtitle": "Guia completo da Finnep Event App",
+      "subtitle": "Guia completo da Okazzo Oy Event App",
       "downloadPdf": "Descarregar PDF",
       "pdfNotAvailable": "Versão PDF brevemente. Use a função de imprimir do navegador.",
       "backToTop": "Voltar ao topo",
@@ -53,7 +53,7 @@
       "subscribeText": "Subscreva para receber eventos e ofertas.",
       "emailPlaceholder": "Seu e-mail",
       "subscribe": "Subscrever",
-      "copyright": "© {{year}} Finnep. Todos os direitos reservados.",
+      "copyright": "© {{year}} Okazzo Oy. Todos os direitos reservados.",
       "privacyPolicy": "Política de Privacidade",
       "termsOfService": "Termos de Serviço",
       "srFacebook": "Facebook",
@@ -691,7 +691,15 @@
       "notAvailable": "N/D",
       "errorLoading": "Erro ao carregar",
       "errorDownloading": "Erro no download",
-      "downloadInfo": "O QR e o ficheiro de calendário serão descarregados à parte."
+      "downloadInfo": "O QR e o ficheiro de calendário serão descarregados à parte.",
+      "platformMarketingConsent": "Notícias e ofertas da plataforma",
+      "platformMarketingConsentDescription": "Receba notícias, dicas e ofertas da plataforma. Pode alterar quando quiser.",
+      "optedIn": "Ligado",
+      "optedOut": "Desligado",
+      "updating": "A atualizar...",
+      "errorUpdatingConsent": "Erro ao atualizar preferência. Tente novamente.",
+      "consentUpdatedOptedIn": "Está agora inscrito nas notícias e ofertas da plataforma.",
+      "consentUpdatedOptedOut": "Está agora desinscrito das notícias e ofertas da plataforma."
     },
     "ticketLogin": {
       "title": "Aceder aos Bilhetes",

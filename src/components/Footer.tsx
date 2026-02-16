@@ -13,7 +13,7 @@ export default function Footer() {
   const settings = data?.setting?.[0] || {};
 
   const socialMedia = (settings as { socialMedia: {   fb?: string; x?: string; in?: string; ln?: string; tk?: string; } }).socialMedia;
-
+  const storedTheme = window.localStorage.getItem('theme');
   return (
     <footer className="w-full border-t overflow-x-hidden" style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)' }}>
       {/* Main Footer Content */}
@@ -25,13 +25,11 @@ export default function Footer() {
             <div className="pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
               <Link href="/">
                 <div className="flex justify-center sm:justify-start">
-                  <Image
-                    src="/okazzo_l1.png"
-                    alt="Okazzo Logo"
-                    width={120}
-                    height={80}
-                    className="h-8 w-auto object-contain"
-                  />
+                <img
+    src= {storedTheme === 'dark' ? "/logo23100.png" : "/black_6100.svg"}
+    alt="Okazzo Logo"
+    className=" sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-none"
+  />
                 </div>
               </Link>
               <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
@@ -138,13 +136,11 @@ export default function Footer() {
           <div className="col-span-2">
             <Link href="/">
               <div className="flex items-center">
-                <Image
-                  src="/okazzo_l1.png"
-                  alt="Okazzo Logo"
-                  width={120}
-                  height={80}
-                  className="h-8 w-auto object-contain"
-                />
+              <img
+    src= {storedTheme === 'dark' ? "/logo23100.png" : "/black_6100.svg"}
+    alt="Okazzo Logo"
+    className=" sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-none"
+  />
               </div>
             </Link>
             <p className="mt-4 text-sm opacity-80 max-w-md" style={{ color: 'var(--foreground)' }}>
