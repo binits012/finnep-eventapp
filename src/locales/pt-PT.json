@@ -452,7 +452,15 @@
         "lowStock": "Últimos bilhetes",
         "soldOut": "Esgotado",
         "buyTicket": "Comprar Bilhete",
-        "selectTicket": "Escolher Bilhete"
+        "selectTicket": "Escolher Bilhete",
+        "getTickets": "Comprar Bilhetes"
+      },
+      "presaleAccess": {
+        "banner": "Tem acesso à pré-venda — compre os seus bilhetes abaixo."
+      },
+      "preSale": {
+        "message": "Os bilhetes ainda não estão à venda. Avisá-lo-emos quando estiverem disponíveis.",
+        "cta": "Avisar quando os bilhetes estiverem à venda"
       },
       "eventDetails": {
         "title": "Detalhes",
@@ -492,6 +500,32 @@
         "registrationSuccessMessage": "Inscrição concluída. Verifique o seu e-mail.",
         "registrationFailed": "Falha na inscrição.",
         "emailPlaceholder": "seu.email@exemplo.com"
+      },
+      "waitlistModal": {
+        "titlePreSale": "Avisar quando os bilhetes estiverem à venda",
+        "titleSoldOut": "Avisar quando houver bilhetes novamente",
+        "successMessage": "Está na lista. Avisá-lo-emos.",
+        "step1Description": "Introduza o seu e-mail e enviaremos um código de verificação (válido 5 minutos).",
+        "emailLabel": "E-mail",
+        "emailPlaceholder": "seu@email.com",
+        "cancel": "Cancelar",
+        "sendCode": "Enviar código",
+        "sending": "A enviar…",
+        "step2Description": "Introduza o código de 8 dígitos que enviamos para {{email}}",
+        "verificationCodeLabel": "Código de verificação",
+        "codePlaceholder": "00000000",
+        "back": "Voltar",
+        "joinWaitlist": "Juntar-me à lista de espera",
+        "joining": "A juntar…",
+        "waitlistFull": "Lista de pré-venda está cheia",
+        "errors": {
+          "validEmail": "Introduza um e-mail válido",
+          "completeVerification": "Complete a verificação",
+          "codeFromEmail": "Introduza o código do seu e-mail",
+          "sendCodeFailed": "Falha ao enviar o código",
+          "joinFailed": "Falha ao juntar-se à lista",
+          "alreadyOnWaitlist": "Já está na lista de espera"
+        }
       }
     },
     "seatSelection": {

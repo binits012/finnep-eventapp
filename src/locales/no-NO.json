@@ -458,7 +458,15 @@
       "lowStock": "Få igjen",
       "soldOut": "Utsolgt",
       "buyTicket": "Kjøp Billett",
-      "selectTicket": "Velg en Billett"
+      "selectTicket": "Velg en Billett",
+      "getTickets": "Kjøp Billetter"
+    },
+    "presaleAccess": {
+      "banner": "Du har forhåndssalg-tilgang — kjøp billettene dine nedenfor."
+    },
+    "preSale": {
+      "message": "Billetter er ikke til salg ennå. Få varsel når de blir tilgjengelige.",
+      "cta": "Varsle meg når billetter blir til salg"
     },
     "eventDetails": {
       "title": "Arrangementsdetaljer",
@@ -500,6 +508,32 @@
       "registrationSuccessMessage": "Du er registrert for dette gratis arrangementet. Sjekk e-posten din for bekreftelse.",
       "registrationFailed": "Registrering mislyktes. Prøv igjen.",
       "emailPlaceholder": "din.epost@eksempel.com"
+    },
+    "waitlistModal": {
+      "titlePreSale": "Varsle meg når billetter selges",
+      "titleSoldOut": "Varsle meg når billetter er tilgjengelige igjen",
+      "successMessage": "Du er på listen. Vi gir deg beskjed.",
+      "step1Description": "Skriv inn e-posten din, så sender vi en bekreftelseskode (gyldig 5 minutter).",
+      "emailLabel": "E-post",
+      "emailPlaceholder": "din@epost.com",
+      "cancel": "Avbryt",
+      "sendCode": "Send kode",
+      "sending": "Sender…",
+      "step2Description": "Skriv inn den 8-sifrede koden vi sendte til {{email}}",
+      "verificationCodeLabel": "Bekreftelseskode",
+      "codePlaceholder": "00000000",
+      "back": "Tilbake",
+      "joinWaitlist": "Bli med på ventelisten",
+      "joining": "Bli med…",
+      "waitlistFull": "Før-salgs ventelisten er full",
+      "errors": {
+        "validEmail": "Skriv inn en gyldig e-postadresse",
+        "completeVerification": "Fullfør verifiseringen",
+        "codeFromEmail": "Skriv inn koden fra e-posten din",
+        "sendCodeFailed": "Kunne ikke sende kode",
+        "joinFailed": "Kunne ikke bli med på ventelisten",
+        "alreadyOnWaitlist": "Du er allerede på ventelisten"
+      }
     }
   },
   "seatSelection": {

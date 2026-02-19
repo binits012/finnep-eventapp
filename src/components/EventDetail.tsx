@@ -37,7 +37,28 @@ const Popup = dynamic(
 );
 
 import { Event, TicketInfo } from '@/types/event';
+import CapjsWidget from '@/components/CapjsWidget';
 import { waitlistAPI } from '@/services/apiClient';
+
+/** Pre-sale when waitlistConfig.pre_sale_enabled; sold_out when sold_out_enabled and at least one ticket sold out. */
+function getWaitlistOffer(event: Event): 'pre_sale' | 'sold_out' | null {
+    const wc = event.waitlistConfig;
+    if (!wc || event.otherInfo?.eventExtraInfo?.eventType === 'free') return null;
+    if (wc.pre_sale_enabled) return 'pre_sale';
+    const tickets = event.ticketInfo ?? [];
+    const hasSoldOut = tickets.some((t) => t?.status === 'sold_out');
+    if (wc.sold_out_enabled && hasSoldOut) return 'sold_out';
+    return null;
+}
+
+/** True when pre-sale waitlist has a cap and current count has reached it; client should disable "Join waitlist". */
+function isPreSaleWaitlistFull(event: Event): boolean {
+    if (getWaitlistOffer(event) !== 'pre_sale') return false;
+    const cap = event.pre_sale_waitlist_cap;
+    if (cap == null || cap === undefined) return false;
+    const count = event.pre_sale_waitlist_count ?? 0;
+    return count >= cap;
+}
 
 // Free Event Registration Modal Component
 function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen: boolean; onClose: () => void; event: Event; ticket: TicketInfo | null }) {
@@ -257,20 +278,22 @@ function FreeEventRegistrationModal({ isOpen, onClose, event, ticket }: { isOpen
     );
 }
 
-// Waitlist join modal (public)
+// Waitlist join modal: step 1 = email → send code; step 2 = enter code → join (type derived by backend)
 function WaitlistJoinModal({
     eventId,
-    type,
-    bothEnabled,
+    waitlistOffer,
     onClose
 }: {
     eventId: string;
-    type: 'pre_sale' | 'sold_out';
-    bothEnabled: boolean;
+    waitlistOffer: 'pre_sale' | 'sold_out';
     onClose: () => void;
 }) {
+    const { t, locale } = useTranslation();
+    const [step, setStep] = useState<'email' | 'code'>('email');
     const [email, setEmail] = useState('');
-    const [selectedType, setSelectedType] = useState<'pre_sale' | 'sold_out'>(type);
+    const [code, setCode] = useState('');
+    const [captchaVerified, setCaptchaVerified] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -278,24 +301,55 @@ function WaitlistJoinModal({
 
     useFocusTrap(true, modalRef);
 
-    useEffect(() => {
-        if (!bothEnabled) setSelectedType(type);
-    }, [type, bothEnabled]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSendCode = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email.trim() || !/.+@.+\..+/.test(email)) {
-            setError('Please enter a valid email');
+            setError(t('eventDetail.waitlistModal.errors.validEmail'));
+            return;
+        }
+        if (!captchaVerified) {
+            setError(t('eventDetail.waitlistModal.errors.completeVerification'));
             return;
         }
         setIsSubmitting(true);
         setError(null);
         try {
-            await waitlistAPI.join(eventId, { email: email.trim(), type: bothEnabled ? selectedType : type });
+            await waitlistAPI.sendCode(eventId, { email: email.trim(), captchaToken, locale });
+            setStep('code');
+        } catch (err: unknown) {
+            const res = err && typeof err === 'object' && 'response' in err ? (err as { response: { status?: number; data?: { code?: string; error?: string } } }).response : undefined;
+            const isAlreadyOnWaitlist = res?.status === 409 || res?.data?.code === 'ALREADY_ON_WAITLIST';
+            const msg = isAlreadyOnWaitlist
+                ? t('eventDetail.waitlistModal.errors.alreadyOnWaitlist')
+                : (typeof res?.data?.error === 'string' ? res.data.error : err instanceof Error ? err.message : t('eventDetail.waitlistModal.errors.sendCodeFailed'));
+            setError(msg);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleJoin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!code.trim()) {
+            setError(t('eventDetail.waitlistModal.errors.codeFromEmail'));
+            return;
+        }
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await waitlistAPI.join(eventId, { email: email.trim(), code: code.trim(), locale });
             setSuccess(true);
             setTimeout(() => onClose(), 2000);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to join waitlist');
+        } catch (err: unknown) {
+            const res = err && typeof err === 'object' && 'response' in err ? (err as { response: { status?: number; data?: { code?: string; error?: string } } }).response : undefined;
+            const isAlreadyOnWaitlist = res?.status === 409 || res?.data?.code === 'ALREADY_ON_WAITLIST';
+            if (isAlreadyOnWaitlist) {
+                setSuccess(true);
+                setTimeout(() => onClose(), 2000);
+            } else {
+                const msg = typeof res?.data?.error === 'string' ? res.data.error : err instanceof Error ? err.message : t('eventDetail.waitlistModal.errors.joinFailed');
+                setError(msg);
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -313,45 +367,65 @@ function WaitlistJoinModal({
                 aria-labelledby="waitlist-title"
             >
                 <h2 id="waitlist-title" className="text-xl font-semibold mb-4">
-                    {type === 'pre_sale' ? 'Notify me when tickets go on sale' : 'Notify me when tickets are available'}
+                    {waitlistOffer === 'pre_sale' ? t('eventDetail.waitlistModal.titlePreSale') : t('eventDetail.waitlistModal.titleSoldOut')}
                 </h2>
                 {success ? (
-                    <p className="text-green-600 dark:text-green-400">You’re on the list. We’ll notify you.</p>
-                ) : (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {bothEnabled && (
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Notify me when</label>
-                                <select
-                                    value={selectedType}
-                                    onChange={e => setSelectedType(e.target.value as 'pre_sale' | 'sold_out')}
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent"
-                                >
-                                    <option value="pre_sale">Tickets go on sale</option>
-                                    <option value="sold_out">Tickets are available again</option>
-                                </select>
-                            </div>
-                        )}
+                    <p className="text-green-600 dark:text-green-400">{t('eventDetail.waitlistModal.successMessage')}</p>
+                ) : step === 'email' ? (
+                    <form onSubmit={handleSendCode} className="space-y-4">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{t('eventDetail.waitlistModal.step1Description')}</p>
                         <div>
-                            <label htmlFor="waitlist-email" className="block text-sm font-medium mb-1">Email</label>
+                            <label htmlFor="waitlist-email" className="block text-sm font-medium mb-1">{t('eventDetail.waitlistModal.emailLabel')}</label>
                             <input
                                 id="waitlist-email"
                                 type="email"
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
-                                placeholder="your@email.com"
+                                placeholder={t('eventDetail.waitlistModal.emailPlaceholder')}
                                 className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent"
                                 required
                             />
                         </div>
+                        <div>
+                            <CapjsWidget
+                                onVerify={(detail) => {
+                                    setCaptchaVerified(true);
+                                    setError(null);
+                                    const token = detail && typeof detail === 'object' && 'token' in detail && typeof (detail as { token?: string }).token === 'string'
+                                        ? (detail as { token: string }).token
+                                        : undefined;
+                                    if (token) setCaptchaToken(token);
+                                }}
+                                onError={() => setCaptchaVerified(false)}
+                            />
+                        </div>
                         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
                         <div className="flex gap-2 justify-end">
-                            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                Cancel
-                            </button>
-                            <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-                                {isSubmitting ? 'Joining…' : 'Join waitlist'}
-                            </button>
+                            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">{t('eventDetail.waitlistModal.cancel')}</button>
+                            <button type="submit" disabled={isSubmitting || !captchaVerified} className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">{isSubmitting ? t('eventDetail.waitlistModal.sending') : t('eventDetail.waitlistModal.sendCode')}</button>
+                        </div>
+                    </form>
+                ) : (
+                    <form onSubmit={handleJoin} className="space-y-4">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{t('eventDetail.waitlistModal.step2Description', { email })}</p>
+                        <div>
+                            <label htmlFor="waitlist-code" className="block text-sm font-medium mb-1">{t('eventDetail.waitlistModal.verificationCodeLabel')}</label>
+                            <input
+                                id="waitlist-code"
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                value={code}
+                                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                                placeholder={t('eventDetail.waitlistModal.codePlaceholder')}
+                                className="text-center w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent font-mono text-lg tracking-widest"
+                                maxLength={8}
+                            />
+                        </div>
+                        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                        <div className="flex gap-2 justify-end">
+                            <button type="button" onClick={() => { setStep('email'); setError(null); setCode(''); }} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">{t('eventDetail.waitlistModal.back')}</button>
+                            <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">{isSubmitting ? t('eventDetail.waitlistModal.joining') : t('eventDetail.waitlistModal.joinWaitlist')}</button>
                         </div>
                     </form>
                 )}
@@ -372,7 +446,7 @@ function useDebouncedValue<T>(value: T, delay = 250): T {
     return debounced;
 }
 
-export default function EventDetail({ event }: { event: Event }) {
+export default function EventDetail({ event, presaleToken }: { event: Event; presaleToken?: string | null }) {
     const { t, locale } = useTranslation();
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
     const [isLeafletReady, setIsLeafletReady] = useState(false);
@@ -384,7 +458,6 @@ export default function EventDetail({ event }: { event: Event }) {
     const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
     const [isFreeRegistrationOpen, setIsFreeRegistrationOpen] = useState(false);
     const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
-    const [waitlistType, setWaitlistType] = useState<'pre_sale' | 'sold_out'>('pre_sale');
     const selectedTicketObj = useMemo(() => event.ticketInfo.find(t => t._id === selectedTicket) || null, [event.ticketInfo, selectedTicket]);
     const router = useRouter();
 
@@ -931,10 +1004,85 @@ export default function EventDetail({ event }: { event: Event }) {
                         <div>
                             {/* Tickets Box */}
                             <div className="rounded-lg shadow p-6 sticky top-24" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                <h2 className="text-2xl font-bold mb-6">{t('eventDetail.tickets.title')}</h2>
-
-                                {/* External Event - Show external ticketing link */}
-                                {event.otherInfo?.isExternalEvent && event.otherInfo?.externalEventDetails ? (
+                                <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>{t('eventDetail.tickets.title')}</h2>
+                                {/* Pre-sale: waitlist-only when no presale access; with valid presale token show ticket purchase */}
+                                {getWaitlistOffer(event) === 'pre_sale' && !event.presaleAccess ? (
+                                    <div className="text-center py-6">
+                                        {isPreSaleWaitlistFull(event) ? (
+                                            <p className="text-gray-600 dark:text-gray-400 py-2">
+                                                {t('eventDetail.waitlistModal.waitlistFull') || 'Pre-sale waitlist is full'}
+                                            </p>
+                                        ) : (
+                                            <>
+                                                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                                    {t('eventDetail.preSale.message') || 'Tickets are not on sale yet. Get notified when they go live.'}
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    className="w-full py-3 px-4 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                                                    onClick={() => setIsWaitlistOpen(true)}
+                                                >
+                                                    {t('eventDetail.preSale.cta') || 'Notify me when tickets go on sale'}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                ) : getWaitlistOffer(event) === 'pre_sale' && event.presaleAccess ? (
+                                    /* Presale access: show short banner and fall through to paid-event ticket UI below (same as paid event branch) */
+                                    <>
+                                        <div className="mb-4 py-2 px-3 rounded-lg text-sm font-medium" style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+                                            {t('eventDetail.presaleAccess.banner')}
+                                        </div>
+                                        {event?.ticketInfo?.map((ticket) => {
+                                            const isSelected = selectedTicket === ticket._id;
+                                            const isAvailable = ticket.status === 'available' || ticket.status === 'low_stock';
+                                            return (
+                                                <div
+                                                    key={ticket._id}
+                                                    role="button"
+                                                    aria-pressed={isSelected}
+                                                    aria-disabled={!isAvailable}
+                                                    tabIndex={isAvailable ? 0 : -1}
+                                                    className={`border-2 rounded-lg p-4 mb-4 transition-all outline-none ${
+                                                        isSelected
+                                                            ? 'border-blue-500 shadow-lg'
+                                                            : 'border-gray-200 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-500'
+                                                    } ${isAvailable ? 'cursor-pointer focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600' : 'opacity-60 cursor-not-allowed'}`}
+                                                    style={{ background: 'var(--surface)' }}
+                                                    onClick={() => { if (isAvailable) { setSelectedTicket(ticket._id); } }}
+                                                    onKeyDown={(e) => {
+                                                        if (!isAvailable) return;
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            setSelectedTicket(ticket._id);
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="flex justify-between items-center">
+                                                        <h3 className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>{ticket.name}</h3>
+                                                        <span className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
+                                                            {getCurrencyCode(event?.country || 'Finland') === 'EUR' ? getCurrencySymbol('EUR') : ''}{(Number(ticket.price) + Number(ticket.serviceFee || 0)).toFixed(2)} {getCurrencyCode(event?.country || 'Finland') !== 'EUR' ? getCurrencyCode(event?.country || 'Finland') : ''}
+                                                        </span>
+                                                    </div>
+                                                    {isAvailable ? (
+                                                        <div className={`mt-2 text-sm font-semibold ${ticket.status === 'low_stock' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                                                            {ticket.status === 'low_stock' ? <>⚠ {t('eventDetail.tickets.lowStock')}</> : <>✓ {t('eventDetail.tickets.available')}</>}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">✗ {t('eventDetail.tickets.soldOut')}</div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        <button
+                                            className="w-full py-3 px-4 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            disabled={!selectedTicket}
+                                            onClick={() => setIsPurchaseOpen(true)}
+                                        >
+                                            {t('eventDetail.tickets.getTickets')}
+                                        </button>
+                                    </>
+                                ) : event.otherInfo?.isExternalEvent && event.otherInfo?.externalEventDetails ? (
                                     <div className="text-center py-8">
                                         <div className="mb-6">
                                             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
@@ -970,7 +1118,7 @@ export default function EventDetail({ event }: { event: Event }) {
                                         </p>
                                         <button
                                             className="w-full py-3 px-4 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
-                                            onClick={() => router.push(`/events/${event._id}/seats`)}
+                                            onClick={() => router.push(`/events/${event._id}/seats${presaleToken ? `?presale=${encodeURIComponent(presaleToken)}` : ''}`)}
                                         >
                                             {t('eventDetail.seatSelection.selectSeats') || 'Select Seats'}
                                         </button>
@@ -1063,27 +1211,20 @@ export default function EventDetail({ event }: { event: Event }) {
                                             }
                                         </button>
 
-                                        {(event.waitlistConfig?.pre_sale_enabled || event.waitlistConfig?.sold_out_enabled) && (
-                                            <div className="mt-4 space-y-2">
-                                                {event.waitlistConfig?.pre_sale_enabled && (
-                                                    <button
-                                                        type="button"
-                                                        className="w-full py-2 px-4 rounded-lg font-medium border-2 border-green-500 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors"
-                                                        onClick={() => { setWaitlistType('pre_sale'); setIsWaitlistOpen(true); }}
-                                                    >
-                                                        Notify me when tickets go on sale
-                                                    </button>
-                                                )}
-                                                {event.waitlistConfig?.sold_out_enabled && (
-                                                    <button
-                                                        type="button"
-                                                        className="w-full py-2 px-4 rounded-lg font-medium border-2 border-green-500 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors"
-                                                        onClick={() => { setWaitlistType('sold_out'); setIsWaitlistOpen(true); }}
-                                                    >
-                                                        Notify me when tickets are available again
-                                                    </button>
-                                                )}
-                                            </div>
+                                        {getWaitlistOffer(event) && (
+                                            isPreSaleWaitlistFull(event) ? (
+                                                <div className="w-full mt-4 py-2 px-4 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 text-center cursor-not-allowed">
+                                                    {t('eventDetail.waitlistModal.waitlistFull')}
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="w-full mt-4 py-2 px-4 rounded-lg font-medium border-2 border-green-500 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors"
+                                                    onClick={() => setIsWaitlistOpen(true)}
+                                                >
+                                                    {getWaitlistOffer(event) === 'pre_sale' ? 'Notify me when tickets go on sale' : 'Notify me when tickets are available again'}
+                                                </button>
+                                            )
                                         )}
                                     </div>
                                 ) : (
@@ -1168,28 +1309,21 @@ export default function EventDetail({ event }: { event: Event }) {
                                             {selectedTicket ? t('eventDetail.tickets.buyTicket') : t('eventDetail.tickets.selectTicket')}
                                         </button>
 
-                                        {/* Waitlist CTAs */}
-                                        {(event.waitlistConfig?.pre_sale_enabled || event.waitlistConfig?.sold_out_enabled) && (
-                                            <div className="mt-4 space-y-2">
-                                                {event.waitlistConfig?.pre_sale_enabled && (
-                                                    <button
-                                                        type="button"
-                                                        className="w-full py-2 px-4 rounded-lg font-medium border-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
-                                                        onClick={() => { setWaitlistType('pre_sale'); setIsWaitlistOpen(true); }}
-                                                    >
-                                                        Notify me when tickets go on sale
-                                                    </button>
-                                                )}
-                                                {event.waitlistConfig?.sold_out_enabled && (
-                                                    <button
-                                                        type="button"
-                                                        className="w-full py-2 px-4 rounded-lg font-medium border-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
-                                                        onClick={() => { setWaitlistType('sold_out'); setIsWaitlistOpen(true); }}
-                                                    >
-                                                        Notify me when tickets are available again
-                                                    </button>
-                                                )}
-                                            </div>
+                                        {/* Waitlist CTA - single button when waitlistConfig determines pre_sale or sold_out; disabled when pre-sale cap reached */}
+                                        {getWaitlistOffer(event) && (
+                                            isPreSaleWaitlistFull(event) ? (
+                                                <div className="w-full mt-4 py-2 px-4 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 text-center cursor-not-allowed">
+                                                    {t('eventDetail.waitlistModal.waitlistFull')}
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="w-full mt-4 py-2 px-4 rounded-lg font-medium border-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
+                                                    onClick={() => setIsWaitlistOpen(true)}
+                                                >
+                                                    {getWaitlistOffer(event) === 'pre_sale' ? 'Notify me when tickets go on sale' : 'Notify me when tickets are available again'}
+                                                </button>
+                                            )
                                         )}
                                     </>
                                 )}
@@ -1300,12 +1434,11 @@ export default function EventDetail({ event }: { event: Event }) {
                 />
             )}
 
-            {/* Waitlist modal */}
-            {isWaitlistOpen && (
+            {/* Waitlist modal - pre_sale vs sold_out from waitlistConfig + ticket status; do not show when pre-sale cap reached */}
+            {isWaitlistOpen && getWaitlistOffer(event) && !isPreSaleWaitlistFull(event) && (
                 <WaitlistJoinModal
                     eventId={event._id}
-                    type={waitlistType}
-                    bothEnabled={Boolean(event.waitlistConfig?.pre_sale_enabled && event.waitlistConfig?.sold_out_enabled)}
+                    waitlistOffer={getWaitlistOffer(event)!}
                     onClose={() => setIsWaitlistOpen(false)}
                 />
             )}
@@ -1340,7 +1473,9 @@ export default function EventDetail({ event }: { event: Event }) {
                             // Seat selection
                             placeIds: placeIds || undefined,
                             // Payment provider - Paytrail availability will be checked by backend
-                            paytrailEnabled: (event?.merchant as { paytrailEnabled?: boolean })?.paytrailEnabled || false
+                            paytrailEnabled: (event?.merchant as { paytrailEnabled?: boolean })?.paytrailEnabled || false,
+                            // Presale: one-time token to send to backend and consume on successful payment
+                            ...(presaleToken && { presaleToken }),
                         };
 
                         // Encode to base64

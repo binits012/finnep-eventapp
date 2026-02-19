@@ -166,11 +166,14 @@ export const api = {
 };
 
 /**
- * Public waitlist join (no auth).
- * Backend should proxy to event-merchant-service POST /merchant/:merchantId/event/:eventId/waitlist/join
+ * Public waitlist: send verification code (with optional captcha), then join with email + code.
+ * Type is derived by backend from event state (waitlist_offer).
  */
 export const waitlistAPI = {
-  join: async (eventId: string, body: { email: string; type: 'pre_sale' | 'sold_out' }) => {
+  sendCode: async (eventId: string, body: { email: string; captchaToken?: string; locale?: string }) => {
+    return api.post<unknown>(`/event/${eventId}/waitlist/send-code`, body);
+  },
+  join: async (eventId: string, body: { email: string; code: string; locale?: string }) => {
     return api.post<unknown>(`/event/${eventId}/waitlist`, body);
   }
 };
@@ -184,21 +187,30 @@ export interface SurveyQuestion {
   options?: string[];
 }
 
+export interface SurveyContext {
+  eventTitle?: string | null;
+  eventDate?: string | null;
+  merchantName?: string | null;
+}
+
 export interface SurveyPublic {
   id: string;
   name: string;
   questions: SurveyQuestion[];
   active: boolean;
   merchantId?: string;
+  eventId?: string;
+  context?: SurveyContext;
+  /** Set by backend when token was already used (after submit); show thank-you. */
+  submitted?: boolean;
 }
 
 export const surveyAPI = {
-  /** merchantId required by backend; pass from query when opening survey link */
-  getSurvey: async (surveyId: string, merchantId?: string): Promise<SurveyPublic> => {
-    const params = merchantId ? { merchantId } : {};
-    return api.get<SurveyPublic>(`/survey/${surveyId}`, { params });
+  /** GET survey by Mongo _id. Link from email: /survey/{mongoId}?token=... */
+  getSurvey: async (surveyId: string, token: string): Promise<SurveyPublic> => {
+    return api.get<SurveyPublic>(`/survey/${surveyId}`, { token });
   },
-  submitResponse: async (surveyId: string, body: { merchantId?: string; respondent_identifier?: string; responses: Record<string, unknown> }) => {
+  submitResponse: async (surveyId: string, body: { token: string; captchaToken?: string; responses: Record<string, unknown> }) => {
     return api.post<unknown>(`/survey/${surveyId}/response`, body);
   }
 };

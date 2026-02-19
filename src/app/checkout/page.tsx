@@ -50,6 +50,8 @@ interface CheckoutData {
   fullName?: string;
   // Payment provider
   paytrailEnabled?: boolean; // Whether merchant has Paytrail enabled
+  // Presale: one-time token to consume on successful payment
+  presaleToken?: string;
   // Security
   nonce?: string; // Nonce for duplicate submission protection
 }
@@ -245,6 +247,8 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
       // Seat selection
       placeIds: checkoutData.placeIds ? JSON.stringify(checkoutData.placeIds) : undefined,
       locale: window.localStorage.getItem('locale') || 'en-US',
+      // Presale: one-time token to consume on successful payment
+      ...(checkoutData.presaleToken && { presaleToken: checkoutData.presaleToken }),
     }
   });
 
@@ -778,7 +782,9 @@ function CheckoutContent() {
                 fullName: checkoutData.fullName,
                 // Security: Include nonce to prevent duplicate submissions
                 nonce: checkoutData.nonce,
-                locale: window.localStorage.getItem('locale') || 'en-US'
+                locale: window.localStorage.getItem('locale') || 'en-US',
+                // Presale: one-time token to consume on successful payment (fallback when Redis expired)
+                ...(checkoutData.presaleToken && { presaleToken: checkoutData.presaleToken })
               })
             }
           );

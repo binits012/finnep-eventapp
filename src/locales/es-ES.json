@@ -452,7 +452,15 @@
         "lowStock": "Pocas entradas",
         "soldOut": "Agotado",
         "buyTicket": "Comprar Entrada",
-        "selectTicket": "Seleccionar Entrada"
+        "selectTicket": "Seleccionar Entrada",
+        "getTickets": "Comprar Entradas"
+      },
+      "presaleAccess": {
+        "banner": "Tienes acceso a la venta anticipada — compra tus entradas abajo."
+      },
+      "preSale": {
+        "message": "Las entradas aún no están a la venta. Te avisaremos cuando estén disponibles.",
+        "cta": "Avísame cuando las entradas estén a la venta"
       },
       "eventDetails": {
         "title": "Detalles del Evento",
@@ -492,6 +500,32 @@
         "registrationSuccessMessage": "Te has registrado correctamente. Revisa tu email.",
         "registrationFailed": "Error en el registro. Inténtalo de nuevo.",
         "emailPlaceholder": "tu.email@ejemplo.com"
+      },
+      "waitlistModal": {
+        "titlePreSale": "Avísame cuando salgan las entradas",
+        "titleSoldOut": "Avísame cuando haya entradas de nuevo",
+        "successMessage": "Estás en la lista. Te avisaremos.",
+        "step1Description": "Introduce tu email y te enviaremos un código de verificación (válido 5 minutos).",
+        "emailLabel": "Email",
+        "emailPlaceholder": "tu@email.com",
+        "cancel": "Cancelar",
+        "sendCode": "Enviar código",
+        "sending": "Enviando…",
+        "step2Description": "Introduce el código de 8 dígitos que enviamos a {{email}}",
+        "verificationCodeLabel": "Código de verificación",
+        "codePlaceholder": "00000000",
+        "back": "Atrás",
+        "joinWaitlist": "Unirse a la lista de espera",
+        "joining": "Uniendo…",
+        "waitlistFull": "La lista de espera de preventa está llena",
+        "errors": {
+          "validEmail": "Introduce un email válido",
+          "completeVerification": "Completa la verificación",
+          "codeFromEmail": "Introduce el código de tu email",
+          "sendCodeFailed": "Error al enviar el código",
+          "joinFailed": "Error al unirse a la lista",
+          "alreadyOnWaitlist": "Ya estás en la lista de espera"
+        }
       }
     },
     "seatSelection": {

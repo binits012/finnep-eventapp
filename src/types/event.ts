@@ -1,3 +1,9 @@
+export interface WaitlistConfig {
+  pre_sale_enabled?: boolean;
+  sold_out_enabled?: boolean;
+  pre_sale_cap?: number;
+}
+
 export interface Event {
     _id: string;
     eventTitle: string;
@@ -78,10 +84,12 @@ export interface Event {
       endDate?: string;
     };
     tags?: string[];
-    waitlistConfig?: {
-      pre_sale_enabled?: boolean;
-      sold_out_enabled?: boolean;
-    };
+    waitlistConfig?: WaitlistConfig;
+    /** Set by backend when pre_sale cap is configured; used to disable "Join waitlist" when full */
+    pre_sale_waitlist_count?: number;
+    pre_sale_waitlist_cap?: number;
+    /** Set by backend when ?presale=TOKEN is valid; allows showing ticket purchase UI during pre-sale */
+    presaleAccess?: boolean;
   }
 
   export interface TicketInfo {

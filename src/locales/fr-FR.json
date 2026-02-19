@@ -452,7 +452,15 @@
         "lowStock": "Stock faible",
         "soldOut": "Complet",
         "buyTicket": "Acheter un billet",
-        "selectTicket": "Choisir un billet"
+        "selectTicket": "Choisir un billet",
+        "getTickets": "Acheter des billets"
+      },
+      "presaleAccess": {
+        "banner": "Vous avez accès à la prévente — achetez vos billets ci-dessous."
+      },
+      "preSale": {
+        "message": "Les billets ne sont pas encore en vente. Nous vous préviendrons quand ils seront disponibles.",
+        "cta": "Me notifier quand les billets sont en vente"
       },
       "eventDetails": {
         "title": "Détails",
@@ -492,6 +500,32 @@
         "registrationSuccessMessage": "Vous êtes inscrit. Vérifiez vos emails.",
         "registrationFailed": "Échec de l'inscription.",
         "emailPlaceholder": "votre.email@exemple.com"
+      },
+      "waitlistModal": {
+        "titlePreSale": "Me notifier quand les billets sont en vente",
+        "titleSoldOut": "Me notifier quand des billets sont à nouveau disponibles",
+        "successMessage": "Vous êtes sur la liste. Nous vous préviendrons.",
+        "step1Description": "Entrez votre e-mail et nous enverrons un code de vérification (valide 5 minutes).",
+        "emailLabel": "E-mail",
+        "emailPlaceholder": "votre@email.com",
+        "cancel": "Annuler",
+        "sendCode": "Envoyer le code",
+        "sending": "Envoi…",
+        "step2Description": "Entrez le code à 8 chiffres envoyé à {{email}}",
+        "verificationCodeLabel": "Code de vérification",
+        "codePlaceholder": "00000000",
+        "back": "Retour",
+        "joinWaitlist": "Rejoindre la liste d'attente",
+        "joining": "Inscription…",
+        "waitlistFull": "La liste d'attente prévente est complète",
+        "errors": {
+          "validEmail": "Veuillez entrer un e-mail valide",
+          "completeVerification": "Veuillez compléter la vérification",
+          "codeFromEmail": "Entrez le code reçu par e-mail",
+          "sendCodeFailed": "Échec de l'envoi du code",
+          "joinFailed": "Échec de l'inscription à la liste",
+          "alreadyOnWaitlist": "Vous êtes déjà sur la liste d'attente"
+        }
       }
     },
     "seatSelection": {

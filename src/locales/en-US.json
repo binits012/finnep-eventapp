@@ -458,7 +458,15 @@
       "lowStock": "Low Stock",
       "soldOut": "Sold Out",
       "buyTicket": "Buy Ticket",
-      "selectTicket": "Select a Ticket"
+      "selectTicket": "Select a Ticket",
+      "getTickets": "Get Tickets"
+    },
+    "preSale": {
+      "message": "Tickets are not on sale yet. Get notified when they go live.",
+      "cta": "Notify me when tickets go on sale"
+    },
+    "presaleAccess": {
+      "banner": "You have presale access — get your tickets below."
     },
     "eventDetails": {
       "title": "Event Details",
@@ -500,6 +508,32 @@
       "registrationSuccessMessage": "You have been registered for this free event. Check your email for confirmation.",
       "registrationFailed": "Registration failed. Please try again.",
       "emailPlaceholder": "your.email@example.com"
+    },
+    "waitlistModal": {
+      "titlePreSale": "Notify me when tickets go on sale",
+      "titleSoldOut": "Notify me when tickets are available again",
+      "successMessage": "You're on the list. We'll notify you.",
+      "step1Description": "Enter your email and we'll send you a verification code (valid 5 minutes).",
+      "emailLabel": "Email",
+      "emailPlaceholder": "your@email.com",
+      "cancel": "Cancel",
+      "sendCode": "Send code",
+      "sending": "Sending…",
+      "step2Description": "Enter the 8-digit code we sent to {{email}}",
+      "verificationCodeLabel": "Verification code",
+      "codePlaceholder": "00000000",
+      "back": "Back",
+      "joinWaitlist": "Join waitlist",
+      "joining": "Joining…",
+      "waitlistFull": "Pre-sale waitlist is full",
+      "errors": {
+        "validEmail": "Please enter a valid email",
+        "completeVerification": "Please complete the verification",
+        "codeFromEmail": "Please enter the code from your email",
+        "sendCodeFailed": "Failed to send code",
+        "joinFailed": "Failed to join waitlist",
+        "alreadyOnWaitlist": "You're already on the waitlist"
+      }
     }
   },
   "seatSelection": {

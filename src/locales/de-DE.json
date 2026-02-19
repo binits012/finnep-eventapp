@@ -452,7 +452,15 @@
         "lowStock": "Fast ausverkauft",
         "soldOut": "Ausverkauft",
         "buyTicket": "Ticket kaufen",
-        "selectTicket": "Ticket wählen"
+        "selectTicket": "Ticket wählen",
+        "getTickets": "Tickets kaufen"
+      },
+      "presaleAccess": {
+        "banner": "Du hast Vorverkaufszugang — kaufe deine Tickets unten."
+      },
+      "preSale": {
+        "message": "Tickets sind noch nicht im Verkauf. Wir benachrichtigen dich, wenn sie verfügbar sind.",
+        "cta": "Benachrichtige mich, wenn Tickets verfügbar sind"
       },
       "eventDetails": {
         "title": "Event-Details",
@@ -492,6 +500,32 @@
         "registrationSuccessMessage": "Du bist angemeldet. Check deine Mails.",
         "registrationFailed": "Anmeldung fehlgeschlagen.",
         "emailPlaceholder": "deine.mail@beispiel.de"
+      },
+      "waitlistModal": {
+        "titlePreSale": "Benachrichtige mich, wenn Karten verkauft werden",
+        "titleSoldOut": "Benachrichtige mich, wenn wieder Karten verfügbar sind",
+        "successMessage": "Du bist auf der Liste. Wir melden uns.",
+        "step1Description": "Gib deine E-Mail ein, wir senden dir einen Bestätigungscode (5 Min. gültig).",
+        "emailLabel": "E-Mail",
+        "emailPlaceholder": "deine@email.com",
+        "cancel": "Abbrechen",
+        "sendCode": "Code senden",
+        "sending": "Wird gesendet…",
+        "step2Description": "Gib den 8-stelligen Code ein, den wir an {{email}} gesendet haben",
+        "verificationCodeLabel": "Bestätigungscode",
+        "codePlaceholder": "00000000",
+        "back": "Zurück",
+        "joinWaitlist": "Warteliste beitreten",
+        "joining": "Wird eingetragen…",
+        "waitlistFull": "Die Vorverkaufs-Warteliste ist voll",
+        "errors": {
+          "validEmail": "Bitte gültige E-Mail eingeben",
+          "completeVerification": "Bitte Verifizierung abschließen",
+          "codeFromEmail": "Bitte Code aus der E-Mail eingeben",
+          "sendCodeFailed": "Code konnte nicht gesendet werden",
+          "joinFailed": "Wartelisten-Beitritt fehlgeschlagen",
+          "alreadyOnWaitlist": "Du bist bereits auf der Warteliste"
+        }
       }
     },
     "seatSelection": {

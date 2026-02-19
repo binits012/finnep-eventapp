@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Script from 'next/script';
 import EventDetail from '@/components/EventDetail';
@@ -14,7 +14,9 @@ export default function EventPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const params = useParams();
+  const searchParams = useSearchParams();
   const eventId = params?.id as string;
+  const presaleParam = searchParams?.get('presale') ?? undefined;
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -29,7 +31,10 @@ export default function EventPage() {
           setTimeout(() => reject(new Error('Request timeout')), 10000)
         );
 
-        const eventPromise = api.get(`/event/${eventId}`) as Promise<{ event: Event }>;
+        const url = presaleParam
+          ? `/event/${eventId}?presale=${encodeURIComponent(presaleParam)}`
+          : `/event/${eventId}`;
+        const eventPromise = api.get(url) as Promise<{ event: Event }>;
 
         const response = await Promise.race([eventPromise, timeoutPromise]) as { event: Event };
 
@@ -45,7 +50,7 @@ export default function EventPage() {
     };
 
     fetchEventDetails();
-  }, [eventId]);
+  }, [eventId, presaleParam]);
 
   // Update page metadata when event data loads
   useEffect(() => {
@@ -179,8 +184,8 @@ export default function EventPage() {
         />
       )}
 
-      {/* Event Detail Component */}
-      <EventDetail event={event} />
+      {/* Event Detail Component - pass presale token for checkout */}
+      <EventDetail event={event} presaleToken={presaleParam} />
     </>
   );
 }

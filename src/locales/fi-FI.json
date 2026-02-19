@@ -458,7 +458,15 @@
       "lowStock": "Vähissä",
       "soldOut": "Loppuunmyyty",
       "buyTicket": "Osta Lippu",
-      "selectTicket": "Valitse Lippu"
+      "selectTicket": "Valitse Lippu",
+      "getTickets": "Hanki Liput"
+    },
+    "presaleAccess": {
+      "banner": "Sinulla on esimyyntipääsy — osta liput alta."
+    },
+    "preSale": {
+      "message": "Liput eivät ole vielä myynnissä. Saat ilmoituksen, kun ne tulevat myyntiin.",
+      "cta": "Ilmoita, kun liput tulevat myyntiin"
     },
     "eventDetails": {
       "title": "Tapahtuman Tiedot",
@@ -496,6 +504,32 @@
       "registrationSuccessMessage": "Sinut on rekisteröity tähän ilmaiseen tapahtumaan. Tarkista sähköpostisi vahvistusta varten.",
       "registrationFailed": "Rekisteröinti epäonnistui. Yritä uudelleen.",
       "emailPlaceholder": "sinun.sahkoposti@esimerkki.com"
+    },
+    "waitlistModal": {
+      "titlePreSale": "Ilmoita kun liput tulevat myyntiin",
+      "titleSoldOut": "Ilmoita kun liput ovat taas saatavilla",
+      "successMessage": "Olet listalla. Ilmoitamme sinulle.",
+      "step1Description": "Syötä sähköpostisi ja lähetämme sinulle vahvistuskoodin (voimassa 5 minuuttia).",
+      "emailLabel": "Sähköposti",
+      "emailPlaceholder": "sahkoposti@esimerkki.com",
+      "cancel": "Peruuta",
+      "sendCode": "Lähetä koodi",
+      "sending": "Lähetetään…",
+      "step2Description": "Syötä 8-numeroinen koodi jonka lähetimme osoitteeseen {{email}}",
+      "verificationCodeLabel": "Vahvistuskoodi",
+      "codePlaceholder": "00000000",
+      "back": "Takaisin",
+      "joinWaitlist": "Liity odotuslistalle",
+      "joining": "Liitytään…",
+      "waitlistFull": "Esimyyntijono on täynnä",
+      "errors": {
+        "validEmail": "Syötä voimassa oleva sähköpostiosoite",
+        "completeVerification": "Suorita vahvistus",
+        "codeFromEmail": "Syötä sähköpostiisi lähetetty koodi",
+        "sendCodeFailed": "Koodin lähetys epäonnistui",
+        "joinFailed": "Odotuslistalle liittyminen epäonnistui",
+        "alreadyOnWaitlist": "Olet jo odotuslistalla"
+      }
     },
     "seatSelection": {
       "available": "Saatavilla",

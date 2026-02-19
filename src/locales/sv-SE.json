@@ -458,7 +458,15 @@
       "lowStock": "Få Kvar",
       "soldOut": "Slutsåld",
       "buyTicket": "Köp Biljett",
-      "selectTicket": "Välj en Biljett"
+      "selectTicket": "Välj en Biljett",
+      "getTickets": "Köp Biljetter"
+    },
+    "presaleAccess": {
+      "banner": "Du har förköpsåtkomst — köp dina biljetter nedan."
+    },
+    "preSale": {
+      "message": "Biljetter är inte ute till försäljning än. Få besked när de släpps.",
+      "cta": "Meddela mig när biljetter släpps"
     },
     "eventDetails": {
       "title": "Evenemangsdetaljer",
@@ -500,6 +508,32 @@
       "registrationSuccessMessage": "Du har registrerats för detta gratis evenemang. Kontrollera din e-post för bekräftelse.",
       "registrationFailed": "Registrering misslyckades. Försök igen.",
       "emailPlaceholder": "din.epost@exempel.com"
+    },
+    "waitlistModal": {
+      "titlePreSale": "Meddela mig när biljetter säljs",
+      "titleSoldOut": "Meddela mig när biljetter finns igen",
+      "successMessage": "Du är på listan. Vi meddelar dig.",
+      "step1Description": "Ange din e-post så skickar vi en verifieringskod (giltig 5 minuter).",
+      "emailLabel": "E-post",
+      "emailPlaceholder": "din@epost.com",
+      "cancel": "Avbryt",
+      "sendCode": "Skicka kod",
+      "sending": "Skickar...",
+      "step2Description": "Ange den 8-siffriga koden vi skickade till {{email}}",
+      "verificationCodeLabel": "Verifieringskod",
+      "codePlaceholder": "00000000",
+      "back": "Tillbaka",
+      "joinWaitlist": "Gå med i väntelistan",
+      "joining": "Går med...",
+      "waitlistFull": "Förförsäljningsväntelistan är full",
+      "errors": {
+        "validEmail": "Ange en giltig e-postadress",
+        "completeVerification": "Slutför verifieringen",
+        "codeFromEmail": "Ange koden från din e-post",
+        "sendCodeFailed": "Kunde inte skicka kod",
+        "joinFailed": "Kunde inte gå med i väntelistan",
+        "alreadyOnWaitlist": "Du är redan på väntelistan"
+      }
     }
   },
   "seatSelection": {
