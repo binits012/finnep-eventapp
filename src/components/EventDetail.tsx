@@ -468,12 +468,19 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
     const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' ||
         (event.ticketInfo && event.ticketInfo.length > 0 && event.ticketInfo.every(ticket => Number(ticket.price) === 0));
 
+    const getEffectiveTaxRate = (ticket: { vat?: number; entertainmentTax?: number }): number => {
+        const vatRate = Number(ticket?.vat ?? 0);
+        if (!Number.isNaN(vatRate) && vatRate > 0) return vatRate;
+        const entertainmentTaxRate = Number(ticket?.entertainmentTax ?? 0);
+        return Number.isNaN(entertainmentTaxRate) ? 0 : entertainmentTaxRate;
+    };
+
     const calculateTotalPrice = (ticket: TicketInfo): string => {
         try {
             // Use Number() to ensure values are numeric and nullish coalescing for defaults
             const basePrice = Number(ticket?.price ?? 0);
             const serviceFee = Number(ticket?.serviceFee ?? 0);
-            const vatRate = Number(ticket?.vat ?? 0);
+            const vatRate = getEffectiveTaxRate(ticket);
             const orderFee = Number(ticket?.orderFee ?? 0);
             const serviceTaxRate = Number(ticket?.serviceTax ?? 0);
 
@@ -1262,7 +1269,7 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
 
                                                     {/* Service Fee, VAT, Order Fee, and Service Tax info */}
                                                     <div className="mt-2 text-sm font-medium" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
-                                                        {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {ticket.vat ?? ticket.entertainmentTax ?? 0}%
+                                                        {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {getEffectiveTaxRate(ticket)}%
                                                         {(ticket.orderFee ?? 0) > 0 && (
                                                             <> • {t('eventDetail.tickets.orderFee')}: +{(ticket.orderFee ?? 0).toFixed(2)}</>
                                                         )}
@@ -1460,7 +1467,7 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
                             ticketName: ticket.name,
                             price: ticket.price,
                             serviceFee: ticket.serviceFee ?? 0,
-                            vat: ticket.vat ?? 0,
+                            vat: getEffectiveTaxRate(ticket),
                             serviceTax: ticket.serviceTax ?? 0,
                             orderFee: ticket.orderFee ?? 0,
                             eventName: event.eventTitle,
