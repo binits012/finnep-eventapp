@@ -649,6 +649,18 @@ export default function MerchantRegistrationPage() {
     'verifyPassword', 'companyDescription'
   ], []);
 
+  // Helper: format website URL (add https:// and www if needed)
+  const formatWebsiteUrl = (url: string): string => {
+    if (!url) return '';
+    const trimmed = url.trim();
+    // Already has protocol
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    // Add https:// and www prefix
+    return `https://www.${trimmed}`;
+  };
+
   // Check if form is valid for submit button
   const isFormValid = useMemo(() => {
     // Check all mandatory fields
@@ -673,7 +685,8 @@ export default function MerchantRegistrationPage() {
     const stripeValid = formData.usePlatformAccount || formData.stripeConnected;
 
     // Check optional URL fields if provided
-    const websiteValid = !formData.website || /^https?:\/\/.+/.test(formData.website);
+    // Website: accept domain names (e.g. example.com) or full URLs; we'll add www/https as needed
+    const websiteValid = !formData.website || /^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$|^https?:\/\/.+/.test(formData.website.trim());
     const logoValid = !formData.logo || /^https?:\/\/.+/.test(formData.logo);
 
     return mandatoryFieldsValid &&
@@ -732,8 +745,8 @@ export default function MerchantRegistrationPage() {
       newErrors.companyPhoneNumber = 'Please enter a valid phone number';
     }
 
-    // Website validation (optional but if provided should be valid)
-    if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
+    // Website validation (optional: accept domain name or full URL)
+    if (formData.website && !/^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$|^https?:\/\/.+/.test(formData.website.trim())) {
       newErrors.website = t('merchant.validation.validWebsite');
     }
 
@@ -803,7 +816,7 @@ export default function MerchantRegistrationPage() {
         password: formData.password,
         verifyPassword: formData.verifyPassword,
         logo: formData.logo || undefined,
-        website: formData.website || undefined,
+        website: formData.website ? formatWebsiteUrl(formData.website) : undefined,
         companyDescription: formData.companyDescription,
         stripeAccount: formData.usePlatformAccount ? 'platform' : (formData.stripeAccount || undefined),
       };

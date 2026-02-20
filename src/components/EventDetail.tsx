@@ -1262,7 +1262,7 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
 
                                                     {/* Service Fee, VAT, Order Fee, and Service Tax info */}
                                                     <div className="mt-2 text-sm font-medium" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
-                                                        {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {ticket.vat}%
+                                                        {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {ticket.vat ?? ticket.entertainmentTax ?? 0}%
                                                         {(ticket.orderFee ?? 0) > 0 && (
                                                             <> • {t('eventDetail.tickets.orderFee')}: +{(ticket.orderFee ?? 0).toFixed(2)}</>
                                                         )}
