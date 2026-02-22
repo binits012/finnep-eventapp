@@ -2467,6 +2467,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
             ...checkoutData,
             totalPrice: totalPrice,
             marketingConsent: marketingConsent,
+            selectedSeats: selectedSeats,
           };
 
           console.log('[handlePaytrailPayment] Storing checkout data:', {

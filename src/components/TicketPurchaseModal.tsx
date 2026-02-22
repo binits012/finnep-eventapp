@@ -12,6 +12,7 @@ interface TicketInfoLite {
   price: number;
   serviceFee?: number;
   vat?: number; // percent
+  entertainmentTax?: number; // percent (fallback when vat is 0/missing)
   orderFee?: number; // fixed amount per transaction
   serviceTax?: number; // percent on serviceFee and orderFee
 }
@@ -89,7 +90,12 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
 
   const basePrice = useMemo(() => Number(ticket?.price ?? 0), [ticket]);
   const serviceFee = useMemo(() => Number(ticket?.serviceFee ?? 0), [ticket]);
-  const vatRate = useMemo(() => Number(ticket?.vat ?? 0), [ticket]);
+  const vatRate = useMemo(() => {
+    const vat = Number(ticket?.vat ?? 0);
+    if (!Number.isNaN(vat) && vat > 0) return vat;
+    const entertainmentTax = Number(ticket?.entertainmentTax ?? 0);
+    return Number.isNaN(entertainmentTax) ? 0 : entertainmentTax;
+  }, [ticket]);
   const serviceTaxRate = useMemo(() => Number(ticket?.serviceTax ?? 0), [ticket]);
   const orderFee = useMemo(() => Number(ticket?.orderFee ?? 0), [ticket]);
 

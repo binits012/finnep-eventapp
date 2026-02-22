@@ -1068,7 +1068,7 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
                                                     <div className="flex justify-between items-center">
                                                         <h3 className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>{ticket.name}</h3>
                                                         <span className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
-                                                            {getCurrencyCode(event?.country || 'Finland') === 'EUR' ? getCurrencySymbol('EUR') : ''}{(Number(ticket.price) + Number(ticket.serviceFee || 0)).toFixed(2)} {getCurrencyCode(event?.country || 'Finland') !== 'EUR' ? getCurrencyCode(event?.country || 'Finland') : ''}
+                                                            {getCurrencyCode(event?.country || 'Finland') === 'EUR' ? getCurrencySymbol('EUR') : ''}{calculateTotalPrice(ticket)} {getCurrencyCode(event?.country || 'Finland') !== 'EUR' ? getCurrencyCode(event?.country || 'Finland') : ''}
                                                         </span>
                                                     </div>
                                                     {isAvailable ? (
