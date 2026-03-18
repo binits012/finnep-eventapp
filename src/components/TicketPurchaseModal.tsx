@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getCurrencySymbol } from '@/utils/currency';
+import { basePriceTaxPercent } from '@/utils/basePriceTax';
 import SeatSelectionModal from './SeatSelectionModal';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
@@ -90,12 +91,14 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
 
   const basePrice = useMemo(() => Number(ticket?.price ?? 0), [ticket]);
   const serviceFee = useMemo(() => Number(ticket?.serviceFee ?? 0), [ticket]);
-  const vatRate = useMemo(() => {
-    const vat = Number(ticket?.vat ?? 0);
-    if (!Number.isNaN(vat) && vat > 0) return vat;
-    const entertainmentTax = Number(ticket?.entertainmentTax ?? 0);
-    return Number.isNaN(entertainmentTax) ? 0 : entertainmentTax;
-  }, [ticket]);
+  const vatRate = useMemo(
+    () =>
+      basePriceTaxPercent(
+        Number(ticket?.vat ?? 0),
+        Number(ticket?.entertainmentTax ?? 0)
+      ),
+    [ticket]
+  );
   const serviceTaxRate = useMemo(() => Number(ticket?.serviceTax ?? 0), [ticket]);
   const orderFee = useMemo(() => Number(ticket?.orderFee ?? 0), [ticket]);
 

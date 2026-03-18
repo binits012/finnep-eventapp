@@ -1047,10 +1047,7 @@ function CheckoutContent() {
                   {baseTaxPct > 0 && (
                     <div className="flex justify-between">
                       <span className="opacity-80">
-                        {isEntertainmentTaxOnBase(checkoutData.entertainmentTax)
-                          ? t('seatSelection.entertainmentTax') ||
-                            'Entertainment tax'
-                          : t('checkout.vat')}{' '}
+                        {t('checkout.vat') || 'VAT'}{' '}
                         ({formatTaxRateDisplay(baseTaxPct)}%)
                       </span>
                       <span>

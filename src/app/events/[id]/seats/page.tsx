@@ -1416,10 +1416,7 @@ export default function SeatSelectionPage() {
                                             {pricingBreakdown.baseTaxAmount > 0 && (
                                               <div className="flex justify-between">
                                                 <span>
-                                                  {pricingBreakdown.baseTaxIsEntertainment
-                                                    ? t('seatSelection.entertainmentTax') ||
-                                                      'Entertainment tax'
-                                                    : t('checkout.vat') || 'VAT'}
+                                                  {t('checkout.vat') || 'VAT'}
                                                   {pricingBreakdown.baseTaxRatePercent != null &&
                                                     pricingBreakdown.baseTaxRatePercent > 0 &&
                                                     ` (${formatTaxRateDisplay(pricingBreakdown.baseTaxRatePercent)}%)`}
@@ -1856,10 +1853,7 @@ export default function SeatSelectionPage() {
                       {baseTaxPct > 0 && (
                         <div className="flex justify-between">
                           <span>
-                            {isEntertainmentTaxOnBase(ticket.entertainmentTax)
-                              ? t('seatSelection.entertainmentTax') ||
-                                'Entertainment tax'
-                              : t('checkout.vat') || 'VAT'}{' '}
+                            {t('checkout.vat') || 'VAT'}{' '}
                             ({formatTaxRateDisplay(baseTaxPct)}%):
                           </span>
                           <span>
@@ -2827,7 +2821,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
                     </div>
                     {item.entertainmentTaxPercent > 0 && (
                       <div className="flex justify-between">
-                        <span>{t('seatSelection.entertainmentTax') || 'Entertainment Tax'} ({item.entertainmentTaxPercent}%):</span>
+                        <span>{t('checkout.vat') || 'VAT'} ({item.entertainmentTaxPercent}%):</span>
                         <span>+{formatCurrency(item.entertainmentTaxAmount)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
                       </div>
                     )}
