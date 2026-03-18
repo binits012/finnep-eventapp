@@ -12,6 +12,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getCurrencySymbol, getCurrencyCode } from '@/utils/currency';
+import { basePriceTaxPercent } from '@/utils/basePriceTax';
 import TicketPurchaseModal from '@/components/TicketPurchaseModal';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -469,11 +470,12 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
         (event.ticketInfo && event.ticketInfo.length > 0 && event.ticketInfo.every(ticket => Number(ticket.price) === 0));
 
     const getEffectiveTaxRate = (ticket: { vat?: number; entertainmentTax?: number }): number => {
-        const vatRate = Number(ticket?.vat ?? 0);
-        if (!Number.isNaN(vatRate) && vatRate > 0) return vatRate;
-        const entertainmentTaxRate = Number(ticket?.entertainmentTax ?? 0);
-        return Number.isNaN(entertainmentTaxRate) ? 0 : entertainmentTaxRate;
+        return basePriceTaxPercent(
+            Number(ticket?.vat ?? 0),
+            Number(ticket?.entertainmentTax ?? 0)
+        );
     };
+    const getEffectiveTaxLabel = (): string => t('eventDetail.tickets.vat') || 'VAT';
 
     const calculateTotalPrice = (ticket: TicketInfo): string => {
         try {
@@ -1267,9 +1269,9 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
                                                         <span className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{ticket.price.toFixed(2)} {getCurrencySymbol(event.country || 'Finland')}</span>
                                                     </div>
 
-                                                    {/* Service Fee, VAT, Order Fee, and Service Tax info */}
+                                                    {/* Service fee, base tax, order fee and service tax info */}
                                                     <div className="mt-2 text-sm font-medium" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
-                                                        {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {t('eventDetail.tickets.vat')}: {getEffectiveTaxRate(ticket)}%
+                                                        {t('eventDetail.tickets.serviceFee')}: +{(ticket.serviceFee ?? 0).toFixed(2)} • {getEffectiveTaxLabel()}: {getEffectiveTaxRate(ticket)}%
                                                         {(ticket.orderFee ?? 0) > 0 && (
                                                             <> • {t('eventDetail.tickets.orderFee')}: +{(ticket.orderFee ?? 0).toFixed(2)}</>
                                                         )}
