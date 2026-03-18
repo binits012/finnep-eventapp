@@ -9,6 +9,7 @@ import { formatEventDateLocale, formatEventDateOnly, formatEventTime } from '@/u
 import { FaCalendarAlt, FaMapMarkerAlt, FaSearch, FaFilter } from 'react-icons/fa';
 import { getCurrencySymbol } from '@/utils/currency';
 import { Event } from '@/types/event';
+import { eventCardMinDisplayPrice } from '@/utils/eventDisplayPrice';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // locale helper - removed unused function
@@ -416,12 +417,12 @@ export default function EventsPage({ data }: { data: { items?: Event[]; event?: 
 }
 
 function EventCard({ event, locale, t }: { event: Event; locale: string; t: (key: string, params?: Record<string, string | number>) => string }) {
-  const minPrice = Array.isArray(event.ticketInfo) && event.ticketInfo.length
-    ? Math.min(...event.ticketInfo.map((ticket) => Number(ticket.price) || 0))
-    : 0;
-
-  // Check if event is free
-  const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' || minPrice === 0;
+  const minDisplay = eventCardMinDisplayPrice(event);
+  const isFreeEvent =
+    event.otherInfo?.eventExtraInfo?.eventType === 'free' ||
+    (Array.isArray(event.ticketInfo) &&
+      event.ticketInfo.length > 0 &&
+      event.ticketInfo.every((ticket) => Number(ticket.price) === 0));
 
   return (
     <motion.div
@@ -485,16 +486,17 @@ function EventCard({ event, locale, t }: { event: Event; locale: string; t: (key
           <span className="line-clamp-1">{event.venueInfo?.name || ''}{event.city ? `, ${event.city}` : ''}</span>
         </div>
 
-          {/* Price & Status Tag */}
           <div className="mt-4 flex justify-between items-center">
             {isFreeEvent ? (
               <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-sm px-3 py-1 rounded-full">
                 {t('eventDetail.freeEvent.free')}
               </span>
-            ) : (
+            ) : minDisplay != null ? (
               <span className="text-indigo-600 dark:text-indigo-400 font-medium">
-                {minPrice} {' '} {getCurrencySymbol(event.country || '')}
+                {minDisplay.toFixed(2)} {getCurrencySymbol(event.country || '')}
               </span>
+            ) : (
+              <span />
             )}
             {(event.active ?? true) && (
               <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">

@@ -7,6 +7,11 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaCalendarAlt, FaTicketAlt, FaUser, FaCreditCard, FaLock, FaClock } from 'react-icons/fa';
 import { getCurrencySymbol, getCurrencyCode } from '@/utils/currency';
+import {
+  basePriceTaxPercent,
+  formatTaxRateDisplay,
+  isEntertainmentTaxOnBase,
+} from '@/utils/basePriceTax';
 import { useTranslation } from '@/hooks/useTranslation';
 import SuccessPage from '../success/page';
 
@@ -191,8 +196,9 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
 
   // Use pre-calculated values from EventDetail component, fallback to calculation if not provided
   const perUnitSubtotal = checkoutData.perUnitSubtotal ?? (checkoutData.price + checkoutData.serviceFee);
-  // VAT is calculated on base price
-  const perUnitVat = checkoutData.perUnitVat ?? (checkoutData.price * (checkoutData.vat / 100));
+  const baseTaxPct = basePriceTaxPercent(checkoutData.vat, checkoutData.entertainmentTax);
+  const perUnitVat =
+    checkoutData.perUnitVat ?? checkoutData.price * (baseTaxPct / 100);
   // Calculate service tax on service fee (this is the "service VAT")
   const serviceTaxRate = checkoutData.serviceTax ?? 0;
   const perUnitServiceTax = (checkoutData.serviceFee > 0 && serviceTaxRate > 0)
@@ -227,13 +233,20 @@ function CheckoutForm({ checkoutData, onSuccess }: { checkoutData: CheckoutData;
       subtotal: (checkoutData.price * checkoutData.quantity).toFixed(3),
       serviceFee: checkoutData.serviceFee.toString(),
       totalServiceFee: (checkoutData.serviceFee * checkoutData.quantity).toFixed(3),
-      serviceTax: serviceTaxRate.toString(),
+      serviceTax: formatTaxRateDisplay(serviceTaxRate),
       serviceTaxAmount: (perUnitServiceTax * checkoutData.quantity).toFixed(3),
-      vatRate: checkoutData.vat.toString(),
+      vatRate: formatTaxRateDisplay(baseTaxPct),
       vatAmount: (perUnitVat * checkoutData.quantity).toFixed(3),
-      // Calculate entertainmentTaxAmount if entertainmentTax is provided
-      entertainmentTax: checkoutData.entertainmentTax ? checkoutData.entertainmentTax.toString() : undefined,
-      entertainmentTaxAmount: checkoutData.entertainmentTax ? ((checkoutData.price * checkoutData.entertainmentTax / 100) * checkoutData.quantity).toFixed(3) : undefined,
+      ...(isEntertainmentTaxOnBase(checkoutData.entertainmentTax)
+        ? {
+            entertainmentTax: formatTaxRateDisplay(
+              checkoutData.entertainmentTax!
+            ),
+            entertainmentTaxAmount: (
+              perUnitVat * checkoutData.quantity
+            ).toFixed(3),
+          }
+        : {}),
       orderFee: orderFee.toString(),
       orderFeeServiceTax: orderFeeServiceTax.toFixed(3),
       totalAmount: total.toFixed(3),
@@ -722,8 +735,13 @@ function CheckoutContent() {
           // Per-unit values (for backward compatibility, but totals are preferred)
           const basePrice = checkoutData.price || 0;
           const serviceFee = checkoutData.serviceFee || 0;
-          const vatRate = checkoutData.vat || 0;
-          const entertainmentTaxRate = checkoutData.entertainmentTax || 0;
+          const baseTaxPct = basePriceTaxPercent(
+            checkoutData.vat,
+            checkoutData.entertainmentTax
+          );
+          const vatRate = baseTaxPct;
+          const entertainmentTaxRate =
+            checkoutData.entertainmentTax || 0;
           const serviceTaxRate = checkoutData.serviceTax ?? 0;
 
           // Grand total from pre-calculated components
@@ -767,12 +785,21 @@ function CheckoutContent() {
                 // Pricing breakdown - use pre-calculated totals (correct for multiple ticket types)
                 basePrice: basePrice.toString(), // Per-unit (for backward compatibility)
                 serviceFee: serviceFee.toString(), // Per-unit (for backward compatibility)
-                vatRate: vatRate.toString(),
-                vatAmount: totalVatAmount.toFixed(3), // Total VAT amount
-                serviceTax: serviceTaxRate.toString(),
-                serviceTaxAmount: totalServiceTaxAmount.toFixed(3), // Total service tax amount
-                entertainmentTax: entertainmentTaxRate > 0 ? entertainmentTaxRate.toString() : undefined,
-                entertainmentTaxAmount: totalEntertainmentTaxAmount.toFixed(3), // Total entertainment tax
+                vatRate: formatTaxRateDisplay(vatRate),
+                vatAmount:
+                  totalVatAmount > 0
+                    ? totalVatAmount.toFixed(3)
+                    : totalEntertainmentTaxAmount.toFixed(3),
+                serviceTax: formatTaxRateDisplay(serviceTaxRate),
+                serviceTaxAmount: totalServiceTaxAmount.toFixed(3),
+                ...(entertainmentTaxRate > 0
+                  ? {
+                      entertainmentTax:
+                        formatTaxRateDisplay(entertainmentTaxRate),
+                      entertainmentTaxAmount:
+                        totalEntertainmentTaxAmount.toFixed(3),
+                    }
+                  : {}),
                 orderFee: orderFee.toString(),
                 orderFeeServiceTax: orderFeeServiceTax.toFixed(3),
                 // CRITICAL: Use pre-calculated totals (not per-unit * quantity)
@@ -947,8 +974,11 @@ function CheckoutContent() {
     );
   }
 
-  // VAT is calculated on base price
-  const perUnitVat = checkoutData.price * (checkoutData.vat / 100);
+  const baseTaxPct = basePriceTaxPercent(
+    checkoutData.vat,
+    checkoutData.entertainmentTax
+  );
+  const perUnitVat = checkoutData.price * (baseTaxPct / 100);
   // Calculate service tax on service fee (this is the "service VAT")
   const serviceTaxRate = checkoutData.serviceTax ?? 0;
   const perUnitServiceTax = (checkoutData.serviceFee > 0 && serviceTaxRate > 0)
@@ -1014,10 +1044,21 @@ function CheckoutContent() {
                       <span>{(perUnitServiceTax * checkoutData.quantity).toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="opacity-80">{t('checkout.vat')} ({checkoutData.vat}%)</span>
-                    <span>{(perUnitVat * checkoutData.quantity).toFixed(3)} {' '} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
-                  </div>
+                  {baseTaxPct > 0 && (
+                    <div className="flex justify-between">
+                      <span className="opacity-80">
+                        {isEntertainmentTaxOnBase(checkoutData.entertainmentTax)
+                          ? t('seatSelection.entertainmentTax') ||
+                            'Entertainment tax'
+                          : t('checkout.vat')}{' '}
+                        ({formatTaxRateDisplay(baseTaxPct)}%)
+                      </span>
+                      <span>
+                        {(perUnitVat * checkoutData.quantity).toFixed(3)}{' '}
+                        {getCurrencySymbol(checkoutData.country || 'Finland')}
+                      </span>
+                    </div>
+                  )}
                   {orderFee > 0 && (
                     <>
                       <div className="flex justify-between">

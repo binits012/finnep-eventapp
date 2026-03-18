@@ -13,6 +13,11 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaCreditCard, FaLock, FaClock } from 'react-icons/fa';
 import { getCurrencySymbol, getCurrencyCode } from '@/utils/currency';
+import {
+  basePriceTaxPercent,
+  formatTaxRateDisplay,
+  isEntertainmentTaxOnBase,
+} from '@/utils/basePriceTax';
 import SuccessPage from '@/app/success/page';
 
 // Initialize Stripe
@@ -320,9 +325,14 @@ export default function SeatSelectionPage() {
       }
 
       // Store pricingConfig if available
-      if (responseData?.pricingConfig) {
-        setPricingConfig(responseData.pricingConfig);
+      const pricingConfigFromResponse = responseData?.pricingConfig ?? null;
+      if (pricingConfigFromResponse) {
+        setPricingConfig(pricingConfigFromResponse);
       }
+
+      // Use response + event model here — React state pricingModel/pricingConfig is still stale until next render
+      const effectivePricingModel =
+        (responseData?.venue?.pricingModel as 'ticket_info' | 'pricing_configuration') || model;
 
       // Decode everything from placeIds array - no need for places array!
       // placeIds encodes: section, row, seat, x, y, tierCode, available, tags
@@ -380,15 +390,21 @@ export default function SeatSelectionPage() {
         };
 
         // Extract pricing from tierCode if pricingModel is 'pricing_configuration'
-        if (pricingModel === 'pricing_configuration' && pricingConfig && decoded.tierCode) {
-          const tier = pricingConfig.tiers.find(t => t.id === decoded.tierCode);
+        if (
+          effectivePricingModel === 'pricing_configuration' &&
+          pricingConfigFromResponse?.tiers &&
+          decoded.tierCode
+        ) {
+          const tier = pricingConfigFromResponse.tiers.find(
+            (t: { id: string }) => t.id === decoded.tierCode
+          );
           if (tier) {
             seatData.basePrice = tier.basePrice;
             seatData.tax = tier.tax;
             seatData.serviceFee = tier.serviceFee;
             seatData.serviceTax = tier.serviceTax;
-            seatData.orderFee = pricingConfig.orderFee || 0;
-            seatData.currency = pricingConfig.currency || currency;
+            seatData.orderFee = pricingConfigFromResponse.orderFee || 0;
+            seatData.currency = pricingConfigFromResponse.currency || currency;
 
             // Calculate total price from pricing fields
             const basePrice = seatData.basePrice || 0;
@@ -402,7 +418,7 @@ export default function SeatSelectionPage() {
             console.warn('[loadEventAndSeatData] Tier not found for placeId:', {
               placeId,
               tierCode: decoded.tierCode,
-              availableTiers: pricingConfig.tiers.map(t => t.id)
+              availableTiers: pricingConfigFromResponse.tiers.map((t: { id: string }) => t.id)
             });
           }
         }
@@ -784,15 +800,17 @@ export default function SeatSelectionPage() {
       if (!ticket) return;
 
       const basePrice = ticket.price || 0;
-      const entertainmentTax = (ticket.entertainmentTax || 0) / 100;
+      const baseTaxPct = basePriceTaxPercent(
+        ticket.vat || 0,
+        ticket.entertainmentTax
+      );
+      const baseTaxMult = baseTaxPct / 100;
       const serviceFee = ticket.serviceFee || 0;
       const serviceTax = (ticket.serviceTax || 0) / 100;
 
-      // Per ticket: basePrice + (basePrice * entertainmentTax) + serviceFee + (serviceFee * serviceTax)
-      // Truncate each calculation to 3 decimals
-      const entertainmentTaxAmount = Math.round((basePrice * entertainmentTax) * 1000) / 1000;
+      const baseTaxAmount = Math.round((basePrice * baseTaxMult) * 1000) / 1000;
       const serviceTaxAmount = Math.round((serviceFee * serviceTax) * 1000) / 1000;
-      const ticketPrice = Math.round((basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
+      const ticketPrice = Math.round((basePrice + baseTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
       total += ticketPrice;
 
       // Order fee (only add once, use first ticket's orderFee)
@@ -1303,15 +1321,17 @@ export default function SeatSelectionPage() {
                                   }
 
                                   // Truncate each calculation to 3 decimal places (preserve exact values, no rounding)
-                                  const entertainmentTaxAmount = Math.round((basePrice * taxPercent) * 1000) / 1000;
+                                  const baseTaxAmount = Math.round((basePrice * taxPercent) * 1000) / 1000;
                                   const serviceTaxAmount = Math.round((serviceFee * serviceTaxPercent) * 1000) / 1000;
 
-                                  seatPrice = Math.round((basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
+                                  seatPrice = Math.round((basePrice + baseTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
 
                                   if (basePrice > 0 || serviceFee > 0) {
                                     pricingBreakdown = {
                                       basePrice,
-                                      entertainmentTaxAmount,
+                                      baseTaxAmount,
+                                      baseTaxRatePercent: seat.tax ?? 0,
+                                      baseTaxIsEntertainment: true,
                                       serviceFee,
                                       serviceTaxAmount,
                                       total: seatPrice
@@ -1324,18 +1344,25 @@ export default function SeatSelectionPage() {
 
                                   if (ticket) {
                                     const basePrice = ticket.price || 0;
-                                    const entertainmentTax = (ticket.entertainmentTax || 0) / 100;
+                                    const baseTaxPct = basePriceTaxPercent(
+                                      ticket.vat || 0,
+                                      ticket.entertainmentTax
+                                    );
                                     const serviceFee = ticket.serviceFee || 0;
                                     const serviceTax = (ticket.serviceTax || 0) / 100;
 
-                                    // Truncate each calculation to 3 decimal places (preserve exact values, no rounding)
-                                    const entertainmentTaxAmount = Math.round((basePrice * entertainmentTax) * 1000) / 1000;
+                                    const baseTaxAmount =
+                                      Math.round((basePrice * (baseTaxPct / 100)) * 1000) / 1000;
                                     const serviceTaxAmount = Math.round((serviceFee * serviceTax) * 1000) / 1000;
-                                    seatPrice = Math.round((basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
+                                    seatPrice = Math.round((basePrice + baseTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
 
                                     pricingBreakdown = {
                                       basePrice,
-                                      entertainmentTaxAmount,
+                                      baseTaxAmount,
+                                      baseTaxRatePercent: baseTaxPct,
+                                      baseTaxIsEntertainment: isEntertainmentTaxOnBase(
+                                        ticket.entertainmentTax
+                                      ),
                                       serviceFee,
                                       serviceTaxAmount,
                                       total: seatPrice
@@ -1386,10 +1413,22 @@ export default function SeatSelectionPage() {
                                               <span>{t('seatSelection.basePrice') || 'Base Price'}:</span>
                                               <span>{formatCurrency(pricingBreakdown.basePrice)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                                             </div>
-                                            {pricingBreakdown.entertainmentTaxAmount > 0 && (
+                                            {pricingBreakdown.baseTaxAmount > 0 && (
                                               <div className="flex justify-between">
-                                                <span>{t('seatSelection.entertainmentTax') || 'Entertainment Tax'}:</span>
-                                                <span>{formatCurrency(pricingBreakdown.entertainmentTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                                <span>
+                                                  {pricingBreakdown.baseTaxIsEntertainment
+                                                    ? t('seatSelection.entertainmentTax') ||
+                                                      'Entertainment tax'
+                                                    : t('checkout.vat') || 'VAT'}
+                                                  {pricingBreakdown.baseTaxRatePercent != null &&
+                                                    pricingBreakdown.baseTaxRatePercent > 0 &&
+                                                    ` (${formatTaxRateDisplay(pricingBreakdown.baseTaxRatePercent)}%)`}
+                                                  :
+                                                </span>
+                                                <span>
+                                                  {formatCurrency(pricingBreakdown.baseTaxAmount)}{' '}
+                                                  {getCurrencySymbol(eventCountry || 'Finland')}
+                                                </span>
                                               </div>
                                             )}
                                             {pricingBreakdown.serviceFee > 0 && (
@@ -1780,16 +1819,17 @@ export default function SeatSelectionPage() {
             <div className="space-y-3 mb-4 max-h-[400px] overflow-y-auto">
               {ticketTypes.map((ticket) => {
                 const basePrice = ticket.price || 0;
-                const entertainmentTaxPercent = ticket.entertainmentTax || 0;
-                const entertainmentTax = entertainmentTaxPercent / 100;
+                const baseTaxPct = basePriceTaxPercent(
+                  ticket.vat || 0,
+                  ticket.entertainmentTax
+                );
                 const serviceFee = ticket.serviceFee || 0;
                 const serviceTaxPercent = ticket.serviceTax || 0;
                 const serviceTax = serviceTaxPercent / 100;
 
-                // Calculate price breakdown
-                const entertainmentTaxAmount = basePrice * entertainmentTax;
+                const baseTaxAmount = basePrice * (baseTaxPct / 100);
                 const serviceTaxAmount = serviceFee * serviceTax;
-                const ticketPrice = basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount;
+                const ticketPrice = basePrice + baseTaxAmount + serviceFee + serviceTaxAmount;
 
                 return (
                   <button
@@ -1813,10 +1853,19 @@ export default function SeatSelectionPage() {
                         <span>{t('seatSelection.basePrice') || 'Base Price'}:</span>
                         <span>{formatCurrency(basePrice)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
                       </div>
-                      {entertainmentTaxPercent > 0 && (
+                      {baseTaxPct > 0 && (
                         <div className="flex justify-between">
-                          <span>{t('seatSelection.entertainmentTax') || 'Entertainment Tax'} ({entertainmentTaxPercent}%):</span>
-                          <span>+{formatCurrency(entertainmentTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                          <span>
+                            {isEntertainmentTaxOnBase(ticket.entertainmentTax)
+                              ? t('seatSelection.entertainmentTax') ||
+                                'Entertainment tax'
+                              : t('checkout.vat') || 'VAT'}{' '}
+                            ({formatTaxRateDisplay(baseTaxPct)}%):
+                          </span>
+                          <span>
+                            +{formatCurrency(baseTaxAmount)}{' '}
+                            {getCurrencySymbol(eventCountry || 'Finland')}
+                          </span>
                         </div>
                       )}
                       {serviceFee > 0 && (
@@ -2028,13 +2077,15 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       if (!ticket) return null;
 
       const basePrice = ticket.price || 0;
-      const entertainmentTaxPercent = ticket.entertainmentTax || 0;
-      const entertainmentTax = entertainmentTaxPercent / 100;
+      const baseTaxPct = basePriceTaxPercent(
+        ticket.vat || 0,
+        ticket.entertainmentTax
+      );
       const serviceFee = ticket.serviceFee || 0;
       const serviceTaxPercent = ticket.serviceTax || 0;
       const serviceTax = serviceTaxPercent / 100;
 
-      const entertainmentTaxAmount = basePrice * entertainmentTax;
+      const entertainmentTaxAmount = basePrice * (baseTaxPct / 100);
       const serviceTaxAmount = serviceFee * serviceTax;
       const ticketPrice = basePrice + entertainmentTaxAmount + serviceFee + serviceTaxAmount;
 
@@ -2044,7 +2095,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
         ticket,
         ticketName: ticket.name,
         basePrice,
-        entertainmentTaxPercent,
+        entertainmentTaxPercent: baseTaxPct,
         entertainmentTaxAmount,
         serviceFee,
         serviceTaxPercent,
@@ -2089,8 +2140,9 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
 
   // Calculate subtotal (sum of all ticket/seat prices, excluding order fee)
   const subtotal = useMemo(() => {
-    // If using pricing_configuration, calculate from seat data directly
-    if (seatData && selectedSeats.length > 0) {
+    // pricing_configuration: per-seat totals live on seat.price (tier-based).
+    // ticket_info: seat.price is zone/seat-only — must use ticket selection breakdown only.
+    if (pricingModel === 'pricing_configuration' && seatData && selectedSeats.length > 0) {
       let calculated = 0;
       selectedSeats.forEach((placeId) => {
         const seat = seatData.seats.find(s => s.placeId === placeId);
@@ -2098,7 +2150,6 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
           calculated += seat.price;
         }
       });
-      // If we got a value from seat prices, use it
       if (calculated > 0) {
         return calculated;
       }
@@ -2114,7 +2165,14 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
     }
 
     return calculated;
-  }, [seatPricingBreakdown, selectedSeats, seatData, totalPrice, orderFeeInfo.orderFeeTotal]);
+  }, [
+    seatPricingBreakdown,
+    selectedSeats,
+    seatData,
+    totalPrice,
+    orderFeeInfo.orderFeeTotal,
+    pricingModel
+  ]);
 
   // Calculate summary totals from seat pricing breakdown (for both ticket_info and pricing_configuration models)
   const summaryTotals = useMemo(() => {
@@ -2182,56 +2240,51 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       // Get vatRate from first ticket or checkoutData
       const firstTicketId = checkoutData.seatTickets?.[0]?.ticketId;
       const firstTicket = ticketTypes.find(t => t._id === firstTicketId);
-      const vatRate = firstTicket?.vat || checkoutData.vat || 0;
-      // Calculate VAT on exact total basePrice, then round to 3 decimals
-      const totalVatAmount = Math.round((totalBasePriceExact * vatRate / 100) * 1000) / 1000;
-
-      // Round the base totals for display/storage
+      const unifiedVatRate = basePriceTaxPercent(
+        firstTicket?.vat || checkoutData.vat || 0,
+        firstTicket?.entertainmentTax ?? checkoutData.entertainmentTax
+      );
       const totalBasePrice = Math.round(totalBasePriceExact * 1000) / 1000;
       const totalServiceFee = Math.round(totalServiceFeeExact * 1000) / 1000;
-
-      // Get entertainment tax rate from first ticket
-      const entertainmentTaxRate = firstTicket?.entertainmentTax || checkoutData.entertainmentTax || 0;
-
-      // Unify VAT and Entertainment Tax - they're the same, use whichever is available (if one is 0/null, use the other)
-      const unifiedVatAmount = (totalVatAmount && totalVatAmount > 0) ? totalVatAmount : (totalEntertainmentTaxAmount || 0);
-      const unifiedVatRate = (vatRate && vatRate > 0) ? vatRate : (entertainmentTaxRate || 0);
+      const unifiedVatAmount = totalEntertainmentTaxAmount;
 
       return {
         totalBasePrice,
         totalServiceFee,
         totalEntertainmentTaxAmount,
         totalServiceTaxAmount,
-        totalVatAmount: unifiedVatAmount, // Use unified value
-        entertainmentTaxRate,
-        vatRate: unifiedVatRate // Use unified rate
+        totalVatAmount: unifiedVatAmount,
+        entertainmentTaxRate: unifiedVatRate,
+        vatRate: unifiedVatRate
       };
       }
     }
 
     // Fallback to legacy calculation (multiply by quantity) - round each calculation
-    const entertainmentTaxAmount = Math.round(((checkoutData.price * (checkoutData.entertainmentTax || 0) / 100) * checkoutData.quantity) * 1000) / 1000;
-    const vatAmount = Math.round(((checkoutData.price * (checkoutData.vat || 0) / 100) * checkoutData.quantity) * 1000) / 1000;
-
-    // Unify VAT and Entertainment Tax - they're the same, use whichever is available (if one is 0/null, use the other)
-    const unifiedVatAmount = (vatAmount && vatAmount > 0) ? vatAmount : (entertainmentTaxAmount || 0);
-    const unifiedVatRate = (checkoutData.vat && checkoutData.vat > 0) ? checkoutData.vat : (checkoutData.entertainmentTax || 0);
+    const basePct = basePriceTaxPercent(
+      checkoutData.vat,
+      checkoutData.entertainmentTax
+    );
+    const unifiedBaseTaxAmount = Math.round(
+      (checkoutData.price * (basePct / 100) * checkoutData.quantity) * 1000
+    ) / 1000;
 
     return {
       totalBasePrice: Math.round((checkoutData.price * checkoutData.quantity) * 1000) / 1000,
       totalServiceFee: Math.round((checkoutData.serviceFee * checkoutData.quantity) * 1000) / 1000,
-      totalEntertainmentTaxAmount: entertainmentTaxAmount,
+      totalEntertainmentTaxAmount: unifiedBaseTaxAmount,
       totalServiceTaxAmount: Math.round(((checkoutData.serviceFee * (checkoutData.serviceTax || 0) / 100) * checkoutData.quantity) * 1000) / 1000,
-      totalVatAmount: unifiedVatAmount, // Use unified value
-      entertainmentTaxRate: unifiedVatRate,
-      vatRate: unifiedVatRate // Use unified rate
+      totalVatAmount: unifiedBaseTaxAmount,
+      entertainmentTaxRate: basePct,
+      vatRate: basePct
     };
   }, [seatPricingBreakdown, checkoutData, pricingModel, ticketTypes]);
 
   // Calculate pricing breakdown (legacy, for payment intent)
   const perUnitSubtotal = checkoutData.price + checkoutData.serviceFee;
-  // VAT is calculated on base price only, not on service fee
-  const perUnitVat = checkoutData.price * (checkoutData.vat / 100);
+  const perUnitVat =
+    checkoutData.price *
+    (basePriceTaxPercent(checkoutData.vat, checkoutData.entertainmentTax) / 100);
 
   const createPaymentIntentPayload = useCallback(() => {
     // Validate required fields
@@ -2263,7 +2316,10 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       locale: typeof window !== 'undefined' ? (localStorage.getItem('locale') || 'en-US') : 'en-US',
       basePrice: checkoutData.price.toString(),
       serviceFee: checkoutData.serviceFee.toString(),
-      vatRate: (summaryTotals?.vatRate || checkoutData.vat || 0).toString(),
+      vatRate: formatTaxRateDisplay(
+        summaryTotals?.vatRate ??
+          basePriceTaxPercent(checkoutData.vat, checkoutData.entertainmentTax)
+      ),
       vatAmount: (summaryTotals?.totalVatAmount || (perUnitVat * checkoutData.quantity)).toFixed(3), // Total VAT amount from summary totals
       perUnitSubtotal: perUnitSubtotal.toString(),
       perUnitTotal: (perUnitSubtotal + perUnitVat).toString(),
@@ -2293,9 +2349,10 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       metadata.sessionId = checkoutData.sessionId;
     }
 
-    // Tax and fee fields - only include if they have values
-    if (checkoutData?.entertainmentTax !== undefined && checkoutData.entertainmentTax !== null) {
-      metadata.entertainmentTax = checkoutData.entertainmentTax.toString();
+    if (isEntertainmentTaxOnBase(checkoutData.entertainmentTax)) {
+      metadata.entertainmentTax = formatTaxRateDisplay(
+        checkoutData.entertainmentTax!
+      );
     }
 
     // Use summaryTotals for pricing_configuration (percentages calculated on totals, not per-seat)
@@ -2305,8 +2362,10 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
         metadata.entertainmentTaxAmount = summaryTotals.totalEntertainmentTaxAmount.toFixed(3);
         metadata.totalEntertainmentTaxAmount = summaryTotals.totalEntertainmentTaxAmount.toFixed(3);
         if (summaryTotals.entertainmentTaxRate > 0) {
-          metadata.entertainmentTax = summaryTotals.entertainmentTaxRate.toString();
-      }
+          metadata.entertainmentTax = formatTaxRateDisplay(
+            summaryTotals.entertainmentTaxRate
+          );
+        }
       }
 
       if (summaryTotals.totalServiceTaxAmount > 0) {
@@ -2325,23 +2384,33 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
         metadata.vatAmount = summaryTotals.totalVatAmount.toFixed(3);
         metadata.totalVatAmount = summaryTotals.totalVatAmount.toFixed(3);
         if (summaryTotals.vatRate > 0) {
-          metadata.vatRate = summaryTotals.vatRate.toString();
+          metadata.vatRate = formatTaxRateDisplay(summaryTotals.vatRate);
         }
       }
     } else if (pricingModel === 'ticket_info' && seatPricingBreakdown.length > 0 && summaryTotals) {
       // For ticket_info model with seatTickets, use summaryTotals
       if (summaryTotals.totalEntertainmentTaxAmount > 0) {
         metadata.entertainmentTaxAmount = summaryTotals.totalEntertainmentTaxAmount.toFixed(3);
-        metadata.entertainmentTax = summaryTotals.entertainmentTaxRate.toString();
+        if (isEntertainmentTaxOnBase(checkoutData.entertainmentTax)) {
+          metadata.entertainmentTax = formatTaxRateDisplay(
+            summaryTotals.entertainmentTaxRate
+          );
         }
+      }
       if (summaryTotals.totalServiceTaxAmount > 0) {
         metadata.serviceTaxAmount = summaryTotals.totalServiceTaxAmount.toFixed(3);
       }
-    } else if (checkoutData?.entertainmentTax !== undefined && checkoutData?.entertainmentTax !== null && checkoutData?.price !== undefined) {
-      // For non-seat purchases, calculate: basePrice * entertainmentTax / 100 * quantity - round to 3 decimals
-      const perUnitEntertainmentTaxAmount = Math.round((checkoutData.price * checkoutData.entertainmentTax / 100) * 1000) / 1000;
-      const totalEntertainmentTaxAmount = Math.round((perUnitEntertainmentTaxAmount * checkoutData.quantity) * 1000) / 1000;
-      metadata.entertainmentTaxAmount = totalEntertainmentTaxAmount.toFixed(3);
+    } else if (checkoutData?.price !== undefined) {
+      const bp = basePriceTaxPercent(
+        checkoutData.vat,
+        checkoutData.entertainmentTax
+      );
+      if (bp > 0 && isEntertainmentTaxOnBase(checkoutData.entertainmentTax)) {
+        const totalEt = Math.round(
+          checkoutData.price * (bp / 100) * checkoutData.quantity * 1000
+        ) / 1000;
+        metadata.entertainmentTaxAmount = totalEt.toFixed(3);
+      }
     }
 
     if (checkoutData?.serviceTax !== undefined && checkoutData.serviceTax !== null) {
@@ -2377,7 +2446,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) {
+    if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || 'Failed to create payment intent');
       }

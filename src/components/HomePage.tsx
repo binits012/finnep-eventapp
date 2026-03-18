@@ -18,6 +18,7 @@ import { FaExternalLinkAlt, FaPlay } from 'react-icons/fa';
 
 import { Event } from '@/types/event';
 import { getCurrencySymbol } from '@/utils/currency';
+import { eventCardMinDisplayPrice } from '@/utils/eventDisplayPrice';
 import { formatEventDateLocale } from '@/utils/common';
 import countries from 'i18n-iso-countries';
 import enCountries from 'i18n-iso-countries/langs/en.json';
@@ -382,21 +383,12 @@ export default function HomePage() {
 
 // Featured Event Card Component
 function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string, params?: Record<string, string | number>) => string; locale: string }) {
-  const getMinPrice = () => {
-    try {
-      if (!event.ticketInfo || !event.ticketInfo.length) return 0;
-      const validPrices = event.ticketInfo
-        .map(ticket => Number(ticket.price))
-        .filter(price => !isNaN(price) && isFinite(price));
-      return validPrices.length ? Math.min(...validPrices) : 0;
-    } catch (e) {
-      console.error("Error calculating min price:", e);
-      return 0;
-    }
-  };
-
-  // Check if event is free
-  const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' || getMinPrice() === 0;
+  const minDisplay = eventCardMinDisplayPrice(event);
+  const isFreeEvent =
+    event.otherInfo?.eventExtraInfo?.eventType === 'free' ||
+    (Array.isArray(event.ticketInfo) &&
+      event.ticketInfo.length > 0 &&
+      event.ticketInfo.every((ticket) => Number(ticket.price) === 0));
 
   return (
     <div
@@ -472,7 +464,7 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
             )}
           </span>
         </div>
-        {!event.otherInfo?.isExternalEvent && (
+        {!event.otherInfo?.isExternalEvent && (isFreeEvent || minDisplay != null) && (
           <div className="mt-1 flex items-center justify-between">
             {isFreeEvent ? (
               <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-sm px-3 py-1 rounded-full">
@@ -482,7 +474,7 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
               <div className="flex items-center text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
                 <FaTicketAlt className="mr-2 flex-shrink-0" />
                 <span>
-                  {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+                  {t('home.from')} {minDisplay!.toFixed(2)} {getCurrencySymbol(event.country || '')}
                 </span>
               </div>
             )}
@@ -525,20 +517,12 @@ function FeaturedEventCard({ event, t, locale }: { event: Event; t: (key: string
 
 // Upcoming Event Card (compact)
 function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string, params?: Record<string, string | number>) => string; locale: string }) {
-  const getMinPrice = () => {
-    try {
-      if (!event.ticketInfo || !event.ticketInfo.length) return 0;
-      const validPrices = event.ticketInfo
-        .map(ticket => Number(ticket.price))
-        .filter(price => !isNaN(price) && isFinite(price));
-      return validPrices.length ? Math.min(...validPrices) : 0;
-    } catch {
-      return 0;
-    }
-  };
-
-  // Check if event is free
-  const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' || getMinPrice() === 0;
+  const minDisplay = eventCardMinDisplayPrice(event);
+  const isFreeEvent =
+    event.otherInfo?.eventExtraInfo?.eventType === 'free' ||
+    (Array.isArray(event.ticketInfo) &&
+      event.ticketInfo.length > 0 &&
+      event.ticketInfo.every((ticket) => Number(ticket.price) === 0));
 
   const promoImg = event.eventPromotionPhoto || event.venueInfo?.media?.photo?.[0] || "https://via.placeholder.com/400x240";
 
@@ -617,8 +601,7 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
               )}
             </span>
           </div>
-
-          {!event.otherInfo?.isExternalEvent && (
+          {!event.otherInfo?.isExternalEvent && (isFreeEvent || minDisplay != null) && (
             <div className="mt-3 flex items-center justify-between">
               {isFreeEvent ? (
                 <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-xs sm:text-sm px-2 py-1 rounded-full">
@@ -626,11 +609,12 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
                 </span>
               ) : (
                 <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                  {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+                  {t('home.from')} {minDisplay!.toFixed(2)} {getCurrencySymbol(event.country || '')}
                 </span>
               )}
             </div>
           )}
+
           {/*
           <span
             className="text-[11px] sm:text-xs px-2 py-1 rounded border"
@@ -664,20 +648,12 @@ function UpcomingEventCard({ event, t, locale }: { event: Event; t: (key: string
 
 // Ongoing Event Card (for events happening today)
 function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string, params?: Record<string, string | number>) => string; locale: string }) {
-  const getMinPrice = () => {
-    try {
-      if (!event.ticketInfo || !event.ticketInfo.length) return 0;
-      const validPrices = event.ticketInfo
-        .map(ticket => Number(ticket.price))
-        .filter(price => !isNaN(price) && isFinite(price));
-      return validPrices.length ? Math.min(...validPrices) : 0;
-    } catch {
-      return 0;
-    }
-  };
-
-  // Check if event is free
-  const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' || getMinPrice() === 0;
+  const minDisplay = eventCardMinDisplayPrice(event);
+  const isFreeEvent =
+    event.otherInfo?.eventExtraInfo?.eventType === 'free' ||
+    (Array.isArray(event.ticketInfo) &&
+      event.ticketInfo.length > 0 &&
+      event.ticketInfo.every((ticket) => Number(ticket.price) === 0));
 
   const promoImg = event.eventPromotionPhoto || event.venueInfo?.media?.photo?.[0] || "https://via.placeholder.com/400x240";
 
@@ -791,8 +767,7 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
             )}
           </span>
         </div>
-
-        {!event.otherInfo?.isExternalEvent && (
+        {!event.otherInfo?.isExternalEvent && (isFreeEvent || minDisplay != null) && (
           <div className="mt-3 flex items-center justify-between">
             {isFreeEvent ? (
               <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold text-xs sm:text-sm px-2 py-1 rounded-full">
@@ -800,11 +775,12 @@ function OngoingEventCard({ event, t, locale }: { event: Event; t: (key: string,
               </span>
             ) : (
               <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                {t('home.from')} {getMinPrice()} {' '} {getCurrencySymbol(event.country || '')}
+                {t('home.from')} {minDisplay!.toFixed(2)} {getCurrencySymbol(event.country || '')}
               </span>
             )}
           </div>
         )}
+
         {/*
         <span
           className="text-[11px] sm:text-xs px-2 py-1 rounded border"

@@ -26,7 +26,7 @@ export default function Footer() {
               <Link href="/">
                 <div className="flex justify-center sm:justify-start">
                 <img
-    src= {storedTheme === 'dark' ? "/logo23100.png" : "/black_6100.svg"}
+    src= {storedTheme === 'dark' ? "/logo21100.png" : "/black_6100.svg"}
     alt="Okazzo Logo"
     className=" sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-none"
   />
@@ -137,7 +137,7 @@ export default function Footer() {
             <Link href="/">
               <div className="flex items-center">
               <img
-    src= {storedTheme === 'dark' ? "/logo23100.png" : "/black_6100.svg"}
+    src= {storedTheme === 'dark' ? "/logo21100.png" : "/black_6100.svg"}
     alt="Okazzo Logo"
     className=" sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-none"
   />

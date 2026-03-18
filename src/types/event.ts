@@ -34,6 +34,19 @@ export interface Event {
       lockedManifestId?: string;
       manifestS3Key?: string;
       pricing?: Record<string, number>;
+      pricingModel?: 'ticket_info' | 'pricing_configuration';
+    };
+    /** Present on some API responses for seat + pricing_configuration events */
+    pricingConfig?: {
+      tiers: Array<{
+        id: string;
+        basePrice: number;
+        tax?: number;
+        serviceFee?: number;
+        serviceTax?: number;
+      }>;
+      orderFee?: number;
+      currency?: string;
     };
     city?: string;
     country?: string;
