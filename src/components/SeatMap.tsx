@@ -98,10 +98,19 @@ const SeatMap: React.FC<SeatMapProps> = ({
   const [zoom, setZoom] = useState(0.5); // Start zoomed out to show full view
   // Calculate initial pan to center seats immediately (prevents bounce)
   const initialPan = useMemo(() => {
-    if (seats.length === 0 || selectedSection) return { x: 0, y: 0 };
+    if ((seats.length === 0 && (!sections || sections.length === 0)) || selectedSection) return { x: 0, y: 0 };
 
-    const xs = seats.map(s => s.x).filter(x => x !== null) as number[];
-    const ys = seats.map(s => s.y).filter(y => y !== null) as number[];
+    // Use both seat coordinates and section polygon coordinates (standing/area sections have no seats).
+    const seatXs = seats.map(s => s.x).filter(x => x !== null) as number[];
+    const seatYs = seats.map(s => s.y).filter(y => y !== null) as number[];
+
+    const polyPoints = (sections || [])
+      .flatMap(s => (s.polygon && s.polygon.length > 0 ? s.polygon : []));
+    const polyXs = polyPoints.map(p => p.x);
+    const polyYs = polyPoints.map(p => p.y);
+
+    const xs = [...seatXs, ...polyXs];
+    const ys = [...seatYs, ...polyYs];
 
     if (xs.length === 0 || ys.length === 0) return { x: 0, y: 0 };
 
@@ -127,6 +136,26 @@ const SeatMap: React.FC<SeatMapProps> = ({
   const [hoveredSeat, setHoveredSeat] = useState<string | null>(null);
   const [hoveredSection, setHoveredSection] = useState<string | null>(null);
   const [svgImage, setSvgImage] = useState<string | null>(null);
+
+  // Show seat metadata before click (hover) and after click (selected fallback),
+  // so users always know what they are about to select.
+  const previewSeat = useMemo(() => {
+    if (hoveredSeat) {
+      return seats.find(s => s.placeId === hoveredSeat) || null;
+    }
+    const lastSelected = selectedSeats[selectedSeats.length - 1];
+    if (lastSelected) {
+      return seats.find(s => s.placeId === lastSelected) || null;
+    }
+    return null;
+  }, [hoveredSeat, selectedSeats, seats]);
+
+  const previewSection = useMemo(() => {
+    if (hoveredSection) {
+      return sections.find(s => s.id === hoveredSection) || null;
+    }
+    return null;
+  }, [hoveredSection, sections]);
 
   // Alignment offsets - seats are drawn relative to their coordinates,
   // background SVG is offset by translateX/translateY from venue config
@@ -551,26 +580,34 @@ const SeatMap: React.FC<SeatMapProps> = ({
       }
     }
 
-    // Default: fit all seats (using scaled positions)
-    if (seats.length === 0) return '0 0 800 600';
+    // Default: fit all seats AND section polygons (area/standing has polygons but no seat dots)
+    const padding = 50;
 
     // Get scaled positions for all seats
     const scaledPositions = seats
       .filter(s => s.x !== null && s.y !== null)
       .map(s => getScaledSeatPosition(s));
 
-    if (scaledPositions.length === 0) return '0 0 800 600';
+    const polyPoints = (sections || [])
+      .flatMap(s => (s.polygon && s.polygon.length > 0 ? s.polygon : []));
 
-    const xs = scaledPositions.map(p => p.x);
-    const ys = scaledPositions.map(p => p.y);
+    const xs = [
+      ...scaledPositions.map(p => p.x),
+      ...polyPoints.map(p => p.x),
+    ];
+    const ys = [
+      ...scaledPositions.map(p => p.y),
+      ...polyPoints.map(p => p.y),
+    ];
 
-    const minX = Math.min(...xs) - 50;
-    const maxX = Math.max(...xs) + 50;
-    const minY = Math.min(...ys) - 50;
-    const maxY = Math.max(...ys) + 50;
+    if (xs.length === 0 || ys.length === 0) return '0 0 800 600';
 
-    const viewBox = `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
-    return viewBox;
+    const minX = Math.min(...xs) - padding;
+    const maxX = Math.max(...xs) + padding;
+    const minY = Math.min(...ys) - padding;
+    const maxY = Math.max(...ys) + padding;
+
+    return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
   };
 
   // Update pan when seats are first loaded (prevents bounce on initial render)
@@ -744,6 +781,34 @@ const SeatMap: React.FC<SeatMapProps> = ({
         </div>
       </div>
 
+      {/* Seat/section preview helper (before click and after selection) */}
+      {(previewSeat || previewSection) && (
+        <div
+          className="absolute top-4 left-4 z-10 px-3 py-2 rounded-lg shadow-md max-w-xs"
+          style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderWidth: '1px' }}
+        >
+          {previewSeat ? (
+            <>
+              <p className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+                {t('seatSelection.section') || 'SECTION'}: {previewSeat.section || '-'}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--foreground)' }}>
+                {t('seatSelection.row') || 'ROW'}: {previewSeat.row || '-'} · {t('seatSelection.seat') || 'SEAT'}: {previewSeat.seat || '-'}
+              </p>
+            </>
+          ) : previewSection ? (
+            <>
+              <p className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+                {t('seatSelection.section') || 'SECTION'}: {previewSection.name}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('seatSelection.clickSection') || 'Click on a section to zoom in and select seats'}
+              </p>
+            </>
+          ) : null}
+        </div>
+      )}
+
       {/* Live region for seat selection announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {selectedSeats.length > 0 && `${selectedSeats.length} seat${selectedSeats.length !== 1 ? 's' : ''} selected`}
@@ -803,6 +868,61 @@ const SeatMap: React.FC<SeatMapProps> = ({
               );
             })()
           )}
+
+          {/* Section polygons (needed for Standing/Area sections) */}
+          {sections.map((section) => {
+            if (!section.polygon || section.polygon.length === 0) return null;
+
+            const isSelected = selectedSection === section.id;
+            const isHovered = hoveredSection === section.id;
+            const points = section.polygon.map((p) => `${p.x},${p.y}`).join(' ');
+
+            // Render a faint fill so the standing/area becomes visible even without seat dots.
+            const fillOpacity = isSelected ? 0.18 : isHovered ? 0.14 : 0.08;
+            const stroke = isSelected || isHovered ? '#ffffff' : section.color;
+
+            // Centroid for a small label (best-effort; optional)
+            const centroid = section.polygon.reduce(
+              (acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }),
+              { x: 0, y: 0 }
+            );
+            const cx = centroid.x / section.polygon.length;
+            const cy = centroid.y / section.polygon.length;
+
+            return (
+              <g key={`section-${section.id}`}>
+                <polygon
+                  points={points}
+                  fill={section.color}
+                  fillOpacity={fillOpacity}
+                  stroke={stroke}
+                  strokeOpacity={isSelected || isHovered ? 1 : 0.9}
+                  strokeWidth={isSelected ? 2.5 : 1.5}
+                  style={{ cursor: onSectionClick ? 'pointer' : 'default' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onSectionClick) onSectionClick(section.id);
+                  }}
+                  onMouseEnter={() => setHoveredSection(section.id)}
+                  onMouseLeave={() => {
+                    if (selectedSection !== section.id) setHoveredSection(null);
+                  }}
+                />
+                <text
+                  x={cx}
+                  y={cy}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="10"
+                  fill={isSelected || isHovered ? '#ffffff' : '#e5e7eb'}
+                  opacity={0.95}
+                  pointerEvents="none"
+                >
+                  {section.name}
+                </text>
+              </g>
+            );
+          })}
 
           {/* Seats (only shown when showSeats is true or viewMode is not 'overview') */}
           {(showSeats || viewMode !== 'overview') && seats.map((seat) => {

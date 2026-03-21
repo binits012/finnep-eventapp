@@ -624,8 +624,10 @@
       "available": "Frei",
       "selected": "Gewählt",
       "occupied": "Belegt",
-      "reserved": "Reserviert",
-      "wheelchair": "Rollstuhlgerecht"
+    "reserved": "Reserviert",
+    "wheelchair": "Rollstuhlgerecht",
+    "standingAreaSections": "Steh- / Bereichssektionen",
+    "soldOut": "Ausverkauft"
     },
     "checkout": {
       "title": "Kauf abschließen",

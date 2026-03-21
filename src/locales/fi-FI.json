@@ -633,7 +633,9 @@
     "selected": "Valittu",
     "occupied": "Varattu",
     "reserved": "Pidätetty",
-    "wheelchair": "Pyörätuolikäyttöinen"
+    "wheelchair": "Pyörätuolikäyttöinen",
+    "standingAreaSections": "Katsomo- / alueosiot",
+    "soldOut": "Loppuunmyyty"
   },
   "checkout": {
     "title": "Suorita Ostoksesi Loppuun",

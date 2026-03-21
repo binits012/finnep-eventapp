@@ -16,6 +16,7 @@ interface TicketInfoLite {
   entertainmentTax?: number; // percent (fallback when vat is 0/missing)
   orderFee?: number; // fixed amount per transaction
   serviceTax?: number; // percent on serviceFee and orderFee
+  scanCount?: number;
 }
 
 interface TicketPurchaseModalProps {
@@ -88,6 +89,21 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
   const isEmailValid = useMemo(() => /.+@.+\..+/.test(email), [email]);
   const emailsMatch = useMemo(() => email.trim() !== "" && email === confirmEmail, [email, confirmEmail]);
   const isQuantityValid = useMemo(() => quantity >= 1 && quantity <= 10, [quantity]);
+
+  const isScanCountPass = useMemo(() => {
+    const raw = ticket?.scanCount ?? 0;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0;
+  }, [ticket]);
+
+  // Season/recurring passes: personal QR = personal pass, so always buy exactly 1.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!isScanCountPass) return;
+    setQuantity(1);
+    // If seat selection is ever enabled for these tickets, clear selection to avoid mismatch.
+    setSelectedSeats([]);
+  }, [isOpen, isScanCountPass]);
 
   const basePrice = useMemo(() => Number(ticket?.price ?? 0), [ticket]);
   const serviceFee = useMemo(() => Number(ticket?.serviceFee ?? 0), [ticket]);
@@ -220,7 +236,7 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
                     setSelectedSeats([]);
                   }
                 }}
-                disabled={quantity <= 1}
+                disabled={isScanCountPass || quantity <= 1}
                 className="flex items-center justify-center w-10 h-10 rounded-md border font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:bg-opacity-10"
                 style={{
                   borderColor: 'var(--border)',
@@ -237,6 +253,10 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
                 type="text"
                 value={quantity}
                 onChange={(e) => {
+                  if (isScanCountPass) {
+                    setQuantity(1);
+                    return;
+                  }
                   const value = e.target.value;
                   if (value === '') {
                     setQuantity(0);
@@ -254,6 +274,7 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
                 }}
                 onFocus={(e) => e.target.select()} // Select all text when focused
                 className="flex-1 rounded-md px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isScanCountPass}
                 style={{ background: 'var(--surface)', color: 'var(--foreground)', borderColor: 'var(--border)', borderWidth: 1 }}
                 placeholder={t('ticketModal.quantityPlaceholder')}
                 aria-required="true"
@@ -270,7 +291,7 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
                     setSelectedSeats([]);
                   }
                 }}
-                disabled={quantity >= 10}
+                disabled={isScanCountPass || quantity >= 10}
                 className="flex items-center justify-center w-10 h-10 rounded-md border font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:bg-opacity-10"
                 style={{
                   borderColor: 'var(--border)',
@@ -377,7 +398,7 @@ export default function TicketPurchaseModal({ isOpen, onClose, onProceed, ticket
             disabled={!canProceed}
             onClick={() => onProceed({
               email,
-              quantity,
+              quantity: isScanCountPass ? 1 : quantity,
               ticket,
               eventId,
               merchantId,

@@ -9,8 +9,12 @@ export interface Event {
     eventTitle: string;
     eventDescription?: string;
     eventDate: string;
+    eventEndDate?: string;
+    event_end_date?: string;
     eventPromotionPhoto?: string;
     status?: string;
+    isSeatedEvent?: boolean;
+    hasSeatSelection?: boolean;
     venueInfo?: {
       name?: string;
       description?: string;
@@ -31,6 +35,7 @@ export interface Event {
       hasSeatSelection?: boolean;
       venueId?: string;
       externalVenueId?: string;
+      manifestVersion?: number | string;
       lockedManifestId?: string;
       manifestS3Key?: string;
       pricing?: Record<string, number>;
@@ -110,6 +115,7 @@ export interface Event {
     name: string;
     price: number; // basePrice
     quantity: number;
+    scanCount?: number;
     available?: number;
     serviceFee?: number;
     entertainmentTax?: number; // percentage on basePrice (e.g., 14% in Finland)

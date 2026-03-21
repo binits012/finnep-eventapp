@@ -633,7 +633,9 @@
     "selected": "Vald",
     "occupied": "Upptagen",
     "reserved": "Reserverad",
-    "wheelchair": "Rullstolsanpassad"
+    "wheelchair": "Rullstolsanpassad",
+    "standingAreaSections": "Ståplats- / områdessektioner",
+    "soldOut": "Slutsåld"
   },
   "checkout": {
     "title": "Slutför Ditt Köp",

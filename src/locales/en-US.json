@@ -633,7 +633,9 @@
     "selected": "Selected",
     "occupied": "Occupied",
     "reserved": "Reserved",
-    "wheelchair": "Wheelchair Accessible"
+    "wheelchair": "Wheelchair Accessible",
+    "standingAreaSections": "Standing / Area Sections",
+    "soldOut": "Sold Out"
   },
   "checkout": {
     "title": "Complete Your Purchase",

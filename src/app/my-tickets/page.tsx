@@ -13,13 +13,37 @@ interface Ticket {
     _id: string;
     eventTitle: string;
     eventDate: string;
+    eventEndDate?: string;
     eventLocationAddress: string;
     active: boolean;
     otherInfo?: Record<string, unknown>;
   };
   type: string;
   otp: string;
-  ticketInfo: Record<string, unknown>;
+  ticketInfo?: {
+    pricingModel?: string | null;
+    ticketName?: string | null;
+    quantity?: number | string | null;
+    price?: number | string | null;
+    serviceFee?: number | string | null;
+    vatAmount?: number | string | null;
+    vatRate?: number | string | null;
+    totalAmount?: number | string | null;
+    currency?: string | null;
+    purchaseDate?: string | null;
+    seatTickets?: Array<{
+      placeId?: string | null;
+      ticketName?: string | null;
+      pricing?: {
+        basePrice?: number | string | null;
+        tax?: number | string | null;
+        serviceFee?: number | string | null;
+        serviceTax?: number | string | null;
+        orderFee?: number | string | null;
+        currency?: string | null;
+      } | null;
+    }> | null;
+  } | null;
   createdAt: string;
   active: boolean;
 }
@@ -46,6 +70,30 @@ export default function MyTicketsPage() {
   const [consentFeedbackMessage, setConsentFeedbackMessage] = useState('');
   const consentFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const expiryCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const asNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const formatMoney = (value: unknown, currency?: string | null): string => {
+    const amount = asNumber(value);
+    if (amount === null) return t('myTickets.notAvailable');
+    return `${amount.toFixed(3)} ${currency || 'EUR'}`;
+  };
+
+  const resolveVatAmount = (basePrice: unknown, taxValue: unknown): number | null => {
+    const base = asNumber(basePrice);
+    const tax = asNumber(taxValue);
+    if (tax === null) return null;
+    if (base === null) return tax;
+    // Seat-ticket pricing.tax can be either VAT amount or VAT percent.
+    if (tax >= 0 && tax <= 100) {
+      return (base * tax) / 100;
+    }
+    return tax;
+  };
 
   // Check token expiry (only on this page)
   useEffect(() => {
@@ -115,7 +163,12 @@ export default function MyTicketsPage() {
         });
 
         if (response.success) {
-          setTickets(response.data || []);
+          const sortedTickets = [...(response.data || [])].sort((a, b) => {
+            const aTime = new Date(a.event?.eventDate || 0).getTime();
+            const bTime = new Date(b.event?.eventDate || 0).getTime();
+            return bTime - aTime;
+          });
+          setTickets(sortedTickets);
           if (typeof response.platformMarketingOptIn === 'boolean') {
             setPlatformMarketingOptIn(response.platformMarketingOptIn);
           }
@@ -398,7 +451,28 @@ export default function MyTicketsPage() {
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {tickets.map((ticket) => {
                   const eventDate = new Date(ticket.event.eventDate);
-                  const isPast = eventDate < new Date();
+                  const eventEndDate = ticket.event.eventEndDate ? new Date(ticket.event.eventEndDate) : eventDate;
+                  const isPast = eventEndDate < new Date();
+                  const seatTickets = Array.isArray(ticket.ticketInfo?.seatTickets) ? ticket.ticketInfo?.seatTickets : [];
+                  const hasSeatTicketBreakdown = seatTickets.length > 0;
+                  const aggregatedSeatBase = hasSeatTicketBreakdown
+                    ? seatTickets.reduce((sum, item) => sum + (asNumber(item?.pricing?.basePrice) || 0), 0)
+                    : null;
+                  const aggregatedSeatTax = hasSeatTicketBreakdown
+                    ? seatTickets.reduce((sum, item) => sum + (resolveVatAmount(item?.pricing?.basePrice, item?.pricing?.tax) || 0), 0)
+                    : null;
+                  const aggregatedSeatFee = hasSeatTicketBreakdown
+                    ? seatTickets.reduce((sum, item) => sum + (asNumber(item?.pricing?.serviceFee) || 0), 0)
+                    : null;
+                  const seatCurrency = seatTickets.find(item => item?.pricing?.currency)?.pricing?.currency || ticket.ticketInfo?.currency;
+                  const computedSeatTotal = hasSeatTicketBreakdown
+                    ? (aggregatedSeatBase || 0) + (aggregatedSeatTax || 0) + (aggregatedSeatFee || 0)
+                    : null;
+                  const effectiveBase = hasSeatTicketBreakdown ? aggregatedSeatBase : asNumber(ticket.ticketInfo?.price);
+                  const effectiveFee = hasSeatTicketBreakdown ? aggregatedSeatFee : asNumber(ticket.ticketInfo?.serviceFee);
+                  const effectiveVat = hasSeatTicketBreakdown ? aggregatedSeatTax : asNumber(ticket.ticketInfo?.vatAmount);
+                  const effectiveTotal = hasSeatTicketBreakdown ? computedSeatTotal : asNumber(ticket.ticketInfo?.totalAmount);
+                  const isFreeTicket = [effectiveBase, effectiveFee, effectiveVat, effectiveTotal].every((v) => v === null || v === 0);
 
                   return (
                     <div
@@ -436,6 +510,67 @@ export default function MyTicketsPage() {
                             {ticket.type}
                           </p>
                         </div>
+
+                        {/* Payment Details */}
+                        <div className="mt-4 p-4 rounded-lg" style={{ background: 'var(--background)', border: '1px solid var(--border)' }}>
+                          <p className="text-sm font-semibold mb-2">{t('checkout.paymentDetails')}</p>
+                          <div className="space-y-1 text-sm opacity-80 mb-3">
+                            <p>
+                              <strong>{t('success.ticketName')}:</strong> {ticket.ticketInfo?.ticketName || ticket.type || t('myTickets.notAvailable')}
+                            </p>
+                            <p>
+                              <strong>{t('success.quantity')}:</strong> {ticket.ticketInfo?.quantity ?? t('myTickets.notAvailable')}
+                            </p>
+                            <p>
+                              <strong>{t('success.purchaseDate')}:</strong>{' '}
+                              {ticket.ticketInfo?.purchaseDate
+                                ? new Date(ticket.ticketInfo.purchaseDate).toLocaleString()
+                                : t('myTickets.notAvailable')}
+                            </p>
+                          </div>
+                          {!isFreeTicket && hasSeatTicketBreakdown && (
+                            <div className="space-y-2 text-sm opacity-90 mb-3">
+                              <p className="font-medium">Ticket line items</p>
+                              {seatTickets.map((item, index) => (
+                                <div key={`${item?.placeId || index}`} className="rounded p-2" style={{ border: '1px dashed var(--border)' }}>
+                                  <p>
+                                    <strong>{item?.ticketName || `Ticket ${index + 1}`}</strong>
+                                  </p>
+                                  <p>{t('success.basePrice')}: {formatMoney(item?.pricing?.basePrice, item?.pricing?.currency || seatCurrency)}</p>
+                                  <p>{t('success.serviceFee')}: {formatMoney(item?.pricing?.serviceFee, item?.pricing?.currency || seatCurrency)}</p>
+                                  <p>{t('success.vat')}: {formatMoney(resolveVatAmount(item?.pricing?.basePrice, item?.pricing?.tax), item?.pricing?.currency || seatCurrency)}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {isFreeTicket ? (
+                            <p className="text-sm font-medium opacity-90">
+                              Free Ticket
+                            </p>
+                          ) : (
+                            <div className="space-y-1 text-sm opacity-80">
+                              <p>
+                                <strong>{t('success.basePrice')}:</strong>{' '}
+                                {formatMoney(effectiveBase, seatCurrency || ticket.ticketInfo?.currency)}
+                              </p>
+                              <p>
+                                <strong>{t('success.serviceFee')}:</strong>{' '}
+                                {formatMoney(effectiveFee, seatCurrency || ticket.ticketInfo?.currency)}
+                              </p>
+                              <p>
+                                <strong>{t('success.vat')}:</strong>{' '}
+                                {formatMoney(effectiveVat, seatCurrency || ticket.ticketInfo?.currency)}
+                                {ticket.ticketInfo?.vatRate !== null && ticket.ticketInfo?.vatRate !== undefined && ticket.ticketInfo?.vatRate !== ''
+                                  ? ` (${ticket.ticketInfo?.vatRate}%)`
+                                  : ''}
+                              </p>
+                              <p>
+                                <strong>{t('success.totalPaid')}:</strong>{' '}
+                                {formatMoney(effectiveTotal, seatCurrency || ticket.ticketInfo?.currency)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between mt-4">
@@ -453,9 +588,9 @@ export default function MyTicketsPage() {
 
                         <button
                           onClick={() => handleDownload(ticket._id)}
-                          disabled={downloadingTicketId === ticket._id}
+                          disabled={downloadingTicketId === ticket._id || isPast}
                           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                            downloadingTicketId === ticket._id
+                            downloadingTicketId === ticket._id || isPast
                               ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                               : 'bg-indigo-600 text-white hover:bg-indigo-700'
                           }`}

@@ -633,7 +633,9 @@
     "selected": "Valgt",
     "occupied": "Optaget",
     "reserved": "Reserveret",
-    "wheelchair": "Kørestolsvenlig"
+    "wheelchair": "Kørestolsvenlig",
+    "standingAreaSections": "Stå- / områdesektioner",
+    "soldOut": "Udsolgt"
   },
   "checkout": {
     "title": "Gennemfør dit Køb",

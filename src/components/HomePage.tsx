@@ -40,24 +40,34 @@ if (!countries.getNames('en')) {
 // Locale helpers - removed unused function
 
 
-function isEventInFuture(eventDate: string): boolean {
-  return dayjs(eventDate).isAfter(dayjs());
+function parseEventDate(dateValue: string, eventTimezone?: string) {
+  if (eventTimezone) {
+    return dayjs.tz(dateValue, eventTimezone).local();
+  }
+  return dayjs(dateValue);
+}
+
+function resolveEventEndDate(event: Event): string {
+  return event.eventEndDate || event.event_end_date || event.eventDate;
+}
+
+function isEventInFuture(event: Event): boolean {
+  return parseEventDate(event.eventDate, event.eventTimezone).isAfter(dayjs());
 }
 
 function isEventHappeningToday(eventDate: string, eventTimezone?: string): boolean {
   const now = dayjs();
-  let eventDateParsed;
-
-  if (eventTimezone) {
-    eventDateParsed = dayjs.tz(eventDate, eventTimezone);
-    // Convert to local time for comparison
-    eventDateParsed = eventDateParsed.local();
-  } else {
-    eventDateParsed = dayjs(eventDate);
-  }
+  const eventDateParsed = parseEventDate(eventDate, eventTimezone);
 
   // Check if the event date is today (ignoring time)
   return eventDateParsed.isSame(now, 'day');
+}
+
+function isEventActiveNow(event: Event): boolean {
+  const now = dayjs();
+  const start = parseEventDate(event.eventDate, event.eventTimezone);
+  const end = parseEventDate(resolveEventEndDate(event), event.eventTimezone);
+  return (start.isBefore(now) || start.isSame(now)) && (end.isAfter(now) || end.isSame(now));
 }
 
 export default function HomePage() {
@@ -72,7 +82,7 @@ export default function HomePage() {
     .filter((event: Event) =>
       event.featured &&
       event.featured.isFeatured === true &&
-      isEventInFuture(event.eventDate)
+      isEventInFuture(event)
     )
     .sort((a: Event, b: Event) => {
       // Sticky events always come first
@@ -87,12 +97,16 @@ export default function HomePage() {
 
   // Filter events happening today (status: 'on-going' or happening today)
   const ongoingEvents = events.filter((event: Event) =>
-    (event.status === 'on-going' || isEventHappeningToday(event.eventDate, event.eventTimezone)) &&
+    (
+      event.status === 'on-going' ||
+      isEventHappeningToday(event.eventDate, event.eventTimezone) ||
+      isEventActiveNow(event)
+    ) &&
     !featuredIds.has(event._id)
   ).sort((a: Event, b: Event) => dayjs(a.eventDate).valueOf() - dayjs(b.eventDate).valueOf());
 
   const upcomingEvents = events.filter((event: Event) => !featuredIds.has(event._id))
-    .filter((event: Event) => isEventInFuture(event.eventDate) && !ongoingEvents.some((e: Event) => e._id === event._id))
+    .filter((event: Event) => isEventInFuture(event) && !ongoingEvents.some((e: Event) => e._id === event._id))
     .sort((a: Event, b: Event) => dayjs(a.eventDate).valueOf() - dayjs(b.eventDate).valueOf());
 
   // Infinite scroll for upcoming events

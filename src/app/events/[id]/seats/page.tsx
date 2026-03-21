@@ -49,6 +49,18 @@ const obfuscateEmail = (email: string): string => {
   return `${obfuscated}@${domain}`;
 };
 
+const obfuscateFullName = (fullName: string): string => {
+  if (!fullName || typeof fullName !== 'string') return '-';
+  const parts = fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return '-';
+
+  const initials = parts.slice(0, 2).map(p => p.charAt(0).toUpperCase()).join(' ');
+  return parts.length === 1 ? initials : `${initials}`;
+};
+
 interface Seat {
   placeId: string;
   x: number | null;
@@ -79,6 +91,7 @@ interface TicketInfo {
   serviceTax?: number;
   orderFee?: number;
   vat?: number;
+  scanCount?: number;
 }
 
 interface SectionBounds {
@@ -95,6 +108,9 @@ interface SectionBounds {
 interface Section {
   id: string;
   name: string;
+  sectionType?: string;
+  selectionMode?: 'seat' | 'area';
+  capacity?: number;
   color: string;
   bounds: SectionBounds | null;
   polygon: Array<{ x: number; y: number }> | null;
@@ -105,6 +121,18 @@ interface Section {
     topMargin?: number;
     rotationAngle?: number;
   };
+}
+
+interface AreaSection {
+  id: string;
+  name: string;
+  sectionType: string;
+  selectionMode: 'area';
+  capacity: number;
+  soldCount: number;
+  reservedCount: number;
+  availableCount: number;
+  color: string;
 }
 
 type Step = 'seats' | 'info' | 'otp' | 'payment';
@@ -128,6 +156,7 @@ interface CheckoutData {
   country?: string;
   placeIds?: string[];
   seatTickets?: Array<Record<string, any>>;
+  sectionSelections?: Array<{ sectionId: string; quantity: number }>;
   sessionId?: string | null;
   fullName?: string;
   totalBasePrice?: number;
@@ -211,6 +240,7 @@ export default function SeatSelectionPage() {
       };
     } | string | null;
     sections: Section[];
+    areaSections: AreaSection[];
     seats: Seat[];
     placeIds: string[];
     sold: string[];
@@ -231,13 +261,61 @@ export default function SeatSelectionPage() {
     }>;
   } | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const [areaSelectionMap, setAreaSelectionMap] = useState<Record<string, number>>({});
+  // When pricingModel is `ticket_info`, area tickets must be chosen explicitly by the user.
+  // This maps the selected area ticket type for "Standing / Area Sections" to a ticketId.
+  const [areaTicketId, setAreaTicketId] = useState<string | null>(null);
   // Map of placeId -> ticketId for each selected seat
   const [seatTicketMap, setSeatTicketMap] = useState<Record<string, string>>({});
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [expandedAreaSectionId, setExpandedAreaSectionId] = useState<string | null>(null);
   const [_showSeats, _setShowSeats] = useState(true);
   const [ticketTypes, setTicketTypes] = useState<TicketInfo[]>([]);
+  // If a scanCount (recurring/season) ticket is selected, it represents a single personal pass/QR,
+  // so the UI must restrict seat selection to exactly 1.
+  const scanCountRestrictionActive = useMemo(() => {
+    if (selectedSeats.length === 0) return false;
+    return selectedSeats.some((placeId) => {
+      const ticketId = seatTicketMap[placeId];
+      if (!ticketId) return false;
+
+      const ticket = ticketTypes.find(t => t._id === ticketId);
+      const raw = ticket?.scanCount ?? 0;
+      const n = Number(raw);
+      return Number.isFinite(n) && n > 0;
+    });
+  }, [selectedSeats, seatTicketMap, ticketTypes]);
+
+  // When pricingModel is `ticket_info`, the order-level ticket type used for area/standing pricing:
+  // - If user selected seats, we follow the first selected seat's ticketId for consistency.
+  // - Otherwise, we follow `areaTicketId` chosen via modal.
+  const effectiveAreaTicketId = useMemo(() => {
+    if (selectedSeats.length > 0) {
+      return seatTicketMap[selectedSeats[0]] || null;
+    }
+    return areaTicketId;
+  }, [selectedSeats, seatTicketMap, areaTicketId]);
+
+  // Build payload for backend OTP verification + reservation.
+  // We include `sectionName` so backend can reliably match `venueManifest.places[].section`
+  // even if section metadata lookup by id is incomplete.
+  const buildSectionSelectionsForSeatFlow = useCallback(() => {
+    return Object.entries(areaSelectionMap)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([sectionId, quantity]) => {
+        const area = seatData?.areaSections?.find(a => a.id === sectionId);
+        return {
+          sectionId,
+          sectionName: area?.name,
+          quantity
+        };
+      });
+  }, [areaSelectionMap, seatData]);
+
   const [showTicketSelector, setShowTicketSelector] = useState(false);
   const [pendingSeat, setPendingSeat] = useState<{ placeId: string; seat: Seat } | null>(null);
+  const [showAreaTicketSelector, setShowAreaTicketSelector] = useState(false);
+  const [pendingArea, setPendingArea] = useState<AreaSection | null>(null);
   const [pricingModel, setPricingModel] = useState<'ticket_info' | 'pricing_configuration' | null>(null);
 
   // User info state
@@ -334,6 +412,16 @@ export default function SeatSelectionPage() {
       const effectivePricingModel =
         (responseData?.venue?.pricingModel as 'ticket_info' | 'pricing_configuration') || model;
 
+      // If pricingModel comes from the seat API response, ensure ticket types are available too.
+      // (Without this, area/standing pricing can show as blank because ticketTypes remains empty.)
+      if (
+        effectivePricingModel === 'ticket_info' &&
+        event.ticketInfo &&
+        event.ticketInfo.length > 0
+      ) {
+        setTicketTypes(event.ticketInfo);
+      }
+
       // Decode everything from placeIds array - no need for places array!
       // placeIds encodes: section, row, seat, x, y, tierCode, available, tags
       const { placeIds = [], sold = [], reserved = [], pricingZones = [] } = responseData;
@@ -348,7 +436,8 @@ export default function SeatSelectionPage() {
       const reservedSet = new Set(reserved);
 
       // Decode each placeId to extract all seat data
-      const seats: Seat[] = placeIds.map((placeId: string, index: number) => {
+      const sourceSeats = Array.isArray(responseData.seats) ? responseData.seats : null;
+      const seats: Seat[] = sourceSeats ? sourceSeats : placeIds.map((placeId: string, index: number) => {
         const decoded = decodePlaceId(placeId);
 
         if (!decoded) {
@@ -462,9 +551,65 @@ export default function SeatSelectionPage() {
         };
       });
 
+      const responseAreaSections: AreaSection[] = Array.isArray(responseData.areaSections)
+        ? responseData.areaSections
+        : [];
+      const fallbackAreaSections: AreaSection[] = enrichedSections
+        .filter((section) => section.selectionMode === 'area')
+        .map((section) => ({
+          id: section.id,
+          name: section.name,
+          sectionType: section.sectionType || 'Area',
+          selectionMode: 'area',
+          capacity: Number(section.capacity || 0),
+          soldCount: 0,
+          reservedCount: 0,
+          availableCount: Number(section.capacity || 0),
+          color: section.color || '#1976D2'
+        }));
+      const resolvedAreaSections = responseAreaSections.length > 0 ? responseAreaSections : fallbackAreaSections;
+
+      // Recompute availability from the actual seat inventory we just decoded.
+      // This ensures `availableCount` decreases when `/seats` reports more `sold` placeIds.
+      const computedAreaSections: AreaSection[] = resolvedAreaSections.map((area) => {
+        const areaName = (area.name || '').trim().toLowerCase();
+        const areaId = (area.id || '').trim().toLowerCase();
+
+        const matchingSeats = seats.filter((s) => {
+          const sec = (s.section || '').trim().toLowerCase();
+          if (!sec) return false;
+
+          if (areaName && sec === areaName) return true;
+          if (areaId && sec === areaId) return true;
+
+          // Best-effort fuzzy matching across backends
+          if (areaName && (sec.includes(areaName) || areaName.includes(sec))) return true;
+          if (areaId && (sec.includes(areaId) || areaId.includes(sec))) return true;
+
+          return false;
+        });
+
+        const soldCount = matchingSeats.filter((s) => s.status === 'sold').length;
+        const reservedCount = matchingSeats.filter((s) => s.status === 'reserved').length;
+
+        const inferredCapacity = matchingSeats.length;
+        const capacity = Number(area.capacity || 0) || inferredCapacity;
+
+        const availableCount = Math.max(0, capacity - soldCount - reservedCount);
+
+        return {
+          ...area,
+          capacity,
+          soldCount,
+          reservedCount,
+          availableCount
+        };
+      });
+
       setSeatData({
         backgroundSvg: response.data.backgroundSvg,
         sections: enrichedSections,
+        areaSections: computedAreaSections,
         seats,
         placeIds,
         sold,
@@ -704,9 +849,14 @@ export default function SeatSelectionPage() {
       return;
     }
 
-    // Limit to maximum 10 seats
-    if (selectedSeats.length >= 10) {
-      setError(t('seatSelection.maxSeatsReached') || 'Maximum 10 seats can be selected at a time');
+    // If we already selected a scanCount (recurring/season pass) ticket type, force max 1 seat.
+    const maxSeatsAllowed = scanCountRestrictionActive ? 1 : 10;
+    if (selectedSeats.length >= maxSeatsAllowed) {
+      setError(
+        maxSeatsAllowed === 1
+          ? 'This ticket type only allows 1 seat'
+          : (t('seatSelection.maxSeatsReached') || 'Maximum 10 seats can be selected at a time')
+      );
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -734,22 +884,60 @@ export default function SeatSelectionPage() {
       // No ticket types, just add seat (fallback)
       setSelectedSeats([...selectedSeats, placeId]);
     }
-  }, [selectedSeats, seatTicketMap, ticketTypes, pricingModel, isSeatAdjacent, areSeatsConnected, t]);
+  }, [selectedSeats, seatTicketMap, ticketTypes, pricingModel, isSeatAdjacent, areSeatsConnected, t, scanCountRestrictionActive]);
 
   // Handle ticket type selection for a seat
   const handleTicketSelect = useCallback((ticketId: string) => {
     if (!pendingSeat) return;
 
     const { placeId } = pendingSeat;
-    setSelectedSeats([...selectedSeats, placeId]);
-    setSeatTicketMap({ ...seatTicketMap, [placeId]: ticketId });
+    const ticket = ticketTypes.find(t => t._id === ticketId);
+    const raw = ticket?.scanCount ?? 0;
+    const n = Number(raw);
+    const isScanCountPass = Number.isFinite(n) && n > 0;
+
+    if (isScanCountPass) {
+      // Season/recurring pass: one QR = one pass, so force selection to exactly one seat.
+      setSelectedSeats([placeId]);
+      setSeatTicketMap({ [placeId]: ticketId });
+    } else {
+      setSelectedSeats([...selectedSeats, placeId]);
+      setSeatTicketMap({ ...seatTicketMap, [placeId]: ticketId });
+    }
     setShowTicketSelector(false);
     setPendingSeat(null);
-  }, [pendingSeat, selectedSeats, seatTicketMap]);
+  }, [pendingSeat, selectedSeats, seatTicketMap, ticketTypes]);
+
+  // Handle ticket type selection for an area/standing section (`pricingModel: ticket_info`)
+  const handleAreaTicketSelect = useCallback((ticketId: string) => {
+    if (!pendingArea) return;
+
+    setAreaTicketId(ticketId);
+
+    const ticket = ticketTypes.find(t => t._id === ticketId);
+    const raw = ticket?.scanCount ?? 0;
+    const n = Number(raw);
+    const isScanCountPass = Number.isFinite(n) && n > 0;
+
+    setAreaSelectionMap(prev => {
+      const currentQty = prev[pendingArea.id] || 0;
+      const nextQty = isScanCountPass
+        ? 1
+        : Math.min(pendingArea.availableCount, (currentQty || 0) + 1);
+      return { ...prev, [pendingArea.id]: nextQty };
+    });
+
+    setShowAreaTicketSelector(false);
+    setPendingArea(null);
+  }, [pendingArea, ticketTypes]);
 
   // Calculate total price using ticket pricing or seat pricing
   const totalPrice = useMemo(() => {
     if (!seatData) return 0;
+
+    const areaSelections = Object.entries(areaSelectionMap)
+      .filter(([, qty]) => (qty || 0) > 0)
+      .map(([sectionId, quantity]) => ({ sectionId, quantity }));
 
     // If pricingModel is 'pricing_configuration', use seat pricing from enriched manifest
     if (pricingModel === 'pricing_configuration') {
@@ -774,6 +962,33 @@ export default function SeatSelectionPage() {
         }
       });
 
+      // Add area sections pricing by using a representative priced seat from this section.
+      areaSelections.forEach(({ sectionId, quantity }) => {
+        const area = seatData.areaSections.find(a => a.id === sectionId);
+        if (!area) return;
+        const name = (area.name || '').trim().toLowerCase();
+        const id = (area.id || '').trim().toLowerCase();
+
+        const repSeat =
+          seatData.seats.find(s => (s.section || '').trim().toLowerCase() === name) ||
+          seatData.seats.find(s => (s.section || '').trim().toLowerCase() === id) ||
+          (name
+            ? seatData.seats.find(s => {
+                const sec = (s.section || '').trim().toLowerCase();
+                return sec.includes(name) || name.includes(sec);
+              }) || null
+            : null);
+
+        if (!repSeat || !repSeat.price) return;
+        total += repSeat.price * quantity;
+
+        if (orderFee === 0 && repSeat.orderFee) {
+          orderFee = repSeat.orderFee;
+          const serviceTaxPercent = (repSeat.serviceTax || 0) / 100;
+          orderFeeTax = Math.round((orderFee * serviceTaxPercent) * 1000) / 1000;
+        }
+      });
+
       // Add order fee + tax on order fee (once per transaction) - truncate to 3 decimals
       const orderFeeTotal = Math.round((orderFee + orderFeeTax) * 1000) / 1000;
       total += orderFeeTotal;
@@ -790,6 +1005,9 @@ export default function SeatSelectionPage() {
     let total = 0;
     let orderFee = 0;
     let orderFeeTax = 0;
+
+    const firstTicketForAreas =
+      (effectiveAreaTicketId ? ticketTypes.find(t => t._id === effectiveAreaTicketId) : null) || ticketTypes[0];
 
     // Calculate per-ticket prices
     selectedSeats.forEach((placeId) => {
@@ -822,23 +1040,232 @@ export default function SeatSelectionPage() {
       }
     });
 
+    // Add area sections pricing by mapping area quantities to the first ticket type.
+    if (firstTicketForAreas && areaSelections.length > 0) {
+      const basePrice = firstTicketForAreas.price || 0;
+      const baseTaxPct = basePriceTaxPercent(firstTicketForAreas.vat || 0, firstTicketForAreas.entertainmentTax);
+      const baseTaxMult = baseTaxPct / 100;
+      const serviceFee = firstTicketForAreas.serviceFee || 0;
+      const serviceTax = (firstTicketForAreas.serviceTax || 0) / 100;
+
+      const baseTaxAmount = Math.round((basePrice * baseTaxMult) * 1000) / 1000;
+      const serviceTaxAmount = Math.round((serviceFee * serviceTax) * 1000) / 1000;
+      const ticketPrice = Math.round((basePrice + baseTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
+
+      areaSelections.forEach(({ quantity }) => {
+        total += ticketPrice * quantity;
+      });
+
+      if (orderFee === 0) {
+        orderFee = firstTicketForAreas.orderFee || 0;
+        const serviceTaxPercent = (firstTicketForAreas.serviceTax || 0) / 100;
+        orderFeeTax = Math.round((orderFee * serviceTaxPercent) * 1000) / 1000;
+      }
+    }
+
     // Add order fee + tax on order fee (once per transaction) - truncate to 3 decimals
     const orderFeeTotal = Math.round((orderFee + orderFeeTax) * 1000) / 1000;
     total += orderFeeTotal;
 
     // Round to 3 decimals (use round, not floor, to handle floating-point representation errors)
     return Math.round(total * 1000) / 1000;
-  }, [selectedSeats, seatTicketMap, ticketTypes, seatData, pricingModel]);
+  }, [selectedSeats, seatTicketMap, ticketTypes, seatData, pricingModel, areaSelectionMap, effectiveAreaTicketId]);
 
   // Step 1: Proceed to user info
   const handleProceedToInfo = () => {
-    if (selectedSeats.length === 0) {
-      setError('Please select at least one seat');
+    const areaById = new Map((seatData?.areaSections || []).map((a) => [a.id, a]));
+    const normalizedAreaSelectionMap: Record<string, number> = {};
+    let runningAreaTotal = 0;
+
+    // Clamp per-area quantities to live availability and max total ticket count (10).
+    Object.entries(areaSelectionMap).forEach(([sectionId, rawQty]) => {
+      const area = areaById.get(sectionId);
+      if (!area) return;
+      const qty = Math.max(0, Number(rawQty) || 0);
+      const maxForArea = Math.max(0, Number(area.availableCount) || 0);
+      const remainingSlots = Math.max(0, 10 - selectedSeats.length - runningAreaTotal);
+      const normalizedQty = Math.min(qty, maxForArea, remainingSlots);
+      if (normalizedQty > 0) {
+        normalizedAreaSelectionMap[sectionId] = normalizedQty;
+        runningAreaTotal += normalizedQty;
+      }
+    });
+
+    const areaSelectedCount = Object.values(normalizedAreaSelectionMap).reduce((sum, qty) => sum + (qty || 0), 0);
+    const normalizedChanged = JSON.stringify(normalizedAreaSelectionMap) !== JSON.stringify(areaSelectionMap);
+    if (normalizedChanged) {
+      setAreaSelectionMap(normalizedAreaSelectionMap);
+    }
+
+    if (selectedSeats.length + areaSelectedCount > 10) {
+      setError(t('seatSelection.maxSeatsReached') || 'Maximum 10 seats can be selected at a time');
+      return;
+    }
+    if (selectedSeats.length === 0 && areaSelectedCount === 0) {
+      setError('Please select at least one seat or section quantity');
       return;
     }
     setStep('info');
     setError(null);
   };
+
+  const getRepresentativeSeatForArea = useCallback(
+    (area: AreaSection): Seat | null => {
+      if (!seatData) return null;
+      const name = (area.name || '').trim().toLowerCase();
+      const id = (area.id || '').trim().toLowerCase();
+      if (!name && !id) return null;
+
+      const scoreSeat = (s: Seat): number => {
+        // Higher score == more suitable for rendering pricing breakdowns.
+        let score = 0;
+
+        if (typeof s.basePrice === 'number' && s.basePrice > 0) score += 30;
+        else if (typeof s.basePrice === 'number') score += 10;
+
+        if (typeof s.tax === 'number') score += 10;
+        if (typeof s.serviceFee === 'number' && s.serviceFee > 0) score += 20;
+        else if (typeof s.serviceFee === 'number') score += 8;
+
+        if (typeof s.serviceTax === 'number') score += 5;
+
+        // Fallback: having a computed total helps, but should be lower priority than breakdown fields.
+        if (typeof s.price === 'number' && s.price > 0) score += 1;
+
+        return score;
+      };
+
+      const uniqByPlaceId = (items: Seat[]): Seat[] => {
+        const seen = new Set<string>();
+        const out: Seat[] = [];
+        for (const item of items) {
+          if (!item?.placeId) continue;
+          if (seen.has(item.placeId)) continue;
+          seen.add(item.placeId);
+          out.push(item);
+        }
+        return out;
+      };
+
+      const exactCandidates = uniqByPlaceId([
+        ...(name
+          ? seatData.seats.filter(
+              s => (s.section || '').trim().toLowerCase() === name
+            )
+          : []),
+        ...(id
+          ? seatData.seats.filter(
+              s => (s.section || '').trim().toLowerCase() === id
+            )
+          : []),
+      ]);
+
+      if (exactCandidates.length > 0) {
+        exactCandidates.sort((a, b) => scoreSeat(b) - scoreSeat(a));
+        return exactCandidates[0] || null;
+      }
+
+      // Best-effort fuzzy matching if section ids/names differ across backends.
+      if (name) {
+        const fuzzyCandidates = uniqByPlaceId(
+          seatData.seats.filter(s => {
+            const sec = (s.section || '').trim().toLowerCase();
+            return sec.includes(name) || name.includes(sec);
+          })
+        );
+
+        if (fuzzyCandidates.length > 0) {
+          fuzzyCandidates.sort((a, b) => scoreSeat(b) - scoreSeat(a));
+          return fuzzyCandidates[0] || null;
+        }
+      }
+      return null;
+    },
+    [seatData]
+  );
+
+  const getAreaPricing = useCallback(
+    (area: AreaSection): {
+      unitPrice: number | null;
+      pricingBreakdown:
+        | {
+            basePrice: number;
+            baseTaxAmount: number;
+            baseTaxRatePercent: number;
+            serviceFee: number;
+            serviceTaxAmount: number;
+            total: number;
+          }
+        | null;
+    } => {
+      if (!seatData) return { unitPrice: null, pricingBreakdown: null };
+
+      // ticket_info: map area quantities to the first ticket type in the UI.
+      if (pricingModel === 'ticket_info') {
+        // Standing/area pricing requires an explicit area ticket selection.
+        // Until `effectiveAreaTicketId` is known, hide the per-area price to avoid showing
+        // an arbitrary/default ticket price.
+        if (!effectiveAreaTicketId) {
+          return { unitPrice: null, pricingBreakdown: null };
+        }
+
+        const ticket =
+          ticketTypes.find(t => t._id === effectiveAreaTicketId) || null;
+        if (!ticket) return { unitPrice: null, pricingBreakdown: null };
+
+        const basePrice = ticket.price || 0;
+        const baseTaxPct = basePriceTaxPercent(ticket.vat || 0, ticket.entertainmentTax);
+        const baseTaxMult = baseTaxPct / 100;
+        const serviceFee = ticket.serviceFee || 0;
+        const serviceTaxMult = (ticket.serviceTax || 0) / 100;
+
+        const baseTaxAmount = Math.round((basePrice * baseTaxMult) * 1000) / 1000;
+        const serviceTaxAmount = Math.round((serviceFee * serviceTaxMult) * 1000) / 1000;
+        const total = Math.round((basePrice + baseTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
+
+        return {
+          unitPrice: total,
+          pricingBreakdown: {
+            basePrice,
+            baseTaxAmount,
+            baseTaxRatePercent: baseTaxPct,
+            serviceFee,
+            serviceTaxAmount,
+            total,
+          },
+        };
+      }
+
+      if (pricingModel === 'pricing_configuration') {
+        const repSeat = getRepresentativeSeatForArea(area);
+        if (!repSeat) return { unitPrice: null, pricingBreakdown: null };
+
+        const basePrice = repSeat.basePrice || 0;
+        const taxPercentMult = (repSeat.tax || 0) / 100;
+        const serviceFee = repSeat.serviceFee || 0;
+        const serviceTaxMult = (repSeat.serviceTax || 0) / 100;
+
+        const baseTaxAmount = Math.round((basePrice * taxPercentMult) * 1000) / 1000;
+        const serviceTaxAmount = Math.round((serviceFee * serviceTaxMult) * 1000) / 1000;
+        const total = Math.round((basePrice + baseTaxAmount + serviceFee + serviceTaxAmount) * 1000) / 1000;
+
+        return {
+          unitPrice: total,
+          pricingBreakdown: {
+            basePrice,
+            baseTaxAmount,
+            baseTaxRatePercent: repSeat.tax || 0,
+            serviceFee,
+            serviceTaxAmount,
+            total,
+          },
+        };
+      }
+
+      return { unitPrice: null, pricingBreakdown: null };
+    },
+    [seatData, pricingModel, ticketTypes, getRepresentativeSeatForArea, effectiveAreaTicketId]
+  );
 
   // Step 2: Send OTP
   const handleSendOTP = async () => {
@@ -867,7 +1294,8 @@ export default function SeatSelectionPage() {
       await api.post(`/event/${eventId}/seats/send-otp?locale=${encodeURIComponent(localeParam)}`, {
         email,
         fullName,
-        placeIds: selectedSeats
+        placeIds: selectedSeats,
+        sectionSelections: buildSectionSelectionsForSeatFlow()
       });
 
       _setOtpSent(true);
@@ -903,11 +1331,12 @@ export default function SeatSelectionPage() {
       await api.post(`/event/${eventId}/seats/verify-otp`, {
         email,
         otp,
-        placeIds: selectedSeats
+        placeIds: selectedSeats,
+        sectionSelections: buildSectionSelectionsForSeatFlow()
       });
 
       if (sessionId) {
-        await seatAPI.reserveSeats(eventId, selectedSeats, sessionId, email);
+        await seatAPI.reserveSeats(eventId, selectedSeats, sessionId, email, buildSectionSelectionsForSeatFlow());
         // Refresh seat data to show newly reserved seats
         await loadEventAndSeatData();
       }
@@ -929,6 +1358,19 @@ export default function SeatSelectionPage() {
 
   // Build checkout data for payment
   const getCheckoutData = useCallback(() => {
+    const sectionSelections = Object.entries(areaSelectionMap)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([sectionId, quantity]) => {
+        const area = seatData?.areaSections?.find(a => a.id === sectionId);
+        return {
+          sectionId,
+          sectionName: area?.name || sectionId,
+          quantity
+        };
+      });
+    const areaQuantity = sectionSelections.reduce((sum, item) => sum + item.quantity, 0);
+    const totalSelectedQuantity = selectedSeats.length + areaQuantity;
+
     console.log('[getCheckoutData] Building checkout data:', {
       selectedSeats,
       selectedSeatsLength: selectedSeats.length,
@@ -938,9 +1380,67 @@ export default function SeatSelectionPage() {
 
     // If pricingModel is 'pricing_configuration', use seat pricing
     if (pricingModel === 'pricing_configuration' && seatData) {
+      const enrichSeatPricingFromPlaceId = (s: Seat | null): Seat | null => {
+        if (!s) return null;
+        if (!pricingConfig || !s.placeId) return s;
+
+        const basePrice = s.basePrice ?? 0;
+        const serviceFee = s.serviceFee ?? 0;
+        // If we already have the pricing fields, don't re-decode.
+        if (basePrice > 0 || serviceFee > 0) return s;
+
+        try {
+          const decoded = decodePlaceId(s.placeId);
+          if (!decoded || !decoded.tierCode || !pricingConfig.tiers?.length) return s;
+
+          const tier = pricingConfig.tiers.find(t => t.id === decoded.tierCode);
+          if (!tier) return s;
+
+          // Fill pricing fields needed for the checkout UI and backend validation.
+          s.basePrice = tier.basePrice ?? 0;
+          s.tax = tier.tax ?? 0; // percent on base price
+          s.serviceFee = tier.serviceFee ?? 0;
+          s.serviceTax = tier.serviceTax ?? 0; // percent on serviceFee
+          s.currency = pricingConfig.currency ?? currency;
+
+          return s;
+        } catch (e) {
+          console.warn('[getCheckoutData] Failed to enrich seat pricing:', e);
+          return s;
+        }
+      };
+
+      const selectedAreaEntries = sectionSelections;
+      const firstAreaSelection = selectedAreaEntries[0] ?? null;
+      const firstArea = firstAreaSelection
+        ? seatData.areaSections.find(a => a.id === firstAreaSelection.sectionId) || null
+        : null;
+
+      const repSeatForCheckout =
+        selectedSeats.length > 0
+          ? seatData.seats.find(s => selectedSeats.includes(s.placeId)) || null
+          : firstArea
+            ? getRepresentativeSeatForArea(firstArea)
+            : null;
+      const repSeatForCheckoutEnriched = enrichSeatPricingFromPlaceId(repSeatForCheckout);
+
+      const checkoutAreaLabel = (() => {
+        if (!firstArea) return 'Area Pass';
+        const sectionType = (firstArea.sectionType || '').trim();
+        return sectionType && sectionType.toLowerCase() !== 'area' ? `${firstArea.name} (${sectionType})` : firstArea.name;
+      })();
+
+      const checkoutTicketName = (() => {
+        if (selectedSeats.length > 0 && areaQuantity === 0) return 'Seat';
+        if (selectedSeats.length > 0 && areaQuantity > 0) return 'Ticket';
+        if (areaQuantity > 0) return selectedAreaEntries.length === 1 ? checkoutAreaLabel : 'Area Pass';
+        return 'Ticket';
+      })();
+
       // Build seat-ticket mapping with individual pricing for each seat
-      const seatTickets = selectedSeats.map(placeId => {
+      const seatTicketsForSeats = selectedSeats.map(placeId => {
         const seat = seatData.seats.find(s => s.placeId === placeId);
+        const enrichedSeat = enrichSeatPricingFromPlaceId(seat || null);
 
         console.log('[getCheckoutData] Building seatTicket for placeId:', {
           placeId,
@@ -969,40 +1469,82 @@ export default function SeatSelectionPage() {
           placeId,
           ticketId: null, // No ticket ID for pricing_configuration
           ticketName: ticketName,
-          pricing: seat ? {
-            basePrice: seat.basePrice || 0,
-            tax: seat.tax || 0,
-            serviceFee: seat.serviceFee || 0,
-            serviceTax: seat.serviceTax || 0,
-            orderFee: seat.orderFee || 0,
-            currency: seat.currency || 'EUR'
+          pricing: enrichedSeat ? {
+            basePrice: enrichedSeat?.basePrice || 0,
+            tax: enrichedSeat?.tax || 0,
+            serviceFee: enrichedSeat?.serviceFee || 0,
+            serviceTax: enrichedSeat?.serviceTax || 0,
+            orderFee: enrichedSeat?.orderFee || 0,
+            currency: enrichedSeat?.currency || 'EUR'
           } : null
         };
       });
 
+      const seatTicketsForAreas = selectedAreaEntries.flatMap(({ sectionId, quantity }) => {
+        const area = seatData.areaSections.find(a => a.id === sectionId);
+        if (!area || !quantity) return [];
+
+        const repSeat = enrichSeatPricingFromPlaceId(getRepresentativeSeatForArea(area));
+        if (!repSeat) return [];
+
+        const sectionType = (area.sectionType || '').trim();
+        const areaLabel =
+          sectionType && sectionType.toLowerCase() !== 'area' ? `${area.name} (${sectionType})` : area.name;
+
+        return Array.from({ length: quantity }).map(() => ({
+          placeId: '',
+          ticketId: null,
+          ticketName: areaLabel,
+          pricing: {
+            basePrice: repSeat.basePrice || 0,
+            tax: repSeat.tax || 0,
+            serviceFee: repSeat.serviceFee || 0,
+            serviceTax: repSeat.serviceTax || 0,
+            orderFee: repSeat.orderFee || 0,
+            currency: repSeat.currency || 'EUR'
+          }
+        }));
+      });
+
+      const seatTickets = [...seatTicketsForSeats, ...seatTicketsForAreas];
+
       // Get pricing from first seat (for legacy fields)
-      const firstSeat = seatData.seats.find(s => selectedSeats.includes(s.placeId));
+      const firstSeat = repSeatForCheckoutEnriched;
 
       // Calculate totals directly from selected seats
-      const totalBasePrice = selectedSeats.reduce((sum: number, placeId: string) => {
-        const seat = seatData.seats.find(s => s.placeId === placeId);
-        return sum + (seat?.basePrice || 0);
-      }, 0);
+      const totalBasePrice =
+        selectedSeats.reduce((sum: number, placeId: string) => {
+          const seat = seatData.seats.find(s => s.placeId === placeId);
+          return sum + (seat?.basePrice || 0);
+        }, 0) +
+        selectedAreaEntries.reduce((sum: number, { sectionId, quantity }) => {
+          const area = seatData.areaSections.find(a => a.id === sectionId);
+          if (!area || !quantity) return sum;
+          const repSeat = getRepresentativeSeatForArea(area);
+          return sum + (repSeat?.basePrice || 0) * quantity;
+        }, 0);
 
-      const totalServiceFee = selectedSeats.reduce((sum: number, placeId: string) => {
-        const seat = seatData.seats.find(s => s.placeId === placeId);
-        return sum + (seat?.serviceFee || 0);
-      }, 0);
+      const totalServiceFee =
+        selectedSeats.reduce((sum: number, placeId: string) => {
+          const seat = seatData.seats.find(s => s.placeId === placeId);
+          return sum + (seat?.serviceFee || 0);
+        }, 0) +
+        selectedAreaEntries.reduce((sum: number, { sectionId, quantity }) => {
+          const area = seatData.areaSections.find(a => a.id === sectionId);
+          if (!area || !quantity) return sum;
+          const repSeat = getRepresentativeSeatForArea(area);
+          return sum + (repSeat?.serviceFee || 0) * quantity;
+        }, 0);
 
       return {
         email,
         confirmEmail,
-        quantity: selectedSeats.length,
+        quantity: totalSelectedQuantity,
         eventId,
         externalMerchantId: externalMerchantId,
         merchantId: merchantId,
         ticketId: null, // No ticket ID for pricing_configuration
-        ticketName: `${selectedSeats.length} Seat(s)`,
+        ticketName: checkoutTicketName,
         price: firstSeat?.basePrice || 0, // Per-unit for legacy
         serviceFee: firstSeat?.serviceFee || 0, // Per-unit for legacy
         totalBasePrice: totalBasePrice, // Total for all seats
@@ -1018,6 +1560,7 @@ export default function SeatSelectionPage() {
         perUnitVat: 0,
         total: totalPrice,
         placeIds: selectedSeats,
+        sectionSelections,
         seatTickets, // Individual pricing for each seat
         sessionId: sessionId,
         fullName: fullName
@@ -1071,17 +1614,30 @@ export default function SeatSelectionPage() {
 
     // Use first ticket for legacy fields (for backward compatibility)
     const firstTicketId = seatTickets[0]?.ticketId;
-    const firstTicket = ticketTypes.find(t => t._id === firstTicketId);
+    const effectiveTicketId = firstTicketId || effectiveAreaTicketId || ticketTypes[0]?._id || null;
+    const firstTicket = ticketTypes.find(t => t._id === effectiveTicketId) || ticketTypes[0];
+    const checkoutTicketName = (() => {
+      // Standing/area-only selections should not use generic "N Ticket(s)" labels.
+      if (selectedSeats.length === 0 && sectionSelections.length > 0) {
+        const sectionLabels = sectionSelections.map(({ sectionId, quantity }) => {
+          const area = seatData?.areaSections?.find(a => a.id === sectionId);
+          const areaName = area?.name || sectionId;
+          return quantity > 1 ? `${areaName} x${quantity}` : areaName;
+        });
+        return sectionLabels.join(', ');
+      }
+      return totalSelectedQuantity > 0 ? `${totalSelectedQuantity} Ticket(s)` : 'Ticket';
+    })();
 
     const result = {
       email,
       confirmEmail,
-      quantity: selectedSeats.length,
+      quantity: totalSelectedQuantity,
       eventId,
       externalMerchantId: externalMerchantId,
       merchantId: merchantId,
-      ticketId: firstTicketId || null,
-      ticketName: `${selectedSeats.length} Seat(s)`,
+      ticketId: effectiveTicketId || null,
+      ticketName: checkoutTicketName,
       price: firstTicket?.price || 0,
       serviceFee: firstTicket?.serviceFee || 0,
       vat: firstTicket?.vat || 0,
@@ -1095,6 +1651,7 @@ export default function SeatSelectionPage() {
       perUnitVat: 0,
       total: totalPrice,
       placeIds: selectedSeats,
+      sectionSelections,
       seatTickets,
       sessionId: sessionId,
       fullName: fullName
@@ -1108,7 +1665,7 @@ export default function SeatSelectionPage() {
     });
 
     return result;
-  }, [selectedSeats, seatTicketMap, ticketTypes, email, eventId, eventTitle, totalPrice, sessionId, fullName, merchantId, externalMerchantId, pricingModel, seatData, eventCountry, confirmEmail, pricingConfig]);
+  }, [selectedSeats, areaSelectionMap, seatTicketMap, ticketTypes, email, eventId, eventTitle, totalPrice, sessionId, fullName, merchantId, externalMerchantId, pricingModel, seatData, eventCountry, confirmEmail, pricingConfig, effectiveAreaTicketId, getRepresentativeSeatForArea]);
 
   // Show success page if payment succeeded
   if (successTicketData) {
@@ -1274,7 +1831,7 @@ export default function SeatSelectionPage() {
 
                       {/* Selected Tickets */}
                       <div className="p-3">
-                        {selectedSeats.length === 0 ? (
+                        {selectedSeats.length === 0 && !Object.values(areaSelectionMap).some((qty) => qty > 0) ? (
                           <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-6">
                             {t('seatSelection.noSeatsSelected') || 'No seats selected yet'}
                           </p>
@@ -1465,6 +2022,69 @@ export default function SeatSelectionPage() {
                                   </div>
                                 ) : null;
                               })}
+
+                              {Object.entries(areaSelectionMap)
+                                .filter(([, qty]) => qty > 0)
+                                .map(([sectionId, qty]) => {
+                                  const area = seatData.areaSections.find((a) => a.id === sectionId);
+                                  if (!area) return null;
+
+                                  const { unitPrice, pricingBreakdown } = getAreaPricing(area);
+                                  const unit = unitPrice ?? 0;
+                                  const lineTotal = Math.round((unit * qty) * 1000) / 1000;
+
+                                  return (
+                                    <div
+                                      key={`selected-area-${sectionId}`}
+                                      className="p-2.5 rounded-lg border"
+                                      style={{
+                                        background: 'var(--surface)',
+                                        borderColor: 'var(--border)',
+                                        WebkitFontSmoothing: 'antialiased',
+                                        MozOsxFontSmoothing: 'grayscale',
+                                        textRendering: 'optimizeLegibility'
+                                      }}
+                                    >
+                                      <div className="flex items-start justify-between mb-1.5">
+                                        <div className="flex-1">
+                                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                                            {t('seatSelection.standard') || 'Standard'}
+                                          </p>
+                                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">
+                                            <span className="font-medium">{t('seatSelection.section') || 'SECTION'}:</span> {area.name}
+                                          </p>
+                                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                            <span className="font-medium">{t('seatSelection.quantity') || 'Quantity'}:</span> {qty}
+                                          </p>
+
+                                          {pricingBreakdown ? (
+                                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-0.5">
+                                              <div className="flex justify-between">
+                                                <span>{t('seatSelection.price') || 'Price'} ({t('seatSelection.perUnit') || 'per unit'}):</span>
+                                                <span>{formatCurrency(pricingBreakdown.total)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                              </div>
+                                              <div className="flex justify-between font-medium border-t pt-0.5 mt-1" style={{ borderColor: 'var(--border)' }}>
+                                                <span>{t('seatSelection.total') || 'Total'}:</span>
+                                                <span>{formatCurrency(lineTotal)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                              </div>
+                                            </div>
+                                          ) : unit > 0 ? (
+                                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-0.5">
+                                              <div className="flex justify-between">
+                                                <span>{t('seatSelection.price') || 'Price'} ({t('seatSelection.perUnit') || 'per unit'}):</span>
+                                                <span>{formatCurrency(unit)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                              </div>
+                                              <div className="flex justify-between font-medium border-t pt-0.5 mt-1" style={{ borderColor: 'var(--border)' }}>
+                                                <span>{t('seatSelection.total') || 'Total'}:</span>
+                                                <span>{formatCurrency(lineTotal)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                              </div>
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                             </div>
 
                             {/* Ticket Count Badge */}
@@ -1473,15 +2093,141 @@ export default function SeatSelectionPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4v-3a2 2 0 00-2-2H5z" />
                               </svg>
                               <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                x{selectedSeats.length}
+                                x{selectedSeats.length + Object.values(areaSelectionMap).reduce((sum, qty) => sum + (qty || 0), 0)}
                               </span>
                             </div>
                           </>
                         )}
+
+                        {seatData.areaSections?.length > 0 && (
+                          <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                            <p className="text-xs font-semibold mb-2">
+                              {t('seatSelection.standingAreaSections') || 'Standing / Area Sections'}
+                            </p>
+                            <div className="space-y-2">
+                              {seatData.areaSections.map((area) => {
+                                const currentQty = areaSelectionMap[area.id] || 0;
+                                const totalAreaSelectedQty = Object.values(areaSelectionMap).reduce((sum, qty) => sum + (qty || 0), 0);
+                                const totalSelectedQty = selectedSeats.length + totalAreaSelectedQty;
+                                const ticketForAreas =
+                                  effectiveAreaTicketId
+                                    ? ticketTypes.find(t => t._id === effectiveAreaTicketId) || ticketTypes[0]
+                                    : ticketTypes[0];
+                                const scanCountRaw = ticketForAreas?.scanCount ?? 0;
+                                const n = Number(scanCountRaw);
+                                const isScanCountPass = pricingModel === 'ticket_info' && Number.isFinite(n) && n > 0;
+                                const maxQty = isScanCountPass ? 1 : area.availableCount;
+                                const canIncrement = currentQty < maxQty && totalSelectedQty < 10;
+                                const expanded = expandedAreaSectionId === area.id;
+                                const isSoldOut = maxQty <= 0;
+                                const availableLabel = t('seatSelection.available') || 'Available';
+                                const soldOutLabel = t('seatSelection.soldOut') || 'Sold Out';
+                                const { unitPrice, pricingBreakdown } = getAreaPricing(area);
+                                return (
+                                  <div key={area.id} className="rounded-md border p-2" style={{ borderColor: 'var(--border)' }}>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div>
+                                        <button
+                                          type="button"
+                                          className="w-full text-left"
+                                          onClick={() => setExpandedAreaSectionId(prev => (prev === area.id ? null : area.id))}
+                                          aria-expanded={expanded}
+                                        >
+                                          <p className="text-xs font-medium">{area.name}</p>
+                                          <p className="text-[11px] text-gray-500">
+                                            {area.sectionType || 'Area'} · {isSoldOut ? soldOutLabel : `${availableLabel}: ${area.availableCount}`}
+                                          </p>
+                                          {unitPrice != null && unitPrice > 0 && (
+                                            <p className="text-[11px] text-gray-600">
+                                              {t('seatSelection.price') || 'Price'}: {formatCurrency(unitPrice)} {getCurrencySymbol(eventCountry || 'Finland')}
+                                            </p>
+                                          )}
+                                        </button>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          type="button"
+                                          className="px-2 py-1 rounded border text-xs"
+                                          style={{ borderColor: 'var(--border)' }}
+                                          onClick={() => setAreaSelectionMap((prev) => ({ ...prev, [area.id]: Math.max(0, (prev[area.id] || 0) - 1) }))}
+                                          disabled={currentQty <= 0}
+                                        >
+                                          -
+                                        </button>
+                                        <span className="text-xs w-6 text-center">{currentQty}</span>
+                                        <button
+                                          type="button"
+                                          className="px-2 py-1 rounded border text-xs"
+                                          style={{ borderColor: 'var(--border)' }}
+                                          onClick={() => {
+                                            // ticket_info: mimic seat-circle behavior by asking for ticket type on first area `+`
+                                            if (pricingModel === 'ticket_info' && selectedSeats.length === 0 && !areaTicketId) {
+                                              setPendingArea(area);
+                                              setShowAreaTicketSelector(true);
+                                              return;
+                                            }
+
+                                            if (maxQty <= 0) return;
+                                            if (selectedSeats.length + Object.values(areaSelectionMap).reduce((sum, qty) => sum + (qty || 0), 0) >= 10) {
+                                              return;
+                                            }
+                                            setAreaSelectionMap((prev) => ({
+                                              ...prev,
+                                              [area.id]: Math.min(maxQty, (prev[area.id] || 0) + 1)
+                                            }));
+                                          }}
+                                          disabled={!canIncrement}
+                                        >
+                                          +
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {expanded && pricingBreakdown && (
+                                      <div className="text-[11px] text-gray-600 mt-2 space-y-0.5">
+                                        <div className="flex justify-between">
+                                          <span>{t('seatSelection.basePrice') || 'Base Price'}:</span>
+                                          <span>{formatCurrency(pricingBreakdown.basePrice)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                        </div>
+                                        {pricingBreakdown.baseTaxAmount > 0 && (
+                                          <div className="flex justify-between">
+                                            <span>
+                                              {t('checkout.vat') || 'VAT'}
+                                              {pricingBreakdown.baseTaxRatePercent != null &&
+                                                pricingBreakdown.baseTaxRatePercent > 0 &&
+                                                ` (${formatTaxRateDisplay(pricingBreakdown.baseTaxRatePercent)}%)`}
+                                            </span>
+                                            <span>{formatCurrency(pricingBreakdown.baseTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                          </div>
+                                        )}
+                                        {pricingBreakdown.serviceFee > 0 && (
+                                          <div className="flex justify-between">
+                                            <span>{t('seatSelection.serviceFee') || 'Service Fee'}:</span>
+                                            <span>{formatCurrency(pricingBreakdown.serviceFee)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                          </div>
+                                        )}
+                                        {pricingBreakdown.serviceTaxAmount > 0 && (
+                                          <div className="flex justify-between">
+                                            <span>{t('seatSelection.serviceTax') || 'Service Tax'}:</span>
+                                            <span>{formatCurrency(pricingBreakdown.serviceTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                          </div>
+                                        )}
+                                        <div className="flex justify-between font-medium border-t pt-0.5 mt-1" style={{ borderColor: 'var(--border)' }}>
+                                          <span>{t('seatSelection.total') || 'Total'}:</span>
+                                          <span>{formatCurrency(pricingBreakdown.total)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Footer with CTA Button */}
-                      {selectedSeats.length > 0 && (
+                      {(selectedSeats.length > 0 || Object.values(areaSelectionMap).some((qty) => qty > 0)) && (
                         <div className="p-3 border-t" style={{ borderColor: 'var(--border)' }}>
                           <button
                             onClick={handleProceedToInfo}
@@ -1896,6 +2642,99 @@ export default function SeatSelectionPage() {
           </div>
         </div>
       )}
+
+      {/* Area Ticket Type Selector Modal (ticket_info only) */}
+      {showAreaTicketSelector && pendingArea && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl pointer-events-auto"
+            style={{ background: 'var(--surface)', color: 'var(--foreground)' }}
+          >
+            <h3 className="text-lg font-semibold mb-4">
+              {t('seatSelection.selectTicketType') || 'Select Ticket Type'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {pendingArea.name ? `Area: ${pendingArea.name}` : 'Area selection'}
+              {pendingArea.sectionType ? ` · ${pendingArea.sectionType}` : ''}
+            </p>
+
+            <div className="space-y-3 mb-4 max-h-[400px] overflow-y-auto">
+              {ticketTypes.map((ticket) => {
+                const basePrice = ticket.price || 0;
+                const baseTaxPct = basePriceTaxPercent(ticket.vat || 0, ticket.entertainmentTax);
+                const serviceFee = ticket.serviceFee || 0;
+                const serviceTaxPercent = ticket.serviceTax || 0;
+                const serviceTax = serviceTaxPercent / 100;
+
+                const baseTaxAmount = basePrice * (baseTaxPct / 100);
+                const serviceTaxAmount = serviceFee * serviceTax;
+                const ticketPrice = basePrice + baseTaxAmount + serviceFee + serviceTaxAmount;
+
+                return (
+                  <button
+                    key={ticket._id}
+                    onClick={() => handleAreaTicketSelect(ticket._id)}
+                    className="w-full p-4 text-left border-2 rounded-lg hover:border-indigo-500 transition-colors"
+                    style={{
+                      borderColor: 'var(--border)',
+                      background: 'var(--surface)'
+                    }}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-medium text-base">{ticket.name}</span>
+                      <span className="font-semibold text-lg">
+                        {formatCurrency(ticketPrice)} {getCurrencySymbol(eventCountry || 'Finland')}
+                      </span>
+                    </div>
+
+                    <div className="text-xs space-y-1" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
+                      <div className="flex justify-between">
+                        <span>{t('seatSelection.basePrice') || 'Base Price'}:</span>
+                        <span>{formatCurrency(basePrice)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                      </div>
+                      {baseTaxPct > 0 && (
+                        <div className="flex justify-between">
+                          <span>
+                            {t('checkout.vat') || 'VAT'} ({formatTaxRateDisplay(baseTaxPct)}%):
+                          </span>
+                          <span>+{formatCurrency(baseTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                        </div>
+                      )}
+                      {serviceFee > 0 && (
+                        <div className="flex justify-between">
+                          <span>{t('seatSelection.serviceFee') || 'Service Fee'}:</span>
+                          <span>+{formatCurrency(serviceFee)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                        </div>
+                      )}
+                      {serviceTaxPercent > 0 && serviceFee > 0 && (
+                        <div className="flex justify-between">
+                          <span>{t('seatSelection.serviceTax') || 'Service Tax'} ({serviceTaxPercent}%):</span>
+                          <span>+{formatCurrency(serviceTaxAmount)} {getCurrencySymbol(eventCountry || 'Finland')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => {
+                setShowAreaTicketSelector(false);
+                setPendingArea(null);
+              }}
+              className="w-full px-4 py-2 rounded-lg border"
+              style={{
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+                background: 'var(--surface)'
+              }}
+            >
+              {t('seatSelection.cancel') || 'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
       </div>
     </div>
     </Elements>
@@ -2017,6 +2856,48 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
 
     // Handle pricing_configuration model
     if (pricingModel === 'pricing_configuration') {
+      const seatTickets = Array.isArray(checkoutData.seatTickets) ? checkoutData.seatTickets : [];
+
+      // Prefer checkoutData.seatTickets (works for standing/area selections too, where selectedSeats can be empty).
+      if (seatTickets.length > 0) {
+        return seatTickets.map((st: Record<string, any>, index: number) => {
+          const pricing = (st?.pricing ?? {}) as Record<string, any>;
+          const basePrice = pricing.basePrice ?? pricing.price ?? 0;
+          const taxPercent = pricing.tax ?? pricing.vat ?? 0;
+          const serviceFee = pricing.serviceFee ?? 0;
+          const serviceTaxPercent = pricing.serviceTax ?? 0;
+
+          const tax = taxPercent / 100;
+          const serviceTax = serviceTaxPercent / 100;
+          const taxAmount = basePrice * tax;
+          const serviceTaxAmount = serviceFee * serviceTax;
+          const ticketPrice = basePrice + taxAmount + serviceFee + serviceTaxAmount;
+
+          return {
+            placeId: (st?.placeId && String(st.placeId).trim().length > 0) ? String(st.placeId) : `seatTicket-${index + 1}`,
+            // UI "seat info" expects `seat.section`, `seat.row`, and `seat.seat`.
+            // For standing/area units we don't have row/seat, but we can still show the area label.
+            seat: {
+              tax: taxPercent,
+              serviceTax: serviceTaxPercent,
+              row: null,
+              seat: null,
+              section: (st?.ticketName && String(st.ticketName).trim().length > 0) ? String(st.ticketName) : null
+            } as any,
+            ticket: null,
+            ticketName: (st?.ticketName && String(st.ticketName).trim().length > 0) ? String(st.ticketName) : 'Ticket',
+            basePrice,
+            entertainmentTaxPercent: taxPercent,
+            entertainmentTaxAmount: taxAmount,
+            serviceFee,
+            serviceTaxPercent,
+            serviceTaxAmount,
+            ticketPrice
+          };
+        }).filter(Boolean);
+      }
+
+      // Fallback: if seatTickets isn't present, calculate from selectedSeats.
       return selectedSeats.map((placeId) => {
         const seat = seatData.seats.find(s => s.placeId === placeId);
         if (!seat) return null;
@@ -2097,17 +2978,30 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
         ticketPrice
       };
     }).filter(Boolean);
-  }, [selectedSeats, seatTicketMap, ticketTypes, seatData, pricingModel]);
+  }, [selectedSeats, seatTicketMap, ticketTypes, seatData, pricingModel, checkoutData.seatTickets]);
 
   // Calculate order fee (once per transaction)
   const orderFeeInfo = useMemo(() => {
     // Handle pricing_configuration model
-    if (pricingModel === 'pricing_configuration' && seatData && selectedSeats.length > 0) {
-      const firstSeat = seatData.seats.find(s => selectedSeats.includes(s.placeId));
-      if (firstSeat) {
-        const orderFee = firstSeat.orderFee || 0;
-        const serviceTaxPercent = firstSeat.serviceTax || 0;
-        // Round order fee tax calculation to 3 decimals
+    if (pricingModel === 'pricing_configuration' && seatData) {
+      if (selectedSeats.length > 0) {
+        const firstSeat = seatData.seats.find(s => selectedSeats.includes(s.placeId));
+        if (firstSeat) {
+          const orderFee = firstSeat.orderFee || 0;
+          const serviceTaxPercent = firstSeat.serviceTax || 0;
+          // Round order fee tax calculation to 3 decimals
+          const orderFeeTax = Math.round((orderFee * (serviceTaxPercent / 100)) * 1000) / 1000;
+          const orderFeeTotal = Math.round((orderFee + orderFeeTax) * 1000) / 1000;
+          return { orderFee, orderFeeTax, orderFeeTotal, serviceTaxPercent };
+        }
+      }
+
+      // Standing/area can have selectedSeats.length === 0, so fall back to checkoutData.seatTickets.
+      const seatTickets = Array.isArray(checkoutData.seatTickets) ? checkoutData.seatTickets : [];
+      const firstTicketPricing = seatTickets?.[0]?.pricing || {};
+      const orderFee = firstTicketPricing.orderFee || 0;
+      const serviceTaxPercent = firstTicketPricing.serviceTax || 0;
+      if (orderFee > 0 || serviceTaxPercent > 0) {
         const orderFeeTax = Math.round((orderFee * (serviceTaxPercent / 100)) * 1000) / 1000;
         const orderFeeTotal = Math.round((orderFee + orderFeeTax) * 1000) / 1000;
         return { orderFee, orderFeeTax, orderFeeTotal, serviceTaxPercent };
@@ -2158,6 +3052,21 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       return Math.max(0, totalPrice - orderFeeTotal);
     }
 
+    // If there are no individual seat tickets (e.g. standing/area-only in `ticket_info`),
+    // derive subtotal from checkoutData (base price + service fee, excluding VAT).
+    if (calculated === 0 && totalPrice > 0) {
+      if (pricingModel === 'ticket_info') {
+        return Math.max(0, (checkoutData.price + checkoutData.serviceFee) * checkoutData.quantity);
+      }
+
+      if (pricingModel === 'pricing_configuration') {
+        const totalBasePrice = checkoutData.totalBasePrice ?? checkoutData.price * checkoutData.quantity;
+        const totalServiceFee =
+          checkoutData.totalServiceFee ?? checkoutData.serviceFee * checkoutData.quantity;
+        return Math.max(0, totalBasePrice + totalServiceFee);
+      }
+    }
+
     return calculated;
   }, [
     seatPricingBreakdown,
@@ -2165,7 +3074,12 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
     seatData,
     totalPrice,
     orderFeeInfo.orderFeeTotal,
-    pricingModel
+    pricingModel,
+    checkoutData.price,
+    checkoutData.serviceFee,
+    checkoutData.quantity,
+    checkoutData.totalBasePrice,
+    checkoutData.totalServiceFee
   ]);
 
   // Calculate summary totals from seat pricing breakdown (for both ticket_info and pricing_configuration models)
@@ -2339,6 +3253,10 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
       metadata.seatTickets = JSON.stringify(checkoutData.seatTickets);
     }
 
+    if (checkoutData?.sectionSelections && Array.isArray(checkoutData.sectionSelections) && checkoutData.sectionSelections.length > 0) {
+      metadata.sectionSelections = JSON.stringify(checkoutData.sectionSelections);
+    }
+
     if (checkoutData?.sessionId) {
       metadata.sessionId = checkoutData.sessionId;
     }
@@ -2487,6 +3405,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
           marketingOptIn: marketingConsent,
           placeIds: checkoutData.placeIds || [],
           seatTickets: checkoutData.seatTickets || [], // Map of placeId -> ticketId
+          sectionSelections: checkoutData.sectionSelections || [],
           sessionId: checkoutData.sessionId || undefined,
           nonce: nonce, // Include nonce to prevent duplicate submissions
           locale: typeof window !== 'undefined' ? (localStorage.getItem('locale') || 'en-US') : 'en-US', // Locale for email templates (BCP 47 format)
@@ -2553,6 +3472,8 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
             seats: checkoutData.placeIds || [],
             placeIds: checkoutData.placeIds || [], // Explicitly include placeIds
             seatTickets: checkoutData.seatTickets || [],
+            sectionSelections: checkoutData.sectionSelections || [],
+            sessionId: checkoutData.sessionId || undefined,
             amount: Math.round(totalPrice * 100), // cents
             currency: getCurrencyCode(checkoutData.country || 'Finland').toUpperCase() || 'EUR',
             transactionId: paytrailResponse.transactionId,
@@ -2698,15 +3619,15 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
           <div className="space-y-1.5 text-sm">
             <div>
               <span style={{ opacity: 0.8 }}>{t('seatSelection.fullName') || 'Full Name'}:</span>
-              <span className="font-medium ml-2">{checkoutData.fullName || '-'}</span>
+              <span className="font-medium ml-2">{obfuscateFullName(checkoutData.fullName || '')}</span>
             </div>
             <div>
               <span style={{ opacity: 0.8 }}>{t('seatSelection.email') || 'Email'}:</span>
-              <span className="font-medium ml-2">{checkoutData.email}</span>
+              <span className="font-medium ml-2">{obfuscateEmail(checkoutData.email)}</span>
             </div>
             <div>
               <span style={{ opacity: 0.8 }}>{t('seatSelection.confirmEmail') || 'Confirm Email'}:</span>
-              <span className="font-medium ml-2">{checkoutData.confirmEmail || checkoutData.email}</span>
+              <span className="font-medium ml-2">{obfuscateEmail(checkoutData.confirmEmail || checkoutData.email)}</span>
             </div>
           </div>
         </div>
@@ -2721,21 +3642,44 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
             </div>
             <div className="space-y-1.5">
               <span style={{ opacity: 0.8 }} className="block">{t('seatSelection.selectedSeats') || 'Selected Seats'}:</span>
-              {seatData && selectedSeats.map((placeId) => {
-                const seat = seatData.seats.find(s => s.placeId === placeId);
-                if (!seat) return null;
-                return (
-                  <div key={placeId} className="ml-3 text-xs" style={{ opacity: 0.9 }}>
-                    <span className="font-medium">
-                      {seat.section && `${t('seatSelection.section') || 'Section'} ${seat.section}`}
-                      {seat.section && seat.row && ' • '}
-                      {seat.row && `${t('seatSelection.row') || 'Row'} ${extractNumericPart(seat.row)}`}
-                      {seat.row && seat.seat && ' • '}
-                      {seat.seat && `${t('seatSelection.seat') || 'Seat'} ${extractNumericPart(seat.seat)}`}
-                    </span>
-                  </div>
-                );
-              })}
+              {seatData && (
+                <>
+                  {selectedSeats.map((placeId) => {
+                    const seat = seatData.seats.find(s => s.placeId === placeId);
+                    if (!seat) return null;
+                    return (
+                      <div key={placeId} className="ml-3 text-xs" style={{ opacity: 0.9 }}>
+                        <span className="font-medium">
+                          {seat.section && `${t('seatSelection.section') || 'Section'} ${seat.section}`}
+                          {seat.section && seat.row && ' • '}
+                          {seat.row && `${t('seatSelection.row') || 'Row'} ${extractNumericPart(seat.row)}`}
+                          {seat.row && seat.seat && ' • '}
+                          {seat.seat && `${t('seatSelection.seat') || 'Seat'} ${extractNumericPart(seat.seat)}`}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {(checkoutData.sectionSelections || [])
+                    .filter(s => (s.quantity || 0) > 0)
+                    .map(({ sectionId, quantity }) => {
+                      const areaSections = (seatData as any)?.areaSections || [];
+                      const area = areaSections.find((a: any) => String(a.id) === String(sectionId));
+                      const sectionType = (area?.sectionType || '').trim();
+                      const areaLabel = sectionType && sectionType.toLowerCase() !== 'area'
+                        ? `${area?.name || sectionId} (${sectionType})`
+                        : (area?.name || sectionId);
+
+                      return (
+                        <div key={`section-${sectionId}`} className="ml-3 text-xs" style={{ opacity: 0.9 }}>
+                          <span className="font-medium">
+                            {t('seatSelection.section') || 'Section'}: {areaLabel} • {t('seatSelection.quantity') || 'Quantity'}: {quantity}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -2745,15 +3689,15 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
           <h4 className="font-semibold mb-3 text-sm">{t('checkout.pricing') || 'Pricing Breakdown'}</h4>
           <div className="space-y-3">
             {/* Summary Totals */}
-            {seatPricingBreakdown.length > 0 && summaryTotals && (
+            {summaryTotals && checkoutData.quantity > 0 && (
               <div className="pb-3 border-b mb-3" style={{ borderColor: 'var(--border)' }}>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between">
-                    <span style={{ opacity: 0.8 }}>{t('seatSelection.basePrice') || 'Base Price'} (x{selectedSeats.length}):</span>
+                    <span style={{ opacity: 0.8 }}>{t('seatSelection.basePrice') || 'Base Price'} (x{checkoutData.quantity}):</span>
                     <span className="font-medium">{formatCurrency(summaryTotals.totalBasePrice)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span style={{ opacity: 0.8 }}>{t('seatSelection.serviceFee') || 'Service Fee'} (x{selectedSeats.length}):</span>
+                    <span style={{ opacity: 0.8 }}>{t('seatSelection.serviceFee') || 'Service Fee'} (x{checkoutData.quantity}):</span>
                     <span className="font-medium">{formatCurrency(summaryTotals.totalServiceFee)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
                   </div>
                   {summaryTotals.totalServiceTaxAmount > 0 && (
@@ -2796,7 +3740,7 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
                 <div key={item.placeId || index} className="pb-2 border-b" style={{ borderColor: 'var(--border)' }}>
                   <div className="font-medium mb-1.5 text-sm">
                     {t('seatSelection.seat') || 'Seat'} {index + 1}
-                    {item.seat && (
+                    {pricingModel !== 'pricing_configuration' && item.seat && (
                       <span className="text-xs font-normal ml-2" style={{ opacity: 0.7 }}>
                         (
                         {item.seat.section && `${t('seatSelection.section') || 'Section'}: ${item.seat.section}`}
@@ -2847,10 +3791,15 @@ function PaymentForm({ checkoutData, totalPrice, ticketTypes, seatTicketMap, sel
             })}
 
             {/* Subtotal */}
-            <div className="flex justify-between pt-1.5 border-t" style={{ borderColor: 'var(--border)' }}>
-              <span style={{ opacity: 0.8 }} className="text-sm">{t('checkout.subtotal') || 'Subtotal'}:</span>
-              <span className="font-medium text-sm">{formatCurrency(subtotal)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
-            </div>
+            {!(
+              summaryTotals &&
+              checkoutData.quantity > 0
+            ) && (
+              <div className="flex justify-between pt-1.5 border-t" style={{ borderColor: 'var(--border)' }}>
+                <span style={{ opacity: 0.8 }} className="text-sm">{t('checkout.subtotal') || 'Subtotal'}:</span>
+                <span className="font-medium text-sm">{formatCurrency(subtotal)} {getCurrencySymbol(checkoutData.country || 'Finland')}</span>
+              </div>
+            )}
 
             {/* Order Fee */}
             {orderFeeInfo.orderFee > 0 && (

@@ -625,7 +625,9 @@
       "selected": "Escolhido",
       "occupied": "Ocupado",
       "reserved": "Reservado",
-      "wheelchair": "Acessível para cadeiras de rodas"
+      "wheelchair": "Acessível para cadeiras de rodas",
+      "standingAreaSections": "Secções em pé / área",
+      "soldOut": "Esgotado"
     },
     "checkout": {
       "title": "Finalizar Compra",

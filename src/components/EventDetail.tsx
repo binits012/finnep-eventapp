@@ -462,8 +462,20 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
     const selectedTicketObj = useMemo(() => event.ticketInfo.find(t => t._id === selectedTicket) || null, [event.ticketInfo, selectedTicket]);
     const router = useRouter();
 
-    // Check if seat selection is enabled (venue.venueId takes priority over everything)
-    const hasSeatSelection = Boolean(event?.venue?.venueId);
+    // Seat selection must be determined by seat-selection semantics, not by venueId existence.
+    // venueId can exist for unseated/free events and should never force "Select Seats" mode.
+    const manifestVersion =
+        typeof event?.venue?.manifestVersion === 'number'
+            ? event.venue.manifestVersion
+            : Number(event?.venue?.manifestVersion ?? 0);
+    const hasSeatSelection = Boolean(
+        event?.isSeatedEvent === true ||
+        event?.hasSeatSelection === true ||
+        event?.venue?.hasSeatSelection === true ||
+        manifestVersion > 0 ||
+        (event?.venue?.lockedManifestId && String(event.venue.lockedManifestId).trim().length > 0) ||
+        event?.venue?.pricingModel === 'pricing_configuration'
+    );
 
     // Check if event is free
     const isFreeEvent = event.otherInfo?.eventExtraInfo?.eventType === 'free' ||
@@ -1501,7 +1513,7 @@ export default function EventDetail({ event, presaleToken }: { event: Event; pre
                     eventId={event._id}
                     merchantId={event?.merchant?._id || event?.merchantId}
                     externalMerchantId={event?.externalMerchantId}
-                    hasSeatSelection={event?.venue?.hasSeatSelection || false}
+                    hasSeatSelection={hasSeatSelection}
                     currency={getCurrencyCode(event?.country || 'Finland')}
                     country={event?.country || 'Finland'}
                 />

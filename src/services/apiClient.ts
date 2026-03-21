@@ -259,9 +259,24 @@ export const seatAPI = {
         sections: Array<{
           id: string;
           name: string;
+          sectionType?: string;
+          selectionMode?: 'seat' | 'area';
+          capacity?: number;
           color: string;
           bounds: Record<string, number> | null;
           polygon: Array<{ x: number; y: number }> | null;
+        }>;
+        seatSections?: Array<Record<string, unknown>>;
+        areaSections?: Array<{
+          id: string;
+          name: string;
+          sectionType: string;
+          selectionMode: 'area';
+          capacity: number;
+          soldCount: number;
+          reservedCount: number;
+          availableCount: number;
+          color: string;
         }>;
         places: Array<{
           placeId: string;
@@ -283,15 +298,24 @@ export const seatAPI = {
    * @param sessionId - Session ID (UUID)
    * @param email - Email address (verified via OTP)
    */
-  reserveSeats: async (eventId: string, placeIds: string[], sessionId: string, email?: string) => {
+  reserveSeats: async (
+    eventId: string,
+    placeIds: string[],
+    sessionId: string,
+    email?: string,
+    sectionSelections?: Array<{ sectionId: string; quantity: number }>
+  ) => {
     return api.post<{
       message: string;
       data: {
         reserved: string[];
         failed: string[];
+        resolvedPlaceIds?: string[];
+        sectionSelections?: Array<{ sectionId: string; quantity: number }>;
       };
     }>(`/event/${eventId}/seats/reserve`, {
       placeIds,
+      sectionSelections,
       sessionId,
       ...(email && { email })
     });
